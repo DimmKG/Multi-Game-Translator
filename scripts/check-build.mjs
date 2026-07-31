@@ -11,6 +11,9 @@ const requireText = (text, label) => {
 requireText("<!DOCTYPE html>", "HTML document declaration");
 requireText("<style>", "embedded application styles");
 requireText("const I18N = {", "embedded interface locales");
+requireText("necesse-translator.interface-locales.v1", "interface locale package storage");
+requireText("function normalizeInterfaceLocale", "interface locale package validator");
+requireText("restoreInstalledInterfaceLocales", "interface locale startup restoration");
 requireText("const GLOSSARY_FORMAT", "embedded glossary loader");
 requireText("globalThis.NecesseGlossaries", "embedded Glossary Manager API");
 requireText("necesse-translator.glossaries.v1", "Glossary Manager storage key");

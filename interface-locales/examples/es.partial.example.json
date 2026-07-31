@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schemas/interface-locale-v1.schema.json",
+  "format": "necesse-interface-locale",
+  "version": 1,
+  "code": "es",
+  "name": "Spanish",
+  "nativeName": "Español",
+  "authors": ["Example only"],
+  "updatedAt": "2026-08-01",
+  "messages": {
+    "app.title": "Necesse — traductor de .lang",
+    "app.sub": "traductor",
+    "drop.pick": "Elegir un archivo .lang",
+    "tab.editor": "Editor",
+    "tab.review": "Revisión",
+    "tab.diff": "Comparar",
+    "filter.missing": "Sin traducir",
+    "filter.done": "Traducidas",
+    "filter.all": "Todas las cadenas"
+  }
+}

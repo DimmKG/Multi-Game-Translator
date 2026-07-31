@@ -8,7 +8,8 @@
     "check": "node scripts/check-build.mjs",
     "test": "node --test",
     "validate:glossaries": "node scripts/validate-glossaries.mjs",
-    "verify": "npm test && npm run validate:locales && npm run validate:glossaries && npm run build && npm run check",
+    "validate:interface-locales": "node scripts/validate-interface-locales.mjs",
+    "verify": "npm test && npm run validate:locales && npm run validate:interface-locales && npm run validate:glossaries && npm run build && npm run check",
     "dev": "node scripts/serve.mjs src",
     "preview": "npm run build && node scripts/serve.mjs dist",
     "validate:locales": "node scripts/validate-locales.mjs"
