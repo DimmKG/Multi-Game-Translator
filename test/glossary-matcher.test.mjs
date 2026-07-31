@@ -9,7 +9,8 @@ const glossary = {
     {
       source: "Caveling",
       target: "Пещерник",
-      alternatives: ["Пещерница"],
+      forms: ["Пещерникът", "Пещерника", "Пещерници", "Пещерниците"],
+      alternatives: ["Подземно същество"],
       forbidden: ["Пещерняк"],
       caseSensitive: false,
       wholeWord: true,
@@ -33,15 +34,21 @@ test("preferred target satisfies the glossary rule", () => {
   assert.deepEqual(inspectTerminology("A Caveling appears", "Появява се Пещерник", [glossary]), []);
 });
 
-test("an allowed alternative satisfies the glossary rule", () => {
-  assert.deepEqual(inspectTerminology("A Caveling appears", "Появява се Пещерница", [glossary]), []);
+test("a grammatical form satisfies the glossary rule", () => {
+  assert.deepEqual(inspectTerminology("The Caveling arrives", "Пещерникът пристига", [glossary]), []);
+  assert.deepEqual(inspectTerminology("Defeat the Caveling", "Победи Пещерника", [glossary]), []);
 });
 
-test("missing preferred terminology produces an issue", () => {
+test("an allowed alternative satisfies the glossary rule", () => {
+  assert.deepEqual(inspectTerminology("A Caveling appears", "Появява се подземно същество", [glossary]), []);
+});
+
+test("missing preferred terminology exposes accepted forms", () => {
   const issues = inspectTerminology("A Caveling appears", "Появява се същество", [glossary]);
   assert.equal(issues.length, 1);
   assert.equal(issues[0].type, "missing-preferred");
   assert.equal(issues[0].preferred, "Пещерник");
+  assert.deepEqual(issues[0].forms, glossary.entries[0].forms);
 });
 
 test("forbidden terminology produces both forbidden and missing issues", () => {
