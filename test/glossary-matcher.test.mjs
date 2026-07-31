@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { containsGlossaryTerm, inspectTerminology } from "../src/scripts/glossary/matcher.js";
+import { containsGlossaryTerm, inspectTerminology, stripProtectedTokens } from "../src/scripts/glossary/matcher.js";
 
 const glossary = {
   id: "bg-test",
@@ -28,6 +28,35 @@ test("whole-word matching does not match inside a longer word", () => {
 test("matching is case-insensitive by default", () => {
   assert.equal(containsGlossaryTerm("CAVELING", "Caveling", {}), true);
   assert.equal(containsGlossaryTerm("CAVELING", "Caveling", { caseSensitive: true }), false);
+});
+
+test("protected placeholders and references are removed before matching", () => {
+  assert.equal(stripProtectedTokens("Talk to <settler> and [item=Settler]"), "Talk to   and  ");
+  assert.equal(containsGlossaryTerm("Talk to <settler>", "Settler", {}), false);
+  assert.equal(containsGlossaryTerm("Use [item=Settler]", "Settler", {}), false);
+  assert.equal(containsGlossaryTerm("The Settler arrives", "Settler", {}), true);
+});
+
+test("placeholder-only source text does not trigger terminology QA", () => {
+  const settlerGlossary = {
+    id: "settler-test",
+    name: "Settler test",
+    entries: [{
+      source: "Settler",
+      target: "Заселник",
+      forms: ["Заселникът", "Заселника", "Заселници", "Заселниците"],
+      alternatives: [],
+      forbidden: [],
+      caseSensitive: false,
+      wholeWord: true,
+      status: "approved"
+    }]
+  };
+  assert.deepEqual(inspectTerminology("Give this to <settler>", "Дай това на <settler>", [settlerGlossary]), []);
+});
+
+test("forbidden terms inside protected target tokens are ignored", () => {
+  assert.deepEqual(inspectTerminology("A Caveling appears", "Появява се <Пещерняк>", [glossary]).map(issue => issue.type), ["missing-preferred"]);
 });
 
 test("preferred target satisfies the glossary rule", () => {
