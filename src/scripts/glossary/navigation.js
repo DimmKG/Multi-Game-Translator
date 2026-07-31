@@ -35,6 +35,10 @@ function flaggedCards() {
   return [...document.querySelectorAll("#list .card.term-qa-flagged")];
 }
 
+function standardFilters() {
+  return [...document.querySelectorAll("#filters .filt:not(.term-nav-filter)")];
+}
+
 function showToast(message) {
   const toast = document.getElementById("toast");
   if (!toast) return;
@@ -80,10 +84,33 @@ function activateAllEntries() {
   if (all && !all.classList.contains("on")) all.click();
 }
 
-function toggleTerminologyFilter() {
-  terminologyFilterActive = !terminologyFilterActive;
+function clearStandardFilterSelection() {
+  standardFilters().forEach(button => button.classList.remove("on"));
+}
+
+function deactivateTerminologyFilter() {
+  if (!terminologyFilterActive) return;
+  terminologyFilterActive = false;
   currentIssueIndex = -1;
-  if (terminologyFilterActive) activateAllEntries();
+  applyTerminologyVisibility();
+  queueRefresh();
+}
+
+function toggleTerminologyFilter() {
+  const activate = !terminologyFilterActive;
+  currentIssueIndex = -1;
+
+  if (activate) {
+    // The application must render every entry before terminology visibility is
+    // applied, but only the terminology button should remain visibly selected.
+    activateAllEntries();
+    terminologyFilterActive = true;
+    clearStandardFilterSelection();
+  } else {
+    terminologyFilterActive = false;
+    activateAllEntries();
+  }
+
   queueRefresh();
 }
 
@@ -119,6 +146,10 @@ function buildControls() {
     navUi.filter.append(left, navUi.count);
     navUi.filter.addEventListener("click", toggleTerminologyFilter);
     filters.append(navUi.filter);
+
+    standardFilters().forEach(button => {
+      button.addEventListener("click", deactivateTerminologyFilter);
+    });
   }
 
   const toolbar = document.getElementById("toolbar");
