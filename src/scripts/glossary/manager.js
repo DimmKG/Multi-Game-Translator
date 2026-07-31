@@ -2,38 +2,9 @@ import { fetchCatalog, fetchGlossary, loadLocalGlossary } from "./loader.js";
 
 const STORAGE_KEY = "necesse-translator.glossaries.v1";
 const DEFAULT_CATALOG = "./glossaries/catalog.json";
-
-const TEXT = {
-  en: {
-    button: "Glossaries", title: "Glossary Manager", intro: "Import local terminology files or load available online glossaries.",
-    import: "Import glossary", catalog: "Load online catalog", online: "Online catalog", local: "Loaded glossaries",
-    offline: "Online catalogs are unavailable in direct-file mode. Local glossary import remains available.",
-    empty: "No glossaries loaded.", remove: "Remove", entries: "entries", enabled: "Enabled", disabled: "Disabled",
-    loaded: "Glossary loaded.", replaced: "Existing glossary replaced.", removed: "Glossary removed.", close: "Close",
-    catalogEmpty: "The catalog contains no glossaries.", install: "Load", loading: "Loading…", error: "Could not load glossary: "
-  },
-  ru: {
-    button: "Глоссарии", title: "Менеджер глоссариев", intro: "Импортируйте локальные файлы терминологии или загрузите доступные онлайн-глоссарии.",
-    import: "Импорт глоссария", catalog: "Загрузить онлайн-каталог", online: "Онлайн-каталог", local: "Загруженные глоссарии",
-    offline: "Онлайн-каталоги недоступны при прямом открытии файла. Локальный импорт продолжает работать.",
-    empty: "Глоссарии не загружены.", remove: "Удалить", entries: "записей", enabled: "Включён", disabled: "Выключен",
-    loaded: "Глоссарий загружен.", replaced: "Существующий глоссарий заменён.", removed: "Глоссарий удалён.", close: "Закрыть",
-    catalogEmpty: "Каталог не содержит глоссариев.", install: "Загрузить", loading: "Загрузка…", error: "Не удалось загрузить глоссарий: "
-  },
-  bg: {
-    button: "Речници", title: "Управление на речници", intro: "Импортирайте локални терминологични файлове или заредете наличните онлайн речници.",
-    import: "Импортиране на речник", catalog: "Зареждане на онлайн каталог", online: "Онлайн каталог", local: "Заредени речници",
-    offline: "Онлайн каталозите не са налични при директно отваряне на файла. Локалният импорт продължава да работи.",
-    empty: "Няма заредени речници.", remove: "Премахване", entries: "термина", enabled: "Включен", disabled: "Изключен",
-    loaded: "Речникът е зареден.", replaced: "Съществуващият речник е заменен.", removed: "Речникът е премахнат.", close: "Затваряне",
-    catalogEmpty: "Каталогът не съдържа речници.", install: "Зареждане", loading: "Зареждане…", error: "Речникът не може да бъде зареден: "
-  }
-};
-
 const state = { records: [], catalog: null, listeners: new Set() };
 const ui = {};
-const lang = () => document.getElementById("uiLang")?.value || "en";
-const t = key => (TEXT[lang()] || TEXT.en)[key] || TEXT.en[key] || key;
+const t = key => globalThis.NecesseI18n?.t(`glossary.${key}`) || key;
 const onlineAvailable = () => location.protocol === "http:" || location.protocol === "https:";
 
 function restore() {
