@@ -12,9 +12,33 @@ The project begins by preserving the behaviour of the original standalone HTML w
 - `legacy/necesse-lang-translator.original.html` - untouched original baseline
 - `dist/necesse-lang-translator.html` - generated standalone build
 
-## Build and verification
+## Run locally in a browser
+
+The source version should be opened through a local HTTP server rather than directly through a `file://` URL. This allows external interface locales, glossaries and other data files to be loaded normally.
 
 Requirements: Node.js 18 or newer.
+
+Start the source version:
+
+```powershell
+npm run dev
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4173
+```
+
+Build and serve the generated standalone version:
+
+```powershell
+npm run preview
+```
+
+No third-party packages are required for either command.
+
+## Build and verification
 
 Build the standalone application:
 
