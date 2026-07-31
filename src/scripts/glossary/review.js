@@ -1,22 +1,7 @@
 import { inspectTerminology } from "./matcher.js";
 
-const TEXT = {
-  en: {
-    badge: n => `Terminology: ${n}`,
-    title: n => `${n} terminology ${n === 1 ? "issue" : "issues"}`
-  },
-  ru: {
-    badge: n => `Терминология: ${n}`,
-    title: n => `Проблем с терминологией: ${n}`
-  },
-  bg: {
-    badge: n => `Терминология: ${n}`,
-    title: n => `${n} ${n === 1 ? "терминологичен проблем" : "терминологични проблема"}`
-  }
-};
-
-const language = () => document.getElementById("uiLang")?.value || "en";
-const messages = () => TEXT[language()] || TEXT.en;
+const reviewT = (key, vars) => globalThis.NecesseI18n?.t(key, vars) || key;
+const reviewPlural = (base, count, vars) => globalThis.NecesseI18n?.plural(base, count, vars) || String(count);
 const glossaries = () => globalThis.NecesseGlossaries?.getEnabled?.() || [];
 const reviewList = () => document.getElementById("reviewlist");
 const issuesButton = () => document.querySelector('.rchip[data-r="issues"]');
@@ -49,8 +34,8 @@ function annotateRow(row) {
   const badge = document.createElement("span");
   badge.className = "rflag term";
   badge.dataset.role = "term-review-flag";
-  badge.textContent = messages().badge(issues.length);
-  badge.title = messages().title(issues.length);
+  badge.textContent = reviewT("terminology.reviewBadge", { n: issues.length });
+  badge.title = reviewPlural("terminology.count", issues.length);
   row.querySelector('[data-role="rflags"]')?.append(badge);
 }
 
@@ -98,8 +83,6 @@ function showCombinedIssues(event) {
   event.stopImmediatePropagation();
   customIssuesMode = true;
 
-  // Ask the application to render every touched row first, then apply the
-  // combined built-in + terminology filter without duplicating its state.
   allButton()?.click();
   scheduleRefresh();
 }

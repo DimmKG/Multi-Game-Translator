@@ -1,31 +1,7 @@
 import { inspectTerminology } from "./matcher.js";
 
-const TEXT = {
-  en: {
-    title: "Terminology",
-    forbidden: issue => `Avoid “${issue.found}”. Preferred term: “${issue.preferred}”.`,
-    missing: issue => `The source contains “${issue.source}”. Expected: “${issue.preferred}”.`,
-    glossary: name => name ? `Glossary: ${name}` : "",
-    count: n => `${n} terminology ${n === 1 ? "issue" : "issues"}`
-  },
-  ru: {
-    title: "Терминология",
-    forbidden: issue => `Не используйте «${issue.found}». Предпочтительный термин: «${issue.preferred}».`,
-    missing: issue => `Оригинал содержит «${issue.source}». Ожидается: «${issue.preferred}».`,
-    glossary: name => name ? `Глоссарий: ${name}` : "",
-    count: n => `Проблем с терминологией: ${n}`
-  },
-  bg: {
-    title: "Терминология",
-    forbidden: issue => `Не използвайте „${issue.found}“. Предпочитан термин: „${issue.preferred}“.`,
-    missing: issue => `Оригиналът съдържа „${issue.source}“. Очаквано: „${issue.preferred}“.`,
-    glossary: name => name ? `Речник: ${name}` : "",
-    count: n => `${n} ${n === 1 ? "терминологичен проблем" : "терминологични проблема"}`
-  }
-};
-
-const currentLanguage = () => document.getElementById("uiLang")?.value || "en";
-const messages = () => TEXT[currentLanguage()] || TEXT.en;
+const t = (key, vars) => globalThis.NecesseI18n?.t(key, vars) || key;
+const plural = (base, count, vars) => globalThis.NecesseI18n?.plural(base, count, vars) || String(count);
 const enabledGlossaries = () => globalThis.NecesseGlossaries?.getEnabled?.() || [];
 
 function sourceText(card) {
@@ -37,7 +13,6 @@ function sourceText(card) {
 }
 
 function issueNode(issue) {
-  const text = messages();
   const row = document.createElement("div");
   row.className = `term-qa-row ${issue.type}`;
 
@@ -48,10 +23,12 @@ function issueNode(issue) {
   const body = document.createElement("div");
   body.className = "term-qa-body";
   const message = document.createElement("div");
-  message.textContent = issue.type === "forbidden" ? text.forbidden(issue) : text.missing(issue);
+  message.textContent = issue.type === "forbidden"
+    ? t("terminology.forbidden", issue)
+    : t("terminology.missing", issue);
   body.append(message);
 
-  const details = [text.glossary(issue.glossaryName), issue.context, issue.note].filter(Boolean);
+  const details = [issue.glossaryName ? t("terminology.glossary", { name: issue.glossaryName }) : "", issue.context, issue.note].filter(Boolean);
   if (details.length) {
     const meta = document.createElement("small");
     meta.textContent = details.join(" · ");
@@ -82,7 +59,7 @@ function scanCard(card) {
   box.className = "term-qa";
   const heading = document.createElement("div");
   heading.className = "term-qa-heading";
-  heading.innerHTML = `<strong>${messages().title}</strong><span>${messages().count(issues.length)}</span>`;
+  heading.innerHTML = `<strong>${t("terminology.title")}</strong><span>${plural("terminology.count", issues.length)}</span>`;
   box.append(heading, ...issues.map(issueNode));
 
   const textareaWrap = textarea.closest(".tawrap");
