@@ -14,6 +14,8 @@ requireText("const I18N = {", "embedded interface locales");
 requireText("const GLOSSARY_FORMAT", "embedded glossary loader");
 requireText("globalThis.NecesseGlossaries", "embedded Glossary Manager API");
 requireText("necesse-translator.glossaries.v1", "Glossary Manager storage key");
+requireText("function inspectTerminology", "embedded terminology matcher");
+requireText("term-qa-flagged", "embedded terminology QA interface");
 
 if (/<link[^>]+href=["']\.\//i.test(built)) failures.push("Standalone build still references a local stylesheet.");
 if (/<script[^>]+src=["']\.\//i.test(built)) failures.push("Standalone build still references a local script.");
