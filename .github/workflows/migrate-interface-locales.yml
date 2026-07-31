@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Disable workflow rewrite in migration
+        run: sed -i 's#\.github/workflows/validate.yml#.migration-workflow-placeholder#' scripts/migrate-interface-locales.mjs
+
       - name: Run migration
         run: node scripts/migrate-interface-locales.mjs
 
