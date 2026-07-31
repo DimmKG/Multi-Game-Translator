@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node scripts/build-standalone.mjs",
     "check": "node scripts/check-build.mjs",
-    "verify": "npm run build && npm run check",
+    "validate:glossaries": "node scripts/validate-glossaries.mjs",
+    "verify": "npm run validate:glossaries && npm run build && npm run check",
     "dev": "node scripts/serve.mjs src",
     "preview": "npm run build && node scripts/serve.mjs dist"
   }
