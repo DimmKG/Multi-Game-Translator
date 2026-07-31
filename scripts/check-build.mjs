@@ -16,6 +16,8 @@ requireText("globalThis.NecesseGlossaries", "embedded Glossary Manager API");
 requireText("necesse-translator.glossaries.v1", "Glossary Manager storage key");
 requireText("function inspectTerminology", "embedded terminology matcher");
 requireText("term-qa-flagged", "embedded terminology QA interface");
+requireText("term-review-flag", "embedded Review terminology integration");
+requireText("showCombinedIssues", "embedded combined Review issue filter");
 requireText("term-nav-filter", "embedded terminology navigation controls");
 requireText("focusNextIssue", "embedded terminology issue navigation");
 
