@@ -163,3 +163,79 @@ export const glossaryFormat = Object.freeze({
   catalog: CATALOG_FORMAT,
   version: FORMAT_VERSION
 });
+
+const GLOSSARY_FEEDBACK_TEXT = {
+  en: {
+    enable: "Enable",
+    disable: "Disable",
+    enabled: name => `Glossary “${name}” is enabled.`,
+    disabled: name => `Glossary “${name}” is disabled.`
+  },
+  ru: {
+    enable: "Включить",
+    disable: "Выключить",
+    enabled: name => `Глоссарий «${name}» включён.`,
+    disabled: name => `Глоссарий «${name}» выключен.`
+  },
+  bg: {
+    enable: "Включи",
+    disable: "Изключи",
+    enabled: name => `Речникът „${name}“ е включен.`,
+    disabled: name => `Речникът „${name}“ е изключен.`
+  }
+};
+
+function installGlossaryToggleFeedback() {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return;
+
+  const language = () => document.getElementById("uiLang")?.value || "en";
+  const text = () => GLOSSARY_FEEDBACK_TEXT[language()] || GLOSSARY_FEEDBACK_TEXT.en;
+
+  function updateToggleLabels(root = document) {
+    const messages = text();
+    root.querySelectorAll?.(".gm-toggle").forEach(button => {
+      const enabled = button.classList.contains("on");
+      button.textContent = enabled ? messages.disable : messages.enable;
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+      button.title = enabled ? messages.disable : messages.enable;
+    });
+  }
+
+  let toastTimer = 0;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add("show");
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+  }
+
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.(".gm-toggle");
+    if (!button) return;
+    const name = button.closest(".gm-card")?.querySelector(".gm-info strong")?.textContent?.trim() || "";
+    const willBeEnabled = !button.classList.contains("on");
+    const messages = text();
+    queueMicrotask(() => {
+      updateToggleLabels();
+      showToast(willBeEnabled ? messages.enabled(name) : messages.disabled(name));
+    });
+  }, true);
+
+  document.getElementById("uiLang")?.addEventListener("change", () => updateToggleLabels());
+  new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node.nodeType === Node.ELEMENT_NODE) updateToggleLabels(node);
+      }
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+
+  updateToggleLabels();
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installGlossaryToggleFeedback);
+  else installGlossaryToggleFeedback();
+}
