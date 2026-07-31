@@ -46,11 +46,13 @@ Build the standalone application:
 npm run build
 ```
 
-Build it and verify that it still matches the preserved original baseline:
+Build it and run all repository checks:
 
 ```powershell
 npm run verify
 ```
+
+The verification currently checks the standalone build against the preserved original and validates glossary files and catalogs.
 
 The generated standalone application is written to:
 
@@ -60,6 +62,23 @@ dist/necesse-lang-translator.html
 
 GitHub Actions runs the same verification automatically for pushes and pull requests.
 
+## Glossaries
+
+The repository now defines versioned JSON formats for local glossaries and online glossary catalogs:
+
+- `schemas/glossary-v1.schema.json`
+- `schemas/glossary-catalog-v1.schema.json`
+- `glossaries/catalog.json`
+- `glossaries/examples/bg.example.json`
+
+Validate them separately with:
+
+```powershell
+npm run validate:glossaries
+```
+
+See [`docs/glossaries.md`](docs/glossaries.md) for the format, offline behaviour and contribution rules.
+
 ## Development direction
 
 The first milestone is structural only. Existing behaviour and technical guidance must be preserved while the code is separated into modules.
@@ -68,6 +87,6 @@ Planned follow-up work:
 
 1. Convert Russian-only technical comments and mixed-language instructions to unified English without removing their meaning.
 2. Extract interface localization into validated external locale packs.
-3. Add local and online glossary loading through a versioned JSON format and catalog.
+3. Add local and online glossary loading through the versioned JSON format and catalog.
 4. Introduce project storage, source update tracking, terminology QA and additional review states.
 5. Publish the web build through GitHub Pages while continuing to generate a standalone HTML file.
