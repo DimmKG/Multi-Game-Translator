@@ -1,0 +1,2051 @@
+
+"use strict";
+
+/* ============================================================================
+   ЛОКАЛИЗАЦИЯ ИНТЕРФЕЙСА / UI LOCALIZATION
+   Добавить язык: скопируйте блок и переведите значения. Ключи не меняйте.
+   To add a language: copy a block and translate the values. Keep the keys.
+   Плейсхолдеры вида {n}, {name} подставляются автоматически.
+   ========================================================================== */
+const I18N = {
+  "en": {
+    "app.title": "Necesse — .lang translator",
+    "app.sub": "translator",
+
+    "save.title": "Progress is saved automatically in this browser. Click to review translated strings.",
+    "save.saved": "saved",
+    "save.saving": "saving…",
+    "save.error": "not saved — make a backup",
+    "save.savedAt": "saved {time} · {n} done",
+
+    "btn.enRef": "en.lang reference",
+    "btn.enRefTitle": "Load en.lang — the English original as a reference for every string",
+    "btn.enRefLoaded": "en.lang ✓ {n}",
+    "btn.enRefLoadedTitle": "Reference loaded from {file}: {n} strings matched. Click to replace.",
+    "btn.saveProgress": "Save progress",
+    "btn.saveProgressTitle": "Save the working copy as a compressed progress file — a backup",
+    "btn.loadProgress": "Load progress",
+    "btn.loadProgressTitle": "Load a progress file (.json.gz or .json, including the old format)",
+    "btn.newFile": "New file",
+    "btn.export": "Download .lang",
+    "fname.label": "file:",
+    "fname.title": "Export file name. Necesse expects a language code: ru.lang, pt-BR.lang, es-419.lang",
+
+    "restore.found": "Unfinished session found:",
+    "restore.continue": "Continue",
+    "restore.startOver": "Start over",
+
+    "filter.missing": "Untranslated",
+    "filter.done": "Translated",
+    "filter.same": "Same as English",
+    "filter.all": "All strings",
+    "filter.ws": "Whitespace",
+    "filter.wsTitle": "Strings with stray leading, trailing or double spaces",
+    "side.sections": "Sections",
+
+    "drop.text": "Drop a Necesse translation file here, or pick one manually.<br>The file is processed locally in your browser — nothing is uploaded anywhere.",
+    "drop.pick": "Choose a .lang file",
+    "legend.var": "&lt;variable&gt;",
+    "legend.fmt": "§format",
+
+    "tab.editor": "Editor",
+    "tab.review": "Review",
+    "tab.diff": "Compare",
+
+    "search.ph": "Search by key or text…",
+    "btn.findDbl": "·· double space",
+    "btn.findDblTitle": "Find strings containing a double space",
+    "btn.findTab": "⇥ tab",
+    "btn.findTabTitle": "Find strings containing a tab character (you cannot type one into the field)",
+    "hint.ctrlEnter": "— accept and jump to the next untranslated string",
+
+    "toggle.spell": "Spellcheck",
+    "toggle.spellTitle": "Browser spellchecking in the target language",
+    "toggle.ac": "Autocomplete",
+    "toggle.acTitle": "Autocomplete words from already translated text. Tab or Enter inserts.",
+    "mt.label": "translator",
+    "mt.perLineHint": "translation is per line — press MT on a card",
+    "mt.providerTitle": "Public machine-translation service. The string is sent to the chosen service.",
+    "mt.google": "Google (unofficial)",
+    "mt.langLabel": "language",
+    "mt.langTitle": "Target language code (from the file name): ru, de, pt-BR…",
+    "mt.btn": "MT",
+
+    "review.searchPh": "Search translated…",
+    "review.all": "All",
+    "review.mt": "MT drafts",
+    "review.issues": "With issues",
+    "review.sameEng": "= English",
+    "review.scopeHint": "Only strings you changed · edits go into the export",
+
+    "diff.loadFile": "Load a file to compare",
+    "diff.onlyDiff": "Differences only",
+    "diff.onlyDiffTitle": "Collapse long matching regions, showing only changes with context",
+    "diff.empty": "Load a file (for example another version of ru.lang, or someone else's translation)<br>to compare it line by line with the current translation.",
+    "diff.identical": "The files are identical.",
+    "diff.stat": "of {total} lines",
+    "diff.headLine": "line",
+    "diff.headCurrent": "current translation",
+    "diff.gap": "⋯ matching lines: {n} ⋯",
+    "diff.fileInfo": "{name} · {n} lines",
+
+    "card.copyKey": "Copy key",
+    "card.enOriginal": "English original",
+    "badge.missing": "needs translation",
+    "badge.same": "same as English",
+    "badge.done": "translated",
+    "badge.mt": "MT draft",
+    "tokens.label": "tokens:",
+    "tokens.insertMissing": "Missing from the translation — click to insert",
+    "tokens.insert": "Insert the token into the translation",
+    "mt.btnTitle": "Draft machine translation of the English original (tokens are preserved). Always review it.",
+    "mt.needEnRef": "Load the en.lang reference first — MT needs the English original, not the current translation",
+    "mt.emptySrc": "Nothing to translate — English source is empty",
+    "ws.fixTitle": "Click to remove the stray whitespace",
+    "same.on": "✓ same as English",
+    "same.off": "same as English",
+    "same.title": "Mark that the translation intentionally matches the original (SAME_TRANSLATION)",
+
+    "ws.lead": "leading space",
+    "ws.trail": "trailing space",
+    "ws.dbl": "double space",
+    "ws.tab": "tab",
+    "ws.nbsp": "non-breaking space",
+
+    "rflag.notTranslated": "not translated",
+    "rflag.token": "⚠ token: {list}",
+    "rflag.extra": "+extra: {list}",
+    "rflag.sameEng": "= English",
+    "rflag.ws": "⎵ {list}",
+    "review.enLabel": "english",
+    "review.trLabel": "translation",
+    "review.noRef": "— load en.lang for a reference",
+    "review.edit": "Edit ↗",
+    "review.editTitle": "Open the full card in the editor",
+    "review.checked": "✓ Reviewed",
+    "review.checkedTitle": "Clear the MT draft mark",
+    "review.wsFix": "⎵ Fix",
+    "review.wsFixTitle": "Remove stray whitespace: {list}",
+    "review.emptyNothing": "You haven't changed anything in this file yet — your edits will appear here.",
+    "review.emptyCategory": "Nothing in this category.",
+
+    "empty.noMatch": "Nothing found for this query.",
+    "empty.allDone": "🎉 No untranslated strings left — all done!",
+    "empty.noWs": "✓ No stray whitespace found.",
+    "empty.generic": "Empty.",
+
+    "footnote.main": "{file} · total lines: {total} · left to translate: {missing}",
+    "footnote.same": " · same as English: {n}",
+    "footnote.ws": " · ⚠ whitespace issues: {n}",
+    "mt.errGoogle": "Google: unexpected response",
+    "mt.errUnknownProvider": "Unknown translator",
+    "mt.errTimeout": "timeout",
+    "mt.errNetwork": "network/CORS unavailable",
+    "mt.prefix": "MT: {msg}",
+
+    "toast.keyCopied": "Key copied",
+    "toast.wsFixed": "Whitespace fixed",
+    "toast.noMoreMissing": "No more untranslated strings below",
+    "toast.fileLoaded": "File loaded",
+    "toast.exported": "Saved {name}",
+    "toast.progressSavedGz": "Progress saved · {size} (from {raw})",
+    "toast.progressSaved": "Progress saved · {size}",
+    "toast.progressRestored": "Progress restored",
+    "toast.enMatched": "en.lang: {n} strings matched",
+    "toast.diffLoaded": "Comparison file loaded",
+    "err.noGzip": "this browser cannot decompress gzip",
+    "err.readFile": "Could not read the file: {msg}",
+    "err.unknownFormat": "Unknown progress file format",
+    "err.restoreFailed": "Could not restore the session",
+    "err.generic": "error",
+
+    "query.hint": "«{q}» · found: {n}",
+    "ac.hint": "Tab · Enter to insert · number = mentions",
+    "bytes.mb": " MB",
+    "bytes.kb": " KB",
+    "bytes.b": " B"
+  },
+
+  "ru": {
+    "app.title": "Necesse — переводчик .lang",
+    "app.sub": "переводчик",
+
+    "save.title": "Прогресс автоматически сохраняется в этом браузере. Нажмите, чтобы посмотреть переведённые строки.",
+    "save.saved": "сохранено",
+    "save.saving": "сохранение…",
+    "save.error": "не сохранено — сделайте бэкап",
+    "save.savedAt": "сохранено {time} · {n} готово",
+
+    "btn.enRef": "Референс en.lang",
+    "btn.enRefTitle": "Загрузить en.lang — английский оригинал как референс для всех строк",
+    "btn.enRefLoaded": "en.lang ✓ {n}",
+    "btn.enRefLoadedTitle": "Референс загружен из {file}: сопоставлено {n} строк. Нажмите, чтобы заменить.",
+    "btn.saveProgress": "Сохранить прогресс",
+    "btn.saveProgressTitle": "Сохранить рабочую копию как сжатый файл прогресса — резервная копия",
+    "btn.loadProgress": "Загрузить прогресс",
+    "btn.loadProgressTitle": "Загрузить файл прогресса (.json.gz или .json, включая старый формат)",
+    "btn.newFile": "Новый файл",
+    "btn.export": "Скачать .lang",
+    "fname.label": "файл:",
+    "fname.title": "Имя файла при экспорте. Necesse ждёт код языка: ru.lang, pt-BR.lang, es-419.lang",
+
+    "restore.found": "Найдена незавершённая сессия:",
+    "restore.continue": "Продолжить",
+    "restore.startOver": "Начать заново",
+
+    "filter.missing": "Непереведённые",
+    "filter.done": "Переведённые",
+    "filter.same": "Как в английском",
+    "filter.all": "Все строки",
+    "filter.ws": "Пробелы",
+    "filter.wsTitle": "Строки с лишними пробелами в начале, в конце или двойными пробелами",
+    "side.sections": "Разделы",
+
+    "drop.text": "Перетащите сюда файл перевода Necesse или выберите его вручную.<br>Файл обрабатывается локально в браузере — ничего никуда не отправляется.",
+    "drop.pick": "Выбрать файл .lang",
+    "legend.var": "&lt;переменная&gt;",
+    "legend.fmt": "§формат",
+
+    "tab.editor": "Редактор",
+    "tab.review": "Ревью",
+    "tab.diff": "Сравнение",
+
+    "search.ph": "Поиск по ключу или тексту…",
+    "btn.findDbl": "·· двойной пробел",
+    "btn.findDblTitle": "Найти строки с двойным пробелом",
+    "btn.findTab": "⇥ табуляция",
+    "btn.findTabTitle": "Найти строки с символом табуляции (в поле ввода его не набрать вручную)",
+    "hint.ctrlEnter": "— принять и перейти к следующей непереведённой",
+
+    "toggle.spell": "Орфография",
+    "toggle.spellTitle": "Проверка орфографии встроенным средством браузера на языке перевода",
+    "toggle.ac": "Автодополнение",
+    "toggle.acTitle": "Автодополнение слов из уже переведённого текста. Tab или Enter — вставить.",
+    "mt.label": "переводчик",
+    "mt.perLineHint": "перевод построчный — кнопка МТ на карточке",
+    "mt.providerTitle": "Публичный сервис машинного перевода. Текст строки отправляется в выбранный сервис.",
+    "mt.google": "Google (неоф.)",
+    "mt.langLabel": "язык",
+    "mt.langTitle": "Код целевого языка (из имени файла): ru, de, pt-BR…",
+    "mt.btn": "МТ",
+
+    "review.searchPh": "Поиск в переведённых…",
+    "review.all": "Все",
+    "review.mt": "МТ-черновики",
+    "review.issues": "С проблемами",
+    "review.sameEng": "= англ.",
+    "review.scopeHint": "Только строки, изменённые вами · правки идут в экспорт",
+
+    "diff.loadFile": "Загрузить файл для сравнения",
+    "diff.onlyDiff": "Только отличия",
+    "diff.onlyDiffTitle": "Скрывать длинные совпадающие фрагменты, показывая только изменения с контекстом",
+    "diff.empty": "Загрузите файл (например, ru.lang другой версии или чужой перевод),<br>чтобы построчно сравнить его с текущим переводом.",
+    "diff.identical": "Файлы совпадают полностью.",
+    "diff.stat": "из {total} строк",
+    "diff.headLine": "стр.",
+    "diff.headCurrent": "текущий перевод",
+    "diff.gap": "⋯ совпадающих строк: {n} ⋯",
+    "diff.fileInfo": "{name} · {n} строк",
+
+    "card.copyKey": "Скопировать ключ",
+    "card.enOriginal": "английский оригинал",
+    "badge.missing": "нужен перевод",
+    "badge.same": "как в англ.",
+    "badge.done": "переведено",
+    "badge.mt": "МТ-черновик",
+    "tokens.label": "токены:",
+    "tokens.insertMissing": "Отсутствует в переводе — нажмите, чтобы вставить",
+    "tokens.insert": "Вставить токен в перевод",
+    "mt.btnTitle": "Черновой машинный перевод английского оригинала (токены сохраняются). Обязательно проверьте.",
+    "mt.needEnRef": "Сначала загрузите референс en.lang — МТ нужен английский оригинал, а не текущий перевод",
+    "mt.emptySrc": "Нечего переводить — английский оригинал пуст",
+    "ws.fixTitle": "Нажмите, чтобы убрать лишние пробелы",
+    "same.on": "✓ как в английском",
+    "same.off": "как в английском",
+    "same.title": "Пометить, что перевод намеренно совпадает с оригиналом (SAME_TRANSLATION)",
+
+    "ws.lead": "пробел в начале",
+    "ws.trail": "пробел в конце",
+    "ws.dbl": "двойной пробел",
+    "ws.tab": "табуляция",
+    "ws.nbsp": "неразрывный пробел",
+
+    "rflag.notTranslated": "не переведено",
+    "rflag.token": "⚠ токен: {list}",
+    "rflag.extra": "+лишний: {list}",
+    "rflag.sameEng": "= англ.",
+    "rflag.ws": "⎵ {list}",
+    "review.enLabel": "английский",
+    "review.trLabel": "перевод",
+    "review.noRef": "— загрузите en.lang для референса",
+    "review.edit": "Править ↗",
+    "review.editTitle": "Открыть полную карточку в редакторе",
+    "review.checked": "✓ Проверено",
+    "review.checkedTitle": "Снять пометку МТ-черновика",
+    "review.wsFix": "⎵ Исправить",
+    "review.wsFixTitle": "Убрать лишние пробелы: {list}",
+    "review.emptyNothing": "Вы ещё ничего не меняли в этом файле — правки появятся здесь.",
+    "review.emptyCategory": "В этой категории пусто.",
+
+    "empty.noMatch": "Ничего не найдено по запросу.",
+    "empty.allDone": "🎉 Непереведённых строк нет — всё готово!",
+    "empty.noWs": "✓ Лишних пробелов не найдено.",
+    "empty.generic": "Пусто.",
+
+    "footnote.main": "{file} · всего строк: {total} · осталось перевести: {missing}",
+    "footnote.same": " · как в англ.: {n}",
+    "footnote.ws": " · ⚠ проблемы с пробелами: {n}",
+    "mt.errGoogle": "Google: неожиданный ответ",
+    "mt.errUnknownProvider": "Неизвестный переводчик",
+    "mt.errTimeout": "таймаут",
+    "mt.errNetwork": "сеть/CORS недоступны",
+    "mt.prefix": "МТ: {msg}",
+
+    "toast.keyCopied": "Ключ скопирован",
+    "toast.wsFixed": "Пробелы исправлены",
+    "toast.noMoreMissing": "Больше непереведённых ниже нет",
+    "toast.fileLoaded": "Файл загружен",
+    "toast.exported": "Сохранён {name}",
+    "toast.progressSavedGz": "Прогресс сохранён · {size} (из {raw})",
+    "toast.progressSaved": "Прогресс сохранён · {size}",
+    "toast.progressRestored": "Прогресс восстановлен",
+    "toast.enMatched": "en.lang: сопоставлено {n} строк",
+    "toast.diffLoaded": "Файл для сравнения загружен",
+    "err.noGzip": "браузер не поддерживает распаковку gzip",
+    "err.readFile": "Не удалось прочитать файл: {msg}",
+    "err.unknownFormat": "Неизвестный формат файла прогресса",
+    "err.restoreFailed": "Не удалось восстановить сессию",
+    "err.generic": "ошибка",
+
+    "query.hint": "«{q}» · найдено: {n}",
+    "ac.hint": "Tab · Enter — вставить · число = упоминаний",
+    "bytes.mb": " МБ",
+    "bytes.kb": " КБ",
+    "bytes.b": " Б"
+  },
+  "bg": {
+    "app.title": "Necesse — .lang преводач",
+    "app.sub": "преводач",
+
+    "save.title": "Прогресът се запазва автоматично в този браузър. Кликнете, за да прегледате преведените низове.",
+    "save.saved": "запазено",
+    "save.saving": "запазване...",
+    "save.error": "не е запазено — направете резервно копие",
+    "save.savedAt": "запазено в {time} · {n} готови",
+
+    "btn.enRef": "en.lang референция",
+    "btn.enRefTitle": "Заредете en.lang — английският оригинал като еталон за всеки низ",
+    "btn.enRefLoaded": "en.lang ✓ {n}",
+    "btn.enRefLoadedTitle": "Референцията е заредена от {file}: {n} низа съвпадат. Кликнете за замяна.",
+    "btn.saveProgress": "Запази прогреса",
+    "btn.saveProgressTitle": "Запазете работното копие като компресиран файл — резервно копие",
+    "btn.loadProgress": "Зареди прогрес",
+    "btn.loadProgressTitle": "Заредете файл с прогрес (.json.gz или .json)",
+    "btn.newFile": "Нов файл",
+    "btn.export": "Изтегли .lang",
+    "fname.label": "файл:",
+    "fname.title": "Име на файла за експортиране. Necesse очаква езиков код: ru.lang, bg.lang и т.н.",
+
+    "restore.found": "Намерена е незавършена сесия:",
+    "restore.continue": "Продължи",
+    "restore.startOver": "Започни отначало",
+
+    "filter.missing": "Непреведени",
+    "filter.done": "Преведени",
+    "filter.same": "Като оригинала",
+    "filter.all": "Всички низове",
+    "filter.ws": "Интервали",
+    "filter.wsTitle": "Низове с излишни интервали в началото, края или двойни интервали",
+    "side.sections": "Раздели",
+
+    "drop.text": "Пуснете файл за превод на Necesse тук или го изберете ръчно.<br>Файлът се обработва локално във вашия браузър.",
+    "drop.pick": "Изберете .lang файл",
+    "legend.var": "&lt;променлива&gt;",
+    "legend.fmt": "§формат",
+
+    "tab.editor": "Редактор",
+    "tab.review": "Преглед",
+    "tab.diff": "Сравнение",
+
+    "search.ph": "Търсене по ключ или текст...",
+    "btn.findDbl": "·· двоен интервал",
+    "btn.findDblTitle": "Намери низове, съдържащи двоен интервал",
+    "btn.findTab": "⇥ таб",
+    "btn.findTabTitle": "Намери низове, съдържащи таб",
+    "hint.ctrlEnter": "— приеми и скочи на следващия непреведен низ",
+
+    "toggle.spell": "Правопис",
+    "toggle.spellTitle": "Проверка на правописа от браузъра за целевия език",
+    "toggle.ac": "Автодопълване",
+    "toggle.acTitle": "Автодопълване на думи от вече преведения текст. Tab или Enter вмъква думата.",
+    "mt.label": "преводач",
+    "mt.perLineHint": "преводът е ред по ред — натиснете MT върху картата",
+    "mt.providerTitle": "Публична услуга за машинен превод.",
+    "mt.google": "Google (неофициално)",
+    "mt.langLabel": "език",
+    "mt.langTitle": "Код на целевия език (от името на файла): bg, ru, de...",
+    "mt.btn": "MT",
+
+    "review.searchPh": "Търсене в преведените...",
+    "review.all": "Всички",
+    "review.mt": "MT чернови",
+    "review.issues": "С проблеми",
+    "review.sameEng": "= Английски",
+    "review.scopeHint": "Само променени от вас низове",
+
+    "diff.loadFile": "Зареди файл за сравнение",
+    "diff.onlyDiff": "Само разлики",
+    "diff.onlyDiffTitle": "Скрий еднаквите части, покажи само промените",
+    "diff.empty": "Заредете файл, за да го сравните ред по ред с текущия превод.",
+    "diff.identical": "Файловете са идентични.",
+    "diff.stat": "от {total} реда",
+    "diff.headLine": "ред",
+    "diff.headCurrent": "текущ превод",
+    "diff.gap": "⋯ еднакви редове: {n} ⋯",
+    "diff.fileInfo": "{name} · {n} реда",
+
+    "card.copyKey": "Копирай ключа",
+    "card.enOriginal": "Английски оригинал",
+    "badge.missing": "нужен превод",
+    "badge.same": "съвпада с оригинала",
+    "badge.done": "преведено",
+    "badge.mt": "MT чернова",
+    "tokens.label": "токени:",
+    "tokens.insertMissing": "Липсва в превода — кликнете за вмъкване",
+    "tokens.insert": "Вмъкни токена в превода",
+    "mt.btnTitle": "Машинен превод на английския оригинал (токените се запазват). Винаги проверявайте резултата.",
+    "mt.needEnRef": "Първо заредете en.lang — MT се нуждае от английския оригинал",
+    "mt.emptySrc": "Няма нищо за превод — източникът е празен",
+    "ws.fixTitle": "Кликнете за премахване на излишните интервали",
+    "same.on": "✓ съвпада с оригинала",
+    "same.off": "съвпада с оригинала",
+    "same.title": "Отбележете, че преводът умишлено съвпада с оригинала (SAME_TRANSLATION)",
+
+    "ws.lead": "интервал в началото",
+    "ws.trail": "интервал в края",
+    "ws.dbl": "двоен интервал",
+    "ws.tab": "табулация",
+    "ws.nbsp": "непрекъсваем интервал",
+
+    "rflag.notTranslated": "не е преведено",
+    "rflag.token": "⚠ токен: {list}",
+    "rflag.extra": "+излишен: {list}",
+    "rflag.sameEng": "= Английски",
+    "rflag.ws": "⎵ {list}",
+    "review.enLabel": "английски",
+    "review.trLabel": "превод",
+    "review.noRef": "— заредете en.lang за референция",
+    "review.edit": "Редактирай ↗",
+    "review.editTitle": "Отвори в пълния редактор",
+    "review.checked": "✓ Проверено",
+    "review.checkedTitle": "Премахни маркировката за MT чернова",
+    "review.wsFix": "⎵ Поправи",
+    "review.wsFixTitle": "Премахни излишните интервали: {list}",
+    "review.emptyNothing": "Все още не сте променили нищо в този файл.",
+    "review.emptyCategory": "Няма нищо в тази категория.",
+
+    "empty.noMatch": "Нищо не е намерено.",
+    "empty.allDone": "🎉 Няма непреведени низове — всичко е готово!",
+    "empty.noWs": "✓ Не са открити проблеми с интервалите.",
+    "empty.generic": "Празно.",
+
+    "footnote.main": "{file} · общо редове: {total} · остава за превод: {missing}",
+    "footnote.same": " · съвпадат с оригинала: {n}",
+    "footnote.ws": " · ⚠ проблеми с интервалите: {n}",
+    "mt.errGoogle": "Google: неочакван отговор",
+    "mt.errUnknownProvider": "Неизвестен преводач",
+    "mt.errTimeout": "изтичане на времето",
+    "mt.errNetwork": "мрежова грешка/CORS",
+    "mt.prefix": "MT: {msg}",
+
+    "toast.keyCopied": "Ключът е копиран",
+    "toast.wsFixed": "Интервалите са коригирани",
+    "toast.noMoreMissing": "Няма повече непреведени низове надолу",
+    "toast.fileLoaded": "Файлът е зареден",
+    "toast.exported": "Запазено като {name}",
+    "toast.progressSavedGz": "Прогресът е запазен · {size} (от {raw})",
+    "toast.progressSaved": "Прогресът е запазен · {size}",
+    "toast.progressRestored": "Прогресът е възстановен",
+    "toast.enMatched": "en.lang: сопоставени са {n} низа",
+    "toast.diffLoaded": "Файлът за сравнение е зареден",
+    "err.noGzip": "този браузър не поддържа gzip декомпресия",
+    "err.readFile": "Грешка при четене: {msg}",
+    "err.unknownFormat": "Неизвестен формат на файла с прогрес",
+    "err.restoreFailed": "Неуспешно възстановяване на сесията",
+    "err.generic": "грешка",
+
+    "query.hint": "«{q}» · намерени: {n}",
+    "ac.hint": "Tab/Enter за вмъкване · число = брой срещания",
+    "bytes.mb": " МБ",
+    "bytes.kb": " КБ",
+    "bytes.b": " Б"
+  },
+};
+(function(){
+  const LS_KEY = "necesse_lang_translator_v1";
+  const MISS = "MISSING_TRANSLATION:";
+  const SAME = "SAME_TRANSLATION:";
+  const TOKEN_RE = /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|[0-9A-Za-z])|\\n/g;
+
+  const $ = id => document.getElementById(id);
+
+  // ---------- i18n ----------
+  const LANG_KEY = "necesse_lang_translator_ui_lang";
+  function detectLang(){
+    try{
+      const saved = localStorage.getItem(LANG_KEY);
+      if (saved && I18N[saved]) return saved;
+    }catch(e){}
+    const nav = (navigator.language || "en").toLowerCase();
+    if (nav.startsWith("bg")) return "bg"; // Добавяме проверка за български
+    if (nav.startsWith("ru")) return "ru";
+    return "en";
+  }
+  let UI = detectLang();
+  function t(key, vars){
+    let s = (I18N[UI] && I18N[UI][key]);
+    if (s == null) s = (I18N.en[key] != null ? I18N.en[key] : key);
+    if (vars) for (const k in vars) s = s.split("{"+k+"}").join(String(vars[k]));
+    return s;
+  }
+  function applyI18n(root){
+    const scope = root || document;
+    scope.querySelectorAll("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    scope.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+    scope.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
+    scope.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+    document.documentElement.lang = UI;
+    document.title = t("app.title");
+  }
+  function setUiLang(code){
+    if (!I18N[code]) return;
+    UI = code;
+    try{ localStorage.setItem(LANG_KEY, code); }catch(e){}
+    $("uiLang").value = code;
+    applyI18n();
+    if (state.items.length){
+      updateEnBtn(); refreshMeter(); renderSectionJumps();
+      $("diffName").textContent = state.diffOther ? t("diff.fileInfo", {name: state.diffOther.name, n: state.diffOther.lines.length}) : "";
+      setView(state.view);
+    }
+  }
+
+  // Strip download-duplication artifacts ("ru_1_.lang", "ru (1).lang") without
+  // touching real locale codes like pt-BR, zh-CN or es-419.
+  function cleanName(name){
+    let base = String(name || "ru.lang").replace(/\.lang$/i, "");
+    base = base.replace(/\s*\(\d+\)\s*$/, "");   // "ru (1)" -> "ru"
+    base = base.replace(/_\d+_?/g, "");           // "ru_1_" / "ru_1" -> "ru"  (locales never use "_")
+    base = base.replace(/^_+|_+$/g, "");
+    return (base || "ru") + ".lang";
+  }
+
+  const state = {
+    filename: "ru.lang",
+    eol: "\r\n",
+    items: [],          // parsed lines in order
+    filter: "missing",
+    query: "",
+    saveTimer: null,
+    // machine-translation / spellcheck
+    spellcheck: true,
+    mtProvider: "google",
+    targetLang: "ru",
+    byId: new Map(),
+    savedAt: 0,
+    view: "editor",
+    reviewFilter: "all",
+    reviewQuery: "",
+    acEnabled: true,
+    enFilename: "",
+    diffOther: null,   // {name, lines[]}
+    diffOnly: true,    // collapse equal runs
+  };
+
+  // ---------- parsing ----------
+  function classifyLine(line){
+    const t = line.trim();
+    if (t === "") return {type:"blank", raw:line};
+    if (t.startsWith("//")) return {type:"comment", raw:line};
+    if (/^\[.*\]$/.test(t)) return {type:"section", raw:line, name:t};
+    return {type:"comment", raw:line};   // passthrough for anything without "="
+  }
+  function parse(text){
+    const eol = text.includes("\r\n") ? "\r\n" : "\n";
+    const lines = text.split(/\r\n|\n/);
+    const items = lines.map((line, idx) => {
+      const t = line.trim();
+      if (t === "" || t.startsWith("//") || /^\[.*\]$/.test(t)) return classifyLine(line);
+      let pfx = "none", body = line;
+      if (line.startsWith(MISS)) { pfx="missing"; body=line.slice(MISS.length); }
+      else if (line.startsWith(SAME)) { pfx="same"; body=line.slice(SAME.length); }
+      const eq = body.indexOf("=");
+      if (eq < 0) return classifyLine(line);
+      const key = body.slice(0, eq);
+      const english = body.slice(eq+1);       // original value (English for missing)
+      // working value: for missing -> prefill with english so tokens are preserved; else the existing value
+      return {
+        type:"entry", id:idx, key, english,
+        value: english,                        // current translation text
+        markedSame: pfx === "same",
+        wasMissing: pfx === "missing",
+        touched: false,                        // user changed it in this workspace
+      };
+    });
+    return {eol, items};
+  }
+
+  // derived status: "missing" | "done" | "same"
+  function statusOf(e){
+    if (e.markedSame) return "same";
+    if (e.wasMissing){
+      if (e.value.trim() === "" || e.value === e.english) return "missing";
+      return "done";
+    }
+    // originally translated line
+    if (e.value.trim() === "") return "missing";
+    return "done";
+  }
+
+  function tokensOf(str){
+    const m = str.match(TOKEN_RE);
+    return m ? m : [];
+  }
+  function tokClass(tok){
+    if (tok.startsWith("<")) return "var";
+    if (tok.startsWith("[")) return "ref";
+    if (tok.startsWith("§")) return "fmt";
+    return "nl"; // \n
+  }
+  // tokens present in english but missing from translation (multiset-aware)
+  function missingTokens(e){
+    const src = tokensOf(baseEN(e));
+    if (!src.length) return [];
+    const have = tokensOf(e.value);
+    const pool = have.slice();
+    const miss = [];
+    for (const tk of src){
+      const i = pool.indexOf(tk);
+      if (i === -1) miss.push(tk); else pool.splice(i,1);
+    }
+    // unique preserve order
+    return [...new Set(miss)];
+  }
+
+  const esc = s => s.replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+
+  // ---------- whitespace anomalies ----------
+  const RE_LEAD = /^[ \t\u00A0]+/, RE_TRAIL = /[ \t\u00A0]+$/, RE_DBL = / {2,}/;
+  const RE_WS_ANY = /^[ \t\u00A0]|[ \t\u00A0]$|[\t\u00A0]| {2}/;
+  // runs to highlight: leading, trailing, any tab/nbsp, inner double spaces
+  const RE_WS_RUN = /^[ \t\u00A0]+|[ \t\u00A0]+$|[\t\u00A0]+| {2,}/g;
+  function wsGlyphs(s){
+    return s.replace(/ /g,"·").replace(/\t/g,"⇥").replace(/\u00A0/g,"⍽");
+  }
+  function wsMark(s){ return s ? `<span class="ws">${wsGlyphs(s)}</span>` : ""; }
+  // escape + make runs of 2+ spaces visible
+  function escWS(s){
+    return esc(s).replace(/ {2,}/g, m => `<span class="ws">${"·".repeat(m.length)}</span>`)
+                 .replace(/\t/g, `<span class="ws">⇥</span>`)
+                 .replace(/\u00A0/g, `<span class="ws">⍽</span>`);
+  }
+  // Overlay markup for a textarea: keeps the ORIGINAL characters (so widths line up
+  // with the textarea on top) and only paints backgrounds behind whitespace runs.
+  function wsOverlayHTML(v){
+    let out = "", last = 0, m;
+    RE_WS_RUN.lastIndex = 0;
+    while ((m = RE_WS_RUN.exec(v)) !== null){
+      if (m[0] === ""){ RE_WS_RUN.lastIndex++; continue; }
+      out += esc(v.slice(last, m.index));
+      out += `<span class="wsb">${esc(m[0])}</span>`;
+      last = m.index + m[0].length;
+    }
+    out += esc(v.slice(last));
+    return out + "\n";   // trailing newline keeps the last line's height stable
+  }
+  // Flags whitespace in the translation that the English source doesn't have.
+  function wsScan(e){
+    const v = e.value, en = sourceEN(e);
+    const lead  = RE_LEAD.test(v)  && !(en != null && RE_LEAD.test(en));
+    const trail = RE_TRAIL.test(v) && !(en != null && RE_TRAIL.test(en));
+    const core  = v.replace(RE_LEAD,"").replace(RE_TRAIL,"");
+    const enCore = en != null ? en.replace(RE_LEAD,"").replace(RE_TRAIL,"") : null;
+    const dbl   = RE_DBL.test(core) && !(enCore != null && RE_DBL.test(enCore));
+    const tab   = v.includes("\t") && !(en != null && en.includes("\t"));
+    const nbsp  = v.includes("\u00A0") && !(en != null && en.includes("\u00A0"));
+    return {lead, trail, dbl, tab, nbsp, any: lead||trail||dbl||tab||nbsp};
+  }
+  function wsLabel(w){
+    const p = [];
+    if (w.lead)  p.push(t("ws.lead"));
+    if (w.trail) p.push(t("ws.trail"));
+    if (w.dbl)   p.push(t("ws.dbl"));
+    if (w.tab)   p.push(t("ws.tab"));
+    if (w.nbsp)  p.push(t("ws.nbsp"));
+    return p.join(", ");
+  }
+  // normalize: strip stray edges, collapse doubles, keep the English source's own edges
+  function wsFix(e){
+    const en = sourceEN(e);
+    let v = e.value.replace(/\t/g," ").replace(/\u00A0/g," ")
+                   .replace(RE_LEAD,"").replace(RE_TRAIL,"")
+                   .replace(/ {2,}/g," ");
+    if (en != null){
+      v = ((en.match(RE_LEAD)||[""])[0]) + v + ((en.match(RE_TRAIL)||[""])[0]);
+    }
+    return v;
+  }
+  function wsCount(){
+    let n = 0;
+    for (const e of state.items) if (e.type==="entry" && wsScan(e).any) n++;
+    return n;
+  }
+  function highlight(str){
+    const lead = (str.match(RE_LEAD)||[""])[0];
+    const trail = lead.length === str.length ? "" : (str.match(RE_TRAIL)||[""])[0];
+    const body = str.slice(lead.length, str.length - trail.length);
+    let out = "", last = 0, m;
+    TOKEN_RE.lastIndex = 0;
+    while ((m = TOKEN_RE.exec(body)) !== null){
+      out += escWS(body.slice(last, m.index));
+      const tk = m[0];
+      out += `<span class="t-${tokClass(tk)}">${esc(tk)}</span>`;
+      last = m.index + tk.length;
+    }
+    out += escWS(body.slice(last));
+    return wsMark(lead) + out + wsMark(trail);
+  }
+
+  // English source for an entry: en.lang reference if loaded, else the English
+  // that shipped inline for MISSING entries. null when no English is available.
+  function sourceEN(e){ return (e.ref != null) ? e.ref : (e.wasMissing ? e.english : null); }
+  function baseEN(e){ const s = sourceEN(e); return s != null ? s : e.english; }
+
+  function parseEnLang(text){
+    const map = new Map();
+    for (const raw of text.split(/\r\n|\n/)){
+      const t = raw.trim();
+      if (t==="" || t.startsWith("//") || /^\[.*\]$/.test(t)) continue;
+      let body = raw;
+      if (body.startsWith(MISS)) body = body.slice(MISS.length);
+      else if (body.startsWith(SAME)) body = body.slice(SAME.length);
+      const eq = body.indexOf("="); if (eq < 0) continue;
+      map.set(body.slice(0, eq), body.slice(eq+1));
+    }
+    return map;
+  }
+  function applyEnRef(map){
+    let matched = 0;
+    for (const e of state.items){
+      if (e.type !== "entry") continue;
+      const r = map.get(e.key);
+      if (r != null){ e.ref = r; matched++; }
+    }
+    return matched;
+  }
+  function updateEnBtn(){
+    const b = $("btnEnRef"); if (!b) return;
+    if (state.enFilename){
+      const n = state.items.filter(e => e.type==="entry" && e.ref != null).length;
+      b.textContent = t("btn.enRefLoaded", {n});
+      b.classList.add("okbtn");
+      b.title = t("btn.enRefLoadedTitle", {file: state.enFilename, n});
+    } else {
+      b.textContent = t("btn.enRef");
+      b.title = t("btn.enRefTitle");
+      b.classList.remove("okbtn");
+    }
+  }
+
+  // ---------- counts + progress ----------
+  function counts(){
+    let missing=0, done=0, same=0, total=0, missBase=0, missDone=0, touched=0;
+    for (const it of state.items){
+      if (it.type !== "entry") continue;
+      total++;
+      if (it.touched) touched++;
+      const s = statusOf(it);
+      if (s==="missing") missing++; else if (s==="same") same++; else done++;
+      if (it.wasMissing){ missBase++; if (s!=="missing") missDone++; }
+    }
+    return {missing, done, same, total, missBase, missDone, touched};
+  }
+  function refreshMeter(){
+    const c = counts();
+    $("c-missing").textContent = c.missing;
+    $("c-done").textContent = c.done;
+    $("c-same").textContent = c.same;
+    $("c-all").textContent = c.total;
+    const ws = wsCount();
+    $("c-ws").textContent = ws;
+    const wsBtn = document.querySelector('.filt[data-f="ws"]');
+    if (wsBtn) wsBtn.classList.toggle("warn", ws > 0);
+    const pct = c.missBase ? Math.round(c.missDone / c.missBase * 100) : 100;
+    $("fill").style.width = pct + "%";
+    $("pct").innerHTML = `<b>${c.missDone}</b> / ${c.missBase} &nbsp;(${pct}%)`;
+    $("footnote").innerHTML =
+      esc(t("footnote.main", {file: state.filename, total: c.total, missing: c.missing})) +
+      (c.same ? esc(t("footnote.same", {n: c.same})) : "") +
+      (ws ? `<span style="color:var(--warn)">${esc(t("footnote.ws", {n: ws}))}</span>` : "");
+    const trc = $("tabReviewCount"); if (trc) trc.textContent = c.touched;
+    if (state.view === "review") updateReviewCounts();
+  }
+
+  // ---------- render list ----------
+  function matchFilter(e){
+    const s = statusOf(e);
+    if (state.filter === "all") { /* pass */ }
+    else if (state.filter === "ws") { if (!wsScan(e).any) return false; }
+    else if (state.filter === "missing" && s !== "missing") return false;
+    else if (state.filter === "done" && s !== "done") return false;
+    else if (state.filter === "same" && s !== "same") return false;
+    if (state.query){
+      const q = state.query.toLowerCase();
+      if (!e.key.toLowerCase().includes(q) &&
+          !e.english.toLowerCase().includes(q) &&
+          !e.value.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }
+
+  function renderList(){
+    AC.hide();
+    const list = $("list");
+    list.innerHTML = "";
+    let curSection = null, shown = 0, frag = document.createDocumentFragment();
+
+    // walk items in order, inserting section headers before their entries
+    let pendingSection = null;
+    for (const it of state.items){
+      if (it.type === "section"){ pendingSection = it.name; continue; }
+      if (it.type !== "entry") continue;
+      if (!matchFilter(it)) continue;
+      if (pendingSection && pendingSection !== curSection){
+        const h = document.createElement("div");
+        h.className = "sec-head";
+        h.textContent = pendingSection.replace(/^\[|\]$/g,"");
+        frag.appendChild(h);
+        curSection = pendingSection;
+      } else if (pendingSection === null && curSection === null){
+        // entries before any section
+      }
+      pendingSection = curSection; // keep header sticky until next section
+      frag.appendChild(buildCard(it));
+      shown++;
+    }
+
+    if (shown === 0){
+      const d = document.createElement("div");
+      d.style.cssText = "text-align:center;color:var(--ink-faint);padding:60px 20px;font-size:14px";
+      d.textContent = state.query ? t("empty.noMatch") :
+        (state.filter === "missing" ? t("empty.allDone") :
+         state.filter === "ws" ? t("empty.noWs") : t("empty.generic"));
+      frag.appendChild(d);
+    }
+    list.appendChild(frag);
+    list.scrollTop = 0;
+  }
+
+  function buildCard(e){
+    const card = document.createElement("div");
+    const s = statusOf(e);
+    card.className = "card st-" + s;
+    card.dataset.key = e.key;
+    card.dataset.idx = e.id;
+
+    // row1
+    const r1 = document.createElement("div"); r1.className = "row1";
+    const key = document.createElement("button");
+    key.className = "key"; key.textContent = e.key; key.title = t("card.copyKey");
+    key.onclick = () => { navigator.clipboard?.writeText(e.key); toast(t("toast.keyCopied")); };
+    const badge = document.createElement("span");
+    badge.className = "badge " + (s==="missing"?"b-missing":s==="same"?"b-same":"b-done");
+    badge.textContent = s==="missing"?t("badge.missing"):s==="same"?t("badge.same"):t("badge.done");
+    const mtBadge = document.createElement("span");
+    mtBadge.className = "badge b-mt" + (e.mtDraft && s==="done" ? " on" : "");
+    mtBadge.textContent = t("badge.mt");
+    r1.appendChild(key); r1.appendChild(badge); r1.appendChild(mtBadge);
+    r1.appendChild(Object.assign(document.createElement("div"),{className:"spacer"}));
+    card.appendChild(r1);
+
+    // original (English reference from en.lang, or inline English for missing entries)
+    const en = sourceEN(e);
+    if (en != null){
+      const orig = document.createElement("div"); orig.className = "orig";
+      orig.innerHTML = `<span class="olabel">${esc(t("card.enOriginal"))}</span>${highlight(en)}`;
+      card.appendChild(orig);
+    }
+
+    // textarea + whitespace overlay
+    const {wrap, ta} = makeTextarea(false);
+    ta.className = "tr"; ta.value = e.value; ta.rows = 1;
+    ta.spellcheck = state.spellcheck; ta.lang = state.targetLang || "ru";
+    autosize(ta); syncWs(ta);
+    ta.addEventListener("input", () => {
+      e.value = ta.value; e.mtDraft = false; e.touched = true; autosize(ta); syncWs(ta);
+      updateCard(card, e); refreshMeter(); scheduleSave();
+    });
+    ta.addEventListener("keydown", ev => {
+      if ((ev.ctrlKey||ev.metaKey) && ev.key === "Enter"){
+        ev.preventDefault(); focusNextMissing(card);
+      }
+    });
+    card.appendChild(wrap);
+
+    // row3: tokens + same toggle + warnings
+    const r3 = document.createElement("div"); r3.className = "row3";
+    r3.dataset.role = "tokens";
+    card.appendChild(r3);
+    renderTokens(r3, e, ta, card);
+
+    return card;
+  }
+
+  function renderTokens(r3, e, ta, card){
+    r3.innerHTML = "";
+    const toks = [...new Set(tokensOf(baseEN(e)))];
+    const miss = new Set(missingTokens(e));
+    if (toks.length){
+      const lead = document.createElement("span"); lead.className="toklead"; lead.textContent=t("tokens.label");
+      r3.appendChild(lead);
+      for (const tk of toks){
+        const c = document.createElement("button");
+        const cls = tokClass(tk);
+        c.className = "chip " + cls + (miss.has(tk) ? " miss" : "");
+        c.textContent = tk;
+        c.title = miss.has(tk) ? t("tokens.insertMissing") : t("tokens.insert");
+        c.onclick = () => { insertAtCursor(ta, tk); e.value = ta.value; e.touched = true; autosize(ta); updateCard(card,e); refreshMeter(); scheduleSave(); };
+        r3.appendChild(c);
+      }
+    }
+    // machine-translation button
+    const mt = document.createElement("button");
+    mt.className = "mtbtn";
+    mt.innerHTML = `<span class="sp2"></span>${esc(t("mt.btn"))}`;
+    mt.title = t("mt.btnTitle");
+    mt.onclick = () => translateEntry(e, ta, card, mt);
+    r3.appendChild(mt);
+    // whitespace warning + one-click fix
+    const w = wsScan(e);
+    if (w.any){
+      const fix = document.createElement("button");
+      fix.className = "chip wsfix";
+      fix.textContent = "⚠ " + wsLabel(w);
+      fix.title = t("ws.fixTitle");
+      fix.onclick = () => {
+        e.value = wsFix(e); e.touched = true; ta.value = e.value; autosize(ta); syncWs(ta);
+        updateCard(card, e); refreshMeter(); scheduleSave(); toast(t("toast.wsFixed"));
+      };
+      r3.appendChild(fix);
+    }
+    // same-as-english toggle
+    const sb = document.createElement("button");
+    sb.className = "samebtn" + (e.markedSame ? " on" : "");
+    sb.textContent = e.markedSame ? t("same.on") : t("same.off");
+    sb.title = t("same.title");
+    sb.onclick = () => {
+      e.markedSame = !e.markedSame; e.touched = true;
+      if (e.markedSame && e.value.trim()===""){ e.value = e.english; ta.value = e.english; autosize(ta); syncWs(ta); }
+      updateCard(card, e); refreshMeter(); scheduleSave();
+    };
+    r3.appendChild(sb);
+  }
+
+  function updateCard(card, e){
+    const s = statusOf(e);
+    card.className = "card st-" + s;
+    const badge = card.querySelector(".badge:not(.b-mt)");
+    if (badge){
+      badge.className = "badge " + (s==="missing"?"b-missing":s==="same"?"b-same":"b-done");
+      badge.textContent = s==="missing"?t("badge.missing"):s==="same"?t("badge.same"):t("badge.done");
+    }
+    const mtBadge = card.querySelector(".b-mt");
+    if (mtBadge) mtBadge.classList.toggle("on", !!e.mtDraft && s==="done");
+    const r3 = card.querySelector('[data-role="tokens"]');
+    const ta = card.querySelector("textarea");
+    if (r3 && ta) renderTokens(r3, e, ta, card);
+  }
+
+  function focusNextMissing(fromCard){
+    let n = fromCard.nextElementSibling;
+    while (n && !(n.classList && n.classList.contains("card") && n.classList.contains("st-missing"))) n = n.nextElementSibling;
+    if (n){ const ta = n.querySelector("textarea"); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); n.scrollIntoView({block:"center"}); }
+    else toast(t("toast.noMoreMissing"));
+  }
+
+  function insertAtCursor(ta, text){
+    const s = ta.selectionStart ?? ta.value.length, en = ta.selectionEnd ?? ta.value.length;
+    ta.value = ta.value.slice(0,s) + text + ta.value.slice(en);
+    ta.focus(); const p = s + text.length; ta.setSelectionRange(p,p);
+    syncWs(ta);
+  }
+  function autosize(ta){ ta.style.height="auto"; ta.style.height = Math.min(ta.scrollHeight, 260) + "px"; }
+
+  // Wrap a textarea so whitespace can be painted behind it, and keep them in sync.
+  function makeTextarea(review){
+    const wrap = document.createElement("div");
+    wrap.className = "tawrap" + (review ? " rv" : "");
+    const ta = document.createElement("textarea");
+    wrap.appendChild(ta);
+    ta.addEventListener("scroll", () => {
+      const b = wrap.querySelector(".wsback");
+      if (b) b.scrollTop = ta.scrollTop;
+    });
+    return {wrap, ta};
+  }
+  function syncWs(ta){
+    const wrap = ta.parentNode;
+    if (!wrap || !wrap.classList || !wrap.classList.contains("tawrap")) return;
+    let back = wrap.querySelector(".wsback");
+    if (!RE_WS_ANY.test(ta.value)){ if (back) back.remove(); return; }
+    if (!back){
+      back = document.createElement("div");
+      back.className = "wsback";
+      back.setAttribute("aria-hidden","true");
+      wrap.insertBefore(back, ta);
+    }
+    back.innerHTML = wsOverlayHTML(ta.value);
+    back.scrollTop = ta.scrollTop;
+  }
+
+  // ---------- review view ----------
+  function extraTokens(e){
+    const src = tokensOf(baseEN(e)), have = tokensOf(e.value);
+    const pool = src.slice(), extra = [];
+    for (const tk of have){ const i = pool.indexOf(tk); if (i===-1) extra.push(tk); else pool.splice(i,1); }
+    return [...new Set(extra)];
+  }
+  function computeReview(e){
+    const s = statusOf(e);
+    const miss = missingTokens(e);
+    const extra = extraTokens(e);
+    const enRef = sourceEN(e);
+    const sameEng = (s==="done" && e.value.trim()!=="" && e.value === (enRef != null ? enRef : e.english));
+    const empty = (s==="missing");            // touched but not actually translated (cleared / MT echoed english)
+    const mt = !!e.mtDraft && s==="done";
+    const ws = wsScan(e);
+    const flagged = miss.length>0 || extra.length>0 || sameEng || empty || ws.any;
+    return {s, miss, extra, sameEng, empty, mt, ws, flagged};
+  }
+  function reviewMatch(e){
+    if (!e.touched) return false;             // only strings changed in this workspace
+    const c = computeReview(e);
+    if (state.reviewFilter==="mt" && !c.mt) return false;
+    if (state.reviewFilter==="issues" && !c.flagged) return false;
+    if (state.reviewFilter==="same" && !c.sameEng) return false;
+    if (state.reviewQuery){
+      const q = state.reviewQuery.toLowerCase();
+      if (!e.key.toLowerCase().includes(q) && !e.english.toLowerCase().includes(q) && !e.value.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  }
+  function reviewStats(){
+    let all=0, mt=0, issues=0, same=0;
+    for (const e of state.items){
+      if (e.type!=="entry" || !e.touched) continue;
+      all++;
+      const c = computeReview(e);
+      if (c.mt) mt++;
+      if (c.flagged) issues++;
+      if (c.sameEng) same++;
+    }
+    return {all, mt, issues, same};
+  }
+  function updateReviewCounts(){
+    const st = reviewStats();
+    $("rc-all").textContent = st.all; $("rc-mt").textContent = st.mt;
+    $("rc-issues").textContent = st.issues; $("rc-same").textContent = st.same;
+  }
+
+  function flagNodes(c){
+    const nodes = [];
+    if (c.empty){ const b=document.createElement("span"); b.className="rflag miss"; b.textContent=t("rflag.notTranslated"); nodes.push(b); }
+    if (c.mt){ const b=document.createElement("span"); b.className="rflag mt"; b.textContent=t("badge.mt"); nodes.push(b); }
+    if (c.miss.length){ const b=document.createElement("span"); b.className="rflag miss"; b.textContent=t("rflag.token",{list:c.miss.join(" ")}); nodes.push(b); }
+    if (c.extra.length){ const b=document.createElement("span"); b.className="rflag miss"; b.textContent=t("rflag.extra",{list:c.extra.join(" ")}); nodes.push(b); }
+    if (c.sameEng){ const b=document.createElement("span"); b.className="rflag same"; b.textContent=t("rflag.sameEng"); nodes.push(b); }
+    if (c.ws && c.ws.any){ const b=document.createElement("span"); b.className="rflag ws"; b.textContent=t("rflag.ws",{list:wsLabel(c.ws)}); nodes.push(b); }
+    return nodes;
+  }
+
+  function buildReviewRow(e){
+    const c = computeReview(e);
+    const row = document.createElement("div");
+    row.className = "rrow " + (c.flagged ? "flag" : c.mt ? "mt" : "");
+    row.dataset.idx = e.id;
+
+    // meta
+    const meta = document.createElement("div"); meta.className = "rmeta";
+    const key = document.createElement("button"); key.className="rkey"; key.textContent=e.key; key.title=t("card.copyKey");
+    key.onclick = () => { navigator.clipboard?.writeText(e.key); toast(t("toast.keyCopied")); };
+    const flags = document.createElement("div"); flags.className="rflags"; flags.dataset.role="rflags";
+    flagNodes(c).forEach(n=>flags.appendChild(n));
+    meta.appendChild(key); meta.appendChild(flags);
+
+    // english
+    const en = document.createElement("div"); en.className="rcol";
+    const enSrc = sourceEN(e);
+    en.innerHTML = `<span class="rlabel">${esc(t("review.enLabel"))}</span>` + (enSrc != null
+      ? `<div class="ren">${highlight(enSrc)}</div>`
+      : `<div class="ren empty-ref">${esc(t("review.noRef"))}</div>`);
+
+    // translation (editable)
+    const ru = document.createElement("div"); ru.className="rcol rru";
+    const lbl = document.createElement("span"); lbl.className="rlabel"; lbl.textContent=t("review.trLabel");
+    const {wrap: taWrap, ta} = makeTextarea(true);
+    ta.value = e.value; ta.spellcheck = state.spellcheck; ta.lang = state.targetLang || "ru";
+    autosize(ta); syncWs(ta);
+    const miss = document.createElement("div"); miss.className="rmiss"; miss.dataset.role="rmiss";
+    renderReviewMiss(miss, e, ta, row);
+    ta.addEventListener("input", () => {
+      e.value = ta.value; e.mtDraft = false; e.touched = true; autosize(ta); syncWs(ta);
+      updateReviewRow(row, e); refreshMeter(); updateReviewCounts(); scheduleSave();
+    });
+    ru.appendChild(lbl); ru.appendChild(taWrap); ru.appendChild(miss);
+
+    // actions
+    const act = document.createElement("div"); act.className="ractions";
+    const edit = document.createElement("button"); edit.className="rbtn"; edit.textContent=t("review.edit");
+    edit.title = t("review.editTitle");
+    edit.onclick = () => jumpToEditor(e);
+    act.appendChild(edit);
+    if (c.mt){
+      const ok = document.createElement("button"); ok.className="rbtn ok"; ok.textContent=t("review.checked");
+      ok.title = t("review.checkedTitle");
+      ok.onclick = () => { e.mtDraft = false; refreshReviewRow(e); refreshMeter(); updateReviewCounts(); scheduleSave(); };
+      act.appendChild(ok);
+    }
+    if (c.ws.any){
+      const fx = document.createElement("button"); fx.className="rbtn"; fx.textContent=t("review.wsFix");
+      fx.title = t("review.wsFixTitle", {list: wsLabel(c.ws)});
+      fx.onclick = () => {
+        e.value = wsFix(e); e.touched = true;
+        refreshReviewRow(e); refreshMeter(); updateReviewCounts(); scheduleSave(); toast(t("toast.wsFixed"));
+      };
+      act.appendChild(fx);
+    }
+
+    row.appendChild(meta); row.appendChild(en); row.appendChild(ru); row.appendChild(act);
+    return row;
+  }
+
+  function renderReviewMiss(box, e, ta, row){
+    box.innerHTML = "";
+    const miss = missingTokens(e);
+    for (const tk of miss){
+      const chip = document.createElement("button");
+      chip.className = "chip miss " + tokClass(tk);
+      chip.textContent = tk;
+      chip.title = t("tokens.insertMissing");
+      chip.onclick = () => { insertAtCursor(ta, tk); e.value = ta.value; e.touched = true; autosize(ta); updateReviewRow(row, e); refreshMeter(); updateReviewCounts(); scheduleSave(); };
+      box.appendChild(chip);
+    }
+  }
+  // update flags/class/miss in place, without touching the textarea (keeps focus)
+  function updateReviewRow(row, e){
+    const c = computeReview(e);
+    row.className = "rrow " + (c.flagged ? "flag" : c.mt ? "mt" : "");
+    const flags = row.querySelector('[data-role="rflags"]');
+    if (flags){ flags.innerHTML=""; flagNodes(c).forEach(n=>flags.appendChild(n)); }
+    const miss = row.querySelector('[data-role="rmiss"]');
+    const ta = row.querySelector("textarea");
+    if (miss && ta) renderReviewMiss(miss, e, ta, row);
+  }
+  // replace/remove the row (used by actions that don't hold textarea focus)
+  function refreshReviewRow(e){
+    const row = $("reviewlist").querySelector(`.rrow[data-idx="${e.id}"]`);
+    if (!row) return;
+    if (!reviewMatch(e)) row.remove();
+    else row.replaceWith(buildReviewRow(e));
+  }
+
+  function renderReview(){
+    AC.hide();
+    updateReviewCounts();
+    const box = $("reviewlist"); box.innerHTML = "";
+    const frag = document.createDocumentFragment();
+    let shown = 0;
+    for (const e of state.items){
+      if (e.type!=="entry" || !reviewMatch(e)) continue;
+      frag.appendChild(buildReviewRow(e)); shown++;
+    }
+    if (shown === 0){
+      const d = document.createElement("div");
+      d.style.cssText = "text-align:center;color:var(--ink-faint);padding:60px 20px;font-size:14px";
+      d.textContent = state.reviewQuery ? t("empty.noMatch")
+        : state.reviewFilter==="all" ? t("review.emptyNothing")
+        : t("review.emptyCategory");
+      frag.appendChild(d);
+    }
+    box.appendChild(frag); box.scrollTop = 0;
+  }
+
+  function jumpToEditor(e){
+    const s = statusOf(e);
+    state.filter = (s==="same") ? "same" : (s==="missing") ? "missing" : "done";
+    document.querySelectorAll(".filt").forEach(b => b.classList.toggle("on", b.dataset.f===state.filter));
+    setView("editor");
+    requestAnimationFrame(() => {
+      const card = $("list").querySelector(`.card[data-idx="${e.id}"]`);
+      if (card){ card.scrollIntoView({block:"center"}); const ta=card.querySelector("textarea"); if (ta) ta.focus(); }
+    });
+  }
+
+  function setView(v){
+    state.view = v;
+    document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.v===v));
+    const editor = v==="editor", review = v==="review", diff = v==="diff";
+    $("side").style.display = editor ? "flex" : "none";
+    $("toolbar").style.display = editor ? "flex" : "none";
+    $("mtbar").style.display = editor ? "flex" : "none";
+    $("list").style.display = editor ? "block" : "none";
+    $("reviewbar").style.display = review ? "flex" : "none";
+    $("reviewlist").style.display = review ? "block" : "none";
+    $("diffbar").style.display = diff ? "flex" : "none";
+    $("difflist").style.display = diff ? "block" : "none";
+    if (editor) renderList(); else if (review) renderReview(); else renderDiff();
+  }
+
+  // ---------- text diff (line-based, like a code editor) ----------
+  // Keys can change between versions, so this compares raw lines, not key→value pairs.
+  function lcsPairs(a,b,i1,i2,j1,j2){
+    const n=i2-i1, m=j2-j1;
+    if (n<=0 || m<=0) return [];
+    const w=m+1, dp=new Uint32Array((n+1)*w);
+    for (let i=n-1;i>=0;i--){
+      const row=i*w, next=(i+1)*w;
+      for (let j=m-1;j>=0;j--){
+        dp[row+j] = (a[i1+i]===b[j1+j]) ? dp[next+j+1]+1
+                  : Math.max(dp[next+j], dp[row+j+1]);
+      }
+    }
+    const out=[]; let i=0,j=0;
+    while (i<n && j<m){
+      if (a[i1+i]===b[j1+j]){ out.push([i1+i, j1+j]); i++; j++; }
+      else if (dp[(i+1)*w+j] >= dp[i*w+j+1]) i++;
+      else j++;
+    }
+    return out;
+  }
+  // patience anchors: lines occurring exactly once on both sides
+  function patienceAnchors(a,b,i1,i2,j1,j2){
+    const ca=new Map(), cb=new Map();
+    for (let i=i1;i<i2;i++) ca.set(a[i],(ca.get(a[i])||0)+1);
+    for (let j=j1;j<j2;j++) cb.set(b[j],(cb.get(b[j])||0)+1);
+    const posB=new Map();
+    for (let j=j1;j<j2;j++) if (cb.get(b[j])===1) posB.set(b[j], j);
+    const cand=[];
+    for (let i=i1;i<i2;i++){ const v=a[i]; if (ca.get(v)===1 && posB.has(v)) cand.push([i, posB.get(v)]); }
+    if (!cand.length) return [];
+    // longest increasing subsequence on the b-index
+    const tails=[], idx=[], prev=new Array(cand.length).fill(-1);
+    for (let k=0;k<cand.length;k++){
+      const v=cand[k][1];
+      let lo=0, hi=tails.length;
+      while (lo<hi){ const mid=(lo+hi)>>1; if (tails[mid]<v) lo=mid+1; else hi=mid; }
+      tails[lo]=v; idx[lo]=k; prev[k] = lo>0 ? idx[lo-1] : -1;
+    }
+    const res=[]; let k = tails.length ? idx[tails.length-1] : -1;
+    while (k>=0){ res.push(cand[k]); k=prev[k]; }
+    return res.reverse();
+  }
+  function collectMatches(a,b,i1,i2,j1,j2,depth,out){
+    while (i1<i2 && j1<j2 && a[i1]===b[j1]){ out.push([i1,j1]); i1++; j1++; }
+    const suffix=[];
+    while (i1<i2 && j1<j2 && a[i2-1]===b[j2-1]){ i2--; j2--; suffix.push([i2,j2]); }
+    if (i1<i2 && j1<j2){
+      const anchors = depth<24 ? patienceAnchors(a,b,i1,i2,j1,j2) : [];
+      if (anchors.length){
+        let ci=i1, cj=j1;
+        for (const [ai,bj] of anchors){
+          collectMatches(a,b,ci,ai,cj,bj,depth+1,out);
+          out.push([ai,bj]); ci=ai+1; cj=bj+1;
+        }
+        collectMatches(a,b,ci,i2,cj,j2,depth+1,out);
+      } else if ((i2-i1)*(j2-j1) <= 1500000){
+        for (const p of lcsPairs(a,b,i1,i2,j1,j2)) out.push(p);
+      }
+      // else: region too large without anchors -> treated as a replaced block
+    }
+    for (let k=suffix.length-1;k>=0;k--) out.push(suffix[k]);
+  }
+
+  // build side-by-side rows: {k:'eq'|'chg'|'del'|'add', li, ri}
+  function diffRows(a,b){
+    const matches=[]; collectMatches(a,b,0,a.length,0,b.length,0,matches);
+    const rows=[]; let ai=0, bi=0;
+    const flushGap = (ae,be) => {
+      const dl=ae-ai, al=be-bi, n=Math.max(dl,al);
+      for (let k=0;k<n;k++){
+        const hasL=k<dl, hasR=k<al;
+        rows.push({k: hasL&&hasR ? "chg" : hasL ? "del" : "add",
+                   li: hasL ? ai+k : -1, ri: hasR ? bi+k : -1});
+      }
+      ai=ae; bi=be;
+    };
+    for (const [x,y] of matches){
+      if (x>ai || y>bi) flushGap(x,y);
+      rows.push({k:"eq", li:x, ri:y}); ai=x+1; bi=y+1;
+    }
+    if (ai<a.length || bi<b.length) flushGap(a.length, b.length);
+    return rows;
+  }
+
+  // word-level highlight inside a changed pair
+  function inlineDiff(l,r){
+    const A=l.match(/\s+|\S+/g)||[], B=r.match(/\s+|\S+/g)||[];
+    if (A.length*B.length > 60000) return [esc(l), esc(r)];
+    const pairs=lcsPairs(A,B,0,A.length,0,B.length);
+    let ai=0, bi=0, lh="", rh="";
+    for (const [x,y] of pairs){
+      if (ai<x) lh += `<span class="di-del">${esc(A.slice(ai,x).join(""))}</span>`;
+      if (bi<y) rh += `<span class="di-add">${esc(B.slice(bi,y).join(""))}</span>`;
+      lh += esc(A[x]); rh += esc(B[y]); ai=x+1; bi=y+1;
+    }
+    if (ai<A.length) lh += `<span class="di-del">${esc(A.slice(ai).join(""))}</span>`;
+    if (bi<B.length) rh += `<span class="di-add">${esc(B.slice(bi).join(""))}</span>`;
+    return [lh||"&nbsp;", rh||"&nbsp;"];
+  }
+
+  function renderDiff(){
+    AC.hide();
+    const box=$("difflist");
+    if (!state.diffOther){
+      box.innerHTML = `<div class="empty-d">${t("diff.empty")}</div>`;
+      $("diffStat").textContent = "";
+      return;
+    }
+    const A=state.diffOther.lines, B=buildLang().split(/\r\n|\n/);
+    const rows=diffRows(A,B);
+    let add=0, del=0, chg=0;
+    for (const r of rows){ if (r.k==="add") add++; else if (r.k==="del") del++; else if (r.k==="chg") chg++; }
+    $("diffStat").innerHTML = `<span class="del">−${del}</span> · <span class="chg">~${chg}</span> · <span class="add">+${add}</span> ${esc(t("diff.stat",{total:rows.length}))}`;
+
+    // collapse long equal runs when "only differences" is on
+    let show=rows.map(()=>true);
+    if (state.diffOnly){
+      const CTX=3;
+      show=rows.map(()=>false);
+      rows.forEach((r,i)=>{
+        if (r.k==="eq") return;
+        for (let j=Math.max(0,i-CTX); j<=Math.min(rows.length-1,i+CTX); j++) show[j]=true;
+      });
+    }
+
+    const cell=(t)=> t==="" ? "&nbsp;" : esc(t);
+    const parts=[`<div class="dhead"><div>${esc(t("diff.headLine"))}</div><div>${esc(state.diffOther.name)}</div><div class="h2">${esc(t("diff.headLine"))}</div><div>${esc(t("diff.headCurrent"))}</div></div>`];
+    let hidden=0;
+    const flushHidden=()=>{ if (hidden){ parts.push(`<div class="dgap">${esc(t("diff.gap",{n:hidden}))}</div>`); hidden=0; } };
+    for (let i=0;i<rows.length;i++){
+      if (!show[i]){ hidden++; continue; }
+      flushHidden();
+      const r=rows[i];
+      const lt=r.li>=0?A[r.li]:"", rt=r.ri>=0?B[r.ri]:"";
+      let lh, rh;
+      if (r.k==="chg") [lh,rh]=inlineDiff(lt,rt);
+      else { lh=r.li>=0?cell(lt):""; rh=r.ri>=0?cell(rt):""; }
+      parts.push(
+        `<div class="drow ${r.k}">`+
+        `<div class="dnum dnum-l">${r.li>=0?r.li+1:""}</div>`+
+        `<div class="dtxt txt-l">${lh}</div>`+
+        `<div class="dnum dnum-r side2">${r.ri>=0?r.ri+1:""}</div>`+
+        `<div class="dtxt txt-r">${rh}</div>`+
+        `</div>`);
+    }
+    flushHidden();
+    if (state.diffOnly && !add && !del && !chg)
+      parts.push(`<div class="empty-d">${esc(t("diff.identical"))}</div>`);
+    box.innerHTML = parts.join("");
+    box.scrollTop = 0;
+  }
+
+  // ---------- section jump list ----------
+  function renderSectionJumps(){
+    const box = $("sections"); box.innerHTML = "";
+    // count missing per section
+    let cur = "—", perSec = {};
+    for (const it of state.items){
+      if (it.type==="section"){ cur = it.name.replace(/^\[|\]$/g,""); perSec[cur] = perSec[cur]||0; }
+      else if (it.type==="entry" && statusOf(it)==="missing"){ perSec[cur]=(perSec[cur]||0)+1; }
+    }
+    for (const [name,cnt] of Object.entries(perSec)){
+      const b = document.createElement("button");
+      b.className = "sec-jump";
+      b.innerHTML = `${esc(name)}${cnt?`<span class="sc">${cnt}</span>`:""}`;
+      b.onclick = () => {
+        // ensure section visible: switch to 'all' if current filter hides it
+        const heads = [...$("list").querySelectorAll(".sec-head")];
+        const target = heads.find(h => h.textContent === name);
+        if (target) target.scrollIntoView({block:"start"});
+        else { setFilter("all"); requestAnimationFrame(()=>{
+          const h2 = [...$("list").querySelectorAll(".sec-head")].find(h=>h.textContent===name);
+          if (h2) h2.scrollIntoView({block:"start"});
+        }); }
+      };
+      box.appendChild(b);
+    }
+  }
+
+  // ---------- machine translation ----------
+function targetFromName(name){ 
+    let code = cleanName(name).replace(/\.lang$/i, "");
+    return code || UI || "en"; 
+  }
+ function indexItems(){ state.byId = new Map(); for (const it of state.items) if (it.type==="entry") state.byId.set(it.id, it); }
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  // Only these remain; sessions saved with a removed provider (e.g. mymemory) fall back.
+  // Google only. Sessions saved with a provider that has since been removed
+  // (mymemory, yandex, lingva) fall back to it on load.
+  const MT_PROVIDERS = ["google"];
+  function validProvider(p){ return MT_PROVIDERS.includes(p) ? p : MT_PROVIDERS[0]; }
+  function decodeEntities(s){ const t = document.createElement("textarea"); t.innerHTML = s; return t.value; }
+
+  // Necesse filenames use BCP-47-ish codes; Google's gtx endpoint wants its own set.
+  // Also fix common typos (pr-BR → pt-BR: R is next to T on QWERTY).
+  function normalizeMtLang(code){
+    let c = String(code || "").trim().replace(/_/g, "-");
+    if (!c) return "ru";
+    if (/^pr(-br)?$/i.test(c)) c = "pt" + c.slice(2);
+    const aliases = {
+      "pt-br": "pt", "pt-pt": "pt",
+      "zh-cn": "zh-CN", "zh-tw": "zh-TW", "zh-hk": "zh-TW",
+      "es-419": "es", "es-es": "es", "es-mx": "es",
+      "en-us": "en", "en-gb": "en",
+      "nb-no": "no", "nn-no": "no",
+    };
+    const hit = aliases[c.toLowerCase()];
+    return hit || c;
+  }
+  // Prefer live input value so MT works even before blur/change fires.
+  function currentTargetLang(){
+    const live = (($("mtTarget") && $("mtTarget").value) || "").trim();
+    if (live) state.targetLang = live;
+    return state.targetLang || "ru";
+  }
+
+  // Replace format tokens with sentinels the MT engine should leave untouched,
+  // then restore them afterwards. Dropped sentinels surface via the ⚠ chips.
+  function maskTokens(str){
+    const tokens = [];
+    TOKEN_RE.lastIndex = 0;
+    const masked = str.replace(TOKEN_RE, m => { const i = tokens.length; tokens.push(m); return "⟦"+i+"⟧"; });
+    return {masked, tokens};
+  }
+  function restoreTokens(str, tokens){
+    let out = str;
+    tokens.forEach((tk,i) => { out = out.replace(new RegExp("⟦\\s*"+i+"\\s*⟧","g"), () => tk); });
+    return out;
+  }
+
+  async function callProvider(provider, text, target){
+    const ctl = new AbortController();
+    const to = setTimeout(() => ctl.abort(), 13000);
+    try{
+      if (provider === "google"){
+        const tl = normalizeMtLang(target);
+        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
+        const r = await fetch(url, {signal:ctl.signal});
+        if (!r.ok) throw new Error("Google "+r.status);
+        const j = await r.json();
+        const seg = j && j[0];
+        if (!Array.isArray(seg)) throw new Error(t("mt.errGoogle"));
+        return seg.map(s => (s && s[0]) ? s[0] : "").join("");
+      }
+      throw new Error(t("mt.errUnknownProvider"));
+    } catch(err){
+      if (err.name === "AbortError") throw new Error(t("mt.errTimeout"));
+      if (err instanceof TypeError) throw new Error(t("mt.errNetwork"));
+      throw err;
+    } finally { clearTimeout(to); }
+  }
+
+  async function mtTranslate(text){
+    if (!text.trim()) return "";
+    const {masked, tokens} = maskTokens(text);
+    const res = await callProvider(state.mtProvider, masked, currentTargetLang());
+    return restoreTokens(res, tokens);
+  }
+
+  let mtBusy = false;
+  async function translateEntry(e, ta, card, btn){
+    if (btn.classList.contains("loading") || mtBusy) return;   // one request at a time
+    // Must translate the English original (en.lang ref / missing inline), never the
+    // already-translated e.english/e.value — that produced Russian→Russian with sl=en.
+    const src = sourceEN(e);
+    if (src == null){ toast(t("mt.needEnRef")); return; }
+    if (!String(src).trim()){ toast(t("mt.emptySrc")); return; }
+    mtBusy = true;
+    btn.classList.add("loading"); btn.disabled = true;
+    try{
+      const sug = await mtTranslate(src);
+      if (sug && sug.trim()){ e.value = sug; e.mtDraft = true; e.touched = true; ta.value = sug; autosize(ta); syncWs(ta); }
+      updateCard(card, e); refreshMeter(); scheduleSave();
+    } catch(err){ toast(t("mt.prefix", {msg: err.message || t("err.generic")})); }
+    finally{ btn.classList.remove("loading"); btn.disabled = false; mtBusy = false; }
+  }
+
+  // ---------- export ----------
+  function buildLang(){
+    const out = [];
+    for (const it of state.items){
+      if (it.type !== "entry"){ out.push(it.raw); continue; }
+      const s = statusOf(it);
+      if (s === "missing") out.push(MISS + it.key + "=" + it.value);
+      else if (s === "same") out.push(SAME + it.key + "=" + it.value);
+      else out.push(it.key + "=" + it.value);
+    }
+    return out.join(state.eol);
+  }
+  function download(name, text, mime){
+    const blob = new Blob([text], {type: mime||"text/plain;charset=utf-8"});
+    downloadBlob(name, blob);
+  }
+  function downloadBlob(name, blob){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+  const canGzip = typeof CompressionStream !== "undefined";
+  async function gzipBlob(text){
+    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+    return await new Response(stream).blob();
+  }
+  async function gunzipText(buf){
+    const stream = new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"));
+    return await new Response(stream).text();
+  }
+  function fmtBytes(n){
+    return n >= 1048576 ? (n/1048576).toFixed(1)+t("bytes.mb")
+         : n >= 1024    ? Math.round(n/1024)+t("bytes.kb") : n+t("bytes.b");
+  }
+
+  // ---------- persistence ----------
+  // Compact format v2: single-letter top-level keys, entries as tuples, flags bit-packed,
+  // redundant fields dropped (english when it equals value, non-entry lines stored as raw
+  // strings and re-classified on load). ~3x smaller than v1, which matters for the
+  // localStorage quota once an en.lang reference is attached.
+  const F_SAME=1, F_MISSING=2, F_MT=4, F_TOUCHED=8;
+
+  function serialize(){
+    const i = state.items.map(it => {
+      if (it.type !== "entry") return it.raw || "";
+      let f = 0;
+      if (it.markedSame) f |= F_SAME;
+      if (it.wasMissing) f |= F_MISSING;
+      if (it.mtDraft)    f |= F_MT;
+      if (it.touched)    f |= F_TOUCHED;
+      const row = [it.key, it.value, f];
+      const needEng = it.english !== it.value;
+      const hasRef  = it.ref != null;
+      if (needEng || hasRef) row.push(needEng ? it.english : 0);
+      if (hasRef) row.push(it.ref);
+      return row;
+    });
+    return {
+      v:2, f:state.filename, e:(state.eol === "\r\n" ? 1 : 0), s:Date.now(), n:state.enFilename || "",
+      m:{p:state.mtProvider, t:state.targetLang, s:state.spellcheck?1:0, a:state.acEnabled?1:0},
+      i
+    };
+  }
+
+  function deserialize(data){
+    if (!data || (data.v !== 2 && !data.items)) throw new Error(t("err.unknownFormat"));
+    if (data.v === 2) return deserializeV2(data);
+    return deserializeV1(data);
+  }
+
+  function deserializeV2(d){
+    state.filename = d.f || "ru.lang";
+    state.enFilename = d.n || "";
+    state.eol = d.e ? "\r\n" : "\n";
+    state.savedAt = d.s || 0;
+    const m = d.m || {};
+    state.mtProvider = validProvider(m.p || state.mtProvider);
+    state.targetLang = m.t || targetFromName(state.filename);
+    state.spellcheck = m.s !== 0;
+    state.acEnabled = m.a !== 0;
+    state.items = (d.i || []).map((row, idx) => {
+      if (!Array.isArray(row)) return classifyLine(String(row));
+      const [key, value, f, eng, ref] = row;
+      const e = {type:"entry", id:idx, key, value,
+                 english: (eng === 0 || eng === undefined) ? value : eng,
+                 markedSame: !!(f & F_SAME), wasMissing: !!(f & F_MISSING),
+                 mtDraft: !!(f & F_MT), touched: !!(f & F_TOUCHED)};
+      if (ref != null) e.ref = ref;
+      return e;
+    });
+  }
+
+  // legacy verbose format
+  function deserializeV1(data){
+    state.filename = data.filename || "ru.lang";
+    state.enFilename = data.enFilename || "";
+    state.eol = data.eol || "\r\n";
+    state.savedAt = data.savedAt || 0;
+    if (data.mt){
+      state.mtProvider = validProvider(data.mt.provider || state.mtProvider);
+      state.targetLang = data.mt.target || targetFromName(state.filename);
+      state.spellcheck = data.mt.spell !== false;
+      state.acEnabled = data.mt.ac !== false;
+    } else { state.targetLang = targetFromName(state.filename); }
+    state.items = data.items.map((d,idx) => {
+      if (d.t === "e") return {type:"entry", id:idx, key:d.key, english:d.english, value:d.value,
+                               markedSame:!!d.markedSame, wasMissing:!!d.wasMissing,
+                               mtDraft:!!d.mtDraft, touched:!!d.touched, ref:(d.ref != null ? d.ref : undefined)};
+      return classifyLine(d.raw || "");
+    });
+  }
+  function saveLS(){
+    try{
+      localStorage.setItem(LS_KEY, JSON.stringify(serialize()));
+      state.savedAt = Date.now();
+      setSaveState("saved");
+      return true;
+    }catch(e){
+      setSaveState("error");
+      return false;
+    }
+  }
+  function scheduleSave(){
+    setSaveState("saving");
+    clearTimeout(state.saveTimer);
+    state.saveTimer = setTimeout(saveLS, 500);
+  }
+  function setSaveState(kind){
+    const pill = $("savePill"); if (!pill) return;
+    pill.classList.remove("saving","error");
+    if (kind === "saving"){ pill.classList.add("saving"); $("saveText").textContent = t("save.saving"); return; }
+    if (kind === "error"){ pill.classList.add("error"); $("saveText").textContent = t("save.error"); return; }
+    updateSaveText();
+  }
+  function updateSaveText(){
+    const pill = $("savePill");
+    if (!pill || pill.classList.contains("saving") || pill.classList.contains("error")) return;
+    if (!state.savedAt){ $("saveText").textContent = t("save.saved"); return; }
+    const d = new Date(state.savedAt);
+    const hh = String(d.getHours()).padStart(2,"0"), mm = String(d.getMinutes()).padStart(2,"0");
+    const c = counts();
+    $("saveText").textContent = t("save.savedAt", {time: hh+":"+mm, n: c.done});
+  }
+
+  // ---------- UI wiring ----------
+  function openWorkspace(){
+    $("empty").style.display = "none";
+    $("side").style.display = "flex";
+    $("toolbar").style.display = "flex";
+    $("mtbar").style.display = "flex";
+    $("list").style.display = "block";
+    $("footnote").style.display = "block";
+    $("meter").style.display = "flex";
+    $("topActions").style.display = "flex";
+    $("outName").value = state.filename;
+    state.mtProvider = validProvider(state.mtProvider);
+    $("mtTarget").value = state.targetLang;
+    $("spellToggle").classList.toggle("on", state.spellcheck);
+    $("acToggle").classList.toggle("on", state.acEnabled);
+    $("tabs").style.display = "flex";
+    state.view = "editor"; state.reviewFilter = "all"; state.reviewQuery = "";
+    $("reviewSearch").value = "";
+    $("queryHint").textContent = "";
+    $("diffName").textContent = state.diffOther ? t("diff.fileInfo", {name: state.diffOther.name, n: state.diffOther.lines.length}) : "";
+    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);
+    document.querySelectorAll(".rchip").forEach(x => x.classList.toggle("on", x.dataset.r==="all"));
+    indexItems(); buildDict(); updateEnBtn();
+    refreshMeter(); renderSectionJumps(); setView("editor"); saveLS();
+  }
+  function loadText(text, filename){
+    const {eol, items} = parse(text);
+    state.eol = eol; state.items = items; state.filename = cleanName(filename);
+    state.targetLang = targetFromName(state.filename);
+    state.filter = "missing"; state.query = "";
+    $("search").value = "";
+    setFilter("missing", true);
+    openWorkspace();
+  }
+  function setFilter(f, silent){
+    state.filter = f;
+    document.querySelectorAll(".filt").forEach(b => b.classList.toggle("on", b.dataset.f===f));
+    if (!silent) renderList();
+  }
+
+  function toast(msg){
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("show"), 1600);
+  }
+
+  // file pickers
+  $("btnPick").onclick = () => $("fileInput").click();
+  $("fileInput").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { loadText(r.result, f.name); toast(t("toast.fileLoaded")); };
+    r.readAsText(f, "UTF-8");
+    e.target.value = "";
+  };
+  $("btnNew").onclick = () => $("fileInput").click();
+  $("btnExport").onclick = () => {
+    let name = ($("outName").value || "").trim() || state.filename || "ru.lang";
+    if (!/\.lang$/i.test(name)) name += ".lang";
+    state.filename = name; $("outName").value = name;
+    download(name, buildLang(), "text/plain;charset=utf-8");
+    toast(t("toast.exported", {name}));
+  };
+  $("btnSaveJson").onclick = async () => {
+    const base = (state.filename||"ru.lang").replace(/\.lang$/i,"");
+    const text = JSON.stringify(serialize());
+    if (canGzip){
+      try{
+        const blob = await gzipBlob(text);
+        downloadBlob(base + ".progress.json.gz", blob);
+        toast(t("toast.progressSavedGz", {size: fmtBytes(blob.size), raw: fmtBytes(text.length)}));
+        return;
+      }catch(err){ /* fall back to plain json */ }
+    }
+    download(base + ".progress.json", text, "application/json");
+    toast(t("toast.progressSaved", {size: fmtBytes(text.length)}));
+  };
+  $("btnLoadJson").onclick = () => $("jsonInput").click();
+  $("jsonInput").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = async () => {
+      try{
+        const buf = new Uint8Array(r.result);
+        let text;
+        if (buf[0] === 0x1f && buf[1] === 0x8b){          // gzip magic
+          if (!canGzip) throw new Error(t("err.noGzip"));
+          text = await gunzipText(buf);
+        } else {
+          text = new TextDecoder("utf-8").decode(buf);
+        }
+        deserialize(JSON.parse(text));
+        setFilter("missing",true); openWorkspace();
+        toast(t("toast.progressRestored"));
+      } catch(err){ toast(t("err.readFile", {msg: err.message || t("err.generic")})); }
+    };
+    r.readAsArrayBuffer(f); e.target.value = "";
+  };
+  $("btnEnRef").onclick = () => $("enInput").click();
+  $("enInput").onchange = e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      const map = parseEnLang(r.result);
+      const n = applyEnRef(map);
+      state.enFilename = f.name;
+      updateEnBtn();
+      (state.view === "review" ? renderReview : renderList)();
+      refreshMeter(); saveLS();
+      toast(t("toast.enMatched", {n}));
+    };
+    r.readAsText(f, "UTF-8"); e.target.value = "";
+  };
+
+  // filters + search
+  document.getElementById("filters").addEventListener("click", e => {
+    const b = e.target.closest(".filt"); if (b) setFilter(b.dataset.f);
+  });
+  let searchTimer;
+  // NB: no trim() — spaces are searchable, which is the point of finding "  ".
+  function applyQuery(v){
+    state.query = v;
+    const h = $("queryHint");
+    if (h){
+      if (v && (RE_LEAD.test(v) || RE_TRAIL.test(v) || RE_DBL.test(v) || /[\t\u00A0]/.test(v))){
+        const n = state.items.filter(e => e.type==="entry" && matchFilter(e)).length;
+        h.textContent = t("query.hint", {q: wsGlyphs(v), n});
+      } else h.textContent = "";
+    }
+    renderList();
+  }
+  $("search").addEventListener("input", e => {
+    clearTimeout(searchTimer);
+    const v = e.target.value;
+    searchTimer = setTimeout(() => applyQuery(v), 160);
+  });
+  $("btnFindDbl").addEventListener("click", () => {
+    setFilter("all", true);
+    $("search").value = "  ";
+    applyQuery("  ");
+    $("search").focus();
+  });
+  $("btnFindTab").addEventListener("click", () => {
+    setFilter("all", true);
+    $("search").value = "\t";
+    applyQuery("\t");
+    $("search").focus();
+  });
+
+  // MT + spellcheck controls
+  // Push spellcheck settings onto already-rendered textareas — never rebuild the list.
+  function applySpellcheckToVisible(){
+    const on = !!state.spellcheck;
+    const lang = state.targetLang || "ru";
+    document.querySelectorAll(".tawrap > textarea").forEach(ta => {
+      ta.lang = lang;
+      // Browsers only re-check after spellcheck is toggled off→on with the new lang.
+      ta.spellcheck = false;
+      if (on){ void ta.offsetHeight; ta.spellcheck = true; }
+    });
+  }
+  $("spellToggle").addEventListener("click", () => {
+    state.spellcheck = !state.spellcheck;
+    $("spellToggle").classList.toggle("on", state.spellcheck);
+    applySpellcheckToVisible();
+    scheduleSave();
+  });
+  $("acToggle").addEventListener("click", () => {
+    state.acEnabled = !state.acEnabled;
+    $("acToggle").classList.toggle("on", state.acEnabled);
+    if (!state.acEnabled) AC.hide();
+    scheduleSave();
+  });
+  function commitMtTarget(raw){
+    let v = String(raw || "").trim().replace(/_/g, "-") || "ru";
+    // Surface the common typo fix in the field itself so the UI matches what Google gets.
+    if (/^pr(-br)?$/i.test(v)) v = "pt" + v.slice(2);
+    if (v === state.targetLang && $("mtTarget").value === v) return;
+    state.targetLang = v;
+    $("mtTarget").value = v;
+    applySpellcheckToVisible();
+    scheduleSave();
+  }
+  $("mtTarget").addEventListener("change", e => commitMtTarget(e.target.value));
+  $("mtTarget").addEventListener("blur", e => commitMtTarget(e.target.value));
+  $("mtTarget").addEventListener("keydown", e => {
+    if (e.key === "Enter"){ e.preventDefault(); e.target.blur(); }
+  });
+  $("mtTarget").addEventListener("input", e => { state.targetLang = e.target.value.trim() || state.targetLang; });
+
+  // tabs + review controls
+  $("tabs").addEventListener("click", e => { const t = e.target.closest(".tab"); if (t) setView(t.dataset.v); });
+  $("btnDiffFile").addEventListener("click", () => $("diffInput").click());
+  $("diffInput").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      state.diffOther = {name: f.name, lines: String(r.result).split(/\r\n|\n/)};
+      $("diffName").textContent = t("diff.fileInfo", {name: f.name, n: state.diffOther.lines.length});
+      renderDiff();
+      toast(t("toast.diffLoaded"));
+    };
+    r.readAsText(f, "UTF-8"); e.target.value = "";
+  });
+  $("diffOnlyToggle").addEventListener("click", () => {
+    state.diffOnly = !state.diffOnly;
+    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);
+    renderDiff();
+  });
+  $("reviewbar").addEventListener("click", e => {
+    const c = e.target.closest(".rchip"); if (!c) return;
+    state.reviewFilter = c.dataset.r;
+    document.querySelectorAll(".rchip").forEach(x => x.classList.toggle("on", x===c));
+    renderReview();
+  });
+  let rSearchTimer;
+  $("reviewSearch").addEventListener("input", e => {
+    clearTimeout(rSearchTimer);
+    const v = e.target.value;   // no trim: spaces are searchable here as well
+    rSearchTimer = setTimeout(() => { state.reviewQuery = v; renderReview(); }, 160);
+  });
+
+  // drag & drop
+  const drop = $("drop");
+  ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e=>{e.preventDefault();drop.classList.add("over");}));
+  ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e=>{e.preventDefault();drop.classList.remove("over");}));
+  drop.addEventListener("drop", e => {
+    const f = e.dataTransfer.files[0]; if (!f) return;
+    const r = new FileReader(); r.onload = () => { loadText(r.result, f.name); toast(t("toast.fileLoaded")); };
+    r.readAsText(f, "UTF-8");
+  });
+
+  // restore banner
+  function tryRestore(){
+    let data; try{ data = JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){ data=null; }
+    if (!data || !(data.i || data.items)) return;
+    $("restore").style.display = "flex";
+    $("restoreName").textContent = data.f || data.filename || "ru.lang";
+    const d = new Date(data.s || data.savedAt || Date.now());
+    $("restoreWhen").textContent = d.toLocaleString("ru-RU");
+    $("restoreYes").onclick = () => {
+      try { deserialize(data); $("restore").style.display="none"; setFilter("missing",true); openWorkspace(); }
+      catch(err){ toast(t("err.restoreFailed")); }
+    };
+    $("restoreNo").onclick = () => { localStorage.removeItem(LS_KEY); $("restore").style.display="none"; };
+  }
+
+  // warn before leaving with unsaved-to-file changes
+  window.addEventListener("beforeunload", e => {
+    if (state.items.length){ saveLS(); }
+  });
+  // flush save on tab hide / mobile background — more reliable than beforeunload
+  window.addEventListener("pagehide", () => { if (state.items.length) saveLS(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && state.items.length) saveLS();
+  });
+  // click the pill to review what's already translated
+  $("savePill").addEventListener("click", () => { if (state.items.length) setView("review"); });
+  // keep the "N готово / time" label honest even when idle
+  setInterval(updateSaveText, 30000);
+
+  // ---------- autocomplete (words from translated text) ----------
+  function wordsOf(str){
+    const noTok = str.replace(TOKEN_RE, " ");
+    return noTok.match(/[\p{L}][\p{L}'’\-]{1,}/gu) || [];
+  }
+  function buildDict(){
+    AC.dict = new Map();
+    for (const e of state.items){
+      if (e.type!=="entry") continue;
+      const s = statusOf(e);
+      // only real target-language text: file/user translations, not untouched English
+      if (s==="done" || s==="same" || e.touched) AC.learnValue(e.value);
+    }
+  }
+
+  const AC = {
+    dict: new Map(),
+    box: null, mirror: null,
+    open: false, ta: null, cw: null, items: [], active: 0,
+    suppressOnce: false,
+
+    learnValue(v){
+      for (const w of wordsOf(v)){
+        const k = w.toLowerCase();
+        if (k.length < 2) continue;
+        this.dict.set(k, (this.dict.get(k)||0) + 1);
+      }
+    },
+    suggest(prefix){
+      const p = prefix.toLowerCase();
+      const out = [];
+      for (const [w,c] of this.dict){
+        if (w.length > p.length && w.startsWith(p)) out.push([w,c]);
+      }
+      out.sort((a,b) => b[1]-a[1] || a[0].length-b[0].length || a[0].localeCompare(b[0]));
+      return out.slice(0,7).map(r => ({w:r[0], c:r[1]}));
+    },
+    applyCase(prefix, word){
+      if (prefix && prefix[0] !== prefix[0].toLowerCase() && prefix[0] === prefix[0].toUpperCase())
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      return word;
+    },
+    currentWord(ta){
+      const pos = ta.selectionStart;
+      if (pos !== ta.selectionEnd) return null;
+      const m = ta.value.slice(0, pos).match(/[\p{L}][\p{L}'’\-]*$/u);
+      if (!m) return null;
+      return {word: m[0], start: pos - m[0].length, end: pos};
+    },
+    ensureDOM(){
+      if (this.box) return;
+      this.box = document.createElement("div"); this.box.className = "acbox";
+      this.box.addEventListener("mousedown", ev => {
+        const it = ev.target.closest(".acitem"); if (!it) return;
+        ev.preventDefault();            // keep textarea focus
+        this.accept(this.items[+it.dataset.i]);
+      });
+      document.body.appendChild(this.box);
+    },
+    caretXY(ta){
+      if (!this.mirror){
+        this.mirror = document.createElement("div");
+        this.mirror.style.cssText = "position:fixed;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;overflow:hidden;z-index:-1;top:0;left:0";
+        document.body.appendChild(this.mirror);
+      }
+      const div = this.mirror, cs = getComputedStyle(ta), r = ta.getBoundingClientRect();
+      ["boxSizing","paddingTop","paddingRight","paddingBottom","paddingLeft",
+       "borderTopWidth","borderRightWidth","borderBottomWidth","borderLeftWidth",
+       "fontStyle","fontVariant","fontWeight","fontStretch","fontSize","fontFamily",
+       "lineHeight","letterSpacing","textAlign","textTransform","wordSpacing","textIndent","tabSize"]
+        .forEach(p => div.style[p] = cs[p]);
+      div.style.width = cs.width;
+      div.style.left = r.left + "px";
+      div.style.top  = r.top + "px";
+      div.textContent = ta.value.slice(0, this.cw.end);
+      const span = document.createElement("span");
+      span.textContent = ta.value.slice(this.cw.end) || ".";
+      div.appendChild(span);
+      const sr = span.getBoundingClientRect();
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize)*1.4;
+      div.textContent = "";
+      return {left: sr.left, top: sr.top - ta.scrollTop, bottom: sr.top - ta.scrollTop + lh};
+    },
+    show(ta, cw, list){
+      this.ensureDOM();
+      this.ta = ta; this.cw = cw; this.items = list; this.active = 0; this.open = true;
+      const pfxLen = cw.word.length;
+      this.box.innerHTML = list.map((it,i) => {
+        const disp = this.applyCase(cw.word, it.w);
+        const head = disp.slice(0, pfxLen), tail = disp.slice(pfxLen);
+        return `<div class="acitem${i===0?" active":""}" data-i="${i}"><span class="acw"><b>${esc(head)}</b>${esc(tail)}</span><span class="acc">${it.c}</span></div>`;
+      }).join("") + `<div class="achint">${esc(t("ac.hint"))}</div>`;
+      const c = this.caretXY(ta);
+      this.box.classList.add("on");
+      const bw = this.box.offsetWidth, bh = this.box.offsetHeight;
+      let left = c.left, top = c.bottom + 2;
+      if (left + bw > window.innerWidth - 8) left = window.innerWidth - bw - 8;
+      if (top + bh > window.innerHeight - 8) top = c.top - bh - 2;   // flip above caret
+      this.box.style.left = Math.max(8, left) + "px";
+      this.box.style.top  = Math.max(8, top) + "px";
+    },
+    render(){
+      [...this.box.querySelectorAll(".acitem")].forEach((el,i) => {
+        el.classList.toggle("active", i===this.active);
+        if (i===this.active) el.scrollIntoView({block:"nearest"});
+      });
+    },
+    move(d){ if (!this.open) return; this.active = (this.active + d + this.items.length) % this.items.length; this.render(); },
+    hide(){ if (this.box) this.box.classList.remove("on"); this.open = false; this.ta = null; },
+    accept(item){
+      if (!this.ta || !item) return;
+      const word = typeof item === "string" ? item : item.w;
+      const ta = this.ta, cw = this.cw, cased = this.applyCase(cw.word, word);
+      ta.value = ta.value.slice(0, cw.start) + cased + ta.value.slice(cw.end);
+      const caret = cw.start + cased.length;
+      ta.setSelectionRange(caret, caret);
+      this.hide();
+      this.suppressOnce = true;
+      ta.dispatchEvent(new Event("input", {bubbles:true}));  // sync value/touched/save
+      ta.focus();
+    },
+    onInput(ta){
+      this.learnValue(ta.value);
+      if (this.suppressOnce){ this.suppressOnce = false; this.hide(); return; }
+      if (!state.acEnabled){ this.hide(); return; }
+      const cw = this.currentWord(ta);
+      const nextCh = ta.value[ta.selectionStart];
+      if (!cw || cw.word.length < 2 || (nextCh && /[\p{L}]/u.test(nextCh))){ this.hide(); return; }
+      const list = this.suggest(cw.word);
+      if (!list.length){ this.hide(); return; }
+      this.show(ta, cw, list);
+    },
+    onKey(e){
+      if (!this.open) return;
+      switch(e.key){
+        case "ArrowDown": e.preventDefault(); e.stopPropagation(); this.move(1); break;
+        case "ArrowUp":   e.preventDefault(); e.stopPropagation(); this.move(-1); break;
+        case "Enter":
+          if (e.ctrlKey || e.metaKey){ this.hide(); return; }  // let Ctrl+Enter = next missing
+          e.preventDefault(); e.stopPropagation(); this.accept(this.items[this.active]); break;
+        case "Tab":       e.preventDefault(); e.stopPropagation(); this.accept(this.items[this.active]); break;
+        case "Escape":    e.preventDefault(); e.stopPropagation(); this.hide(); break;
+      }
+    },
+  };
+
+  function isTAInput(el){ return el && el.tagName === "TEXTAREA" && (el.classList.contains("tr") || el.closest(".rru")); }
+  document.addEventListener("keydown", e => { if (isTAInput(e.target)) AC.onKey(e); }, true);
+  document.addEventListener("input",   e => { if (isTAInput(e.target)) AC.onInput(e.target); });
+  document.addEventListener("focusout",e => { if (isTAInput(e.target)) setTimeout(() => AC.hide(), 120); });
+  document.addEventListener("scroll",  () => AC.hide(), true);
+  window.addEventListener("resize",    () => AC.hide());
+
+  // UI language switcher
+  $("uiLang").addEventListener("change", e => setUiLang(e.target.value));
+  $("uiLang").value = UI;
+  applyI18n();
+
+  tryRestore();
+})();

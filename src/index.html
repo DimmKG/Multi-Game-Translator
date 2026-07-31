@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Necesse — .lang</title>
+<link rel="stylesheet" href="./styles/app.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="mark">necesse.lang</span>
+    <span class="sub" data-i18n="app.sub"></span>
+  </div>
+  <select id="uiLang" class="uilang" aria-label="Interface language">
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+    <option value="bg">Български</option>
+  </select>
+  <div class="meter" id="meter" style="display:none">
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="pct" id="pct"></div>
+  </div>
+  <div class="grow"></div>
+  <div class="filebar" id="topActions" style="display:none">
+    <button class="savepill" id="savePill" data-i18n-title="save.title"><span class="sdot"></span><span id="saveText"></span></button>
+    <button class="btn ghost" id="btnEnRef" data-i18n-title="btn.enRefTitle" data-i18n="btn.enRef"></button>
+    <button class="btn ghost" id="btnSaveJson" data-i18n-title="btn.saveProgressTitle" data-i18n="btn.saveProgress"></button>
+    <button class="btn ghost" id="btnLoadJson" data-i18n-title="btn.loadProgressTitle" data-i18n="btn.loadProgress"></button>
+    <button class="btn ghost" id="btnNew" data-i18n="btn.newFile"></button>
+    <label class="fname" data-i18n-title="fname.title">
+      <span data-i18n="fname.label"></span>
+      <input type="text" id="outName" spellcheck="false" placeholder="*.lang">
+    </label>
+    <button class="btn primary" id="btnExport" data-i18n="btn.export"></button>
+  </div>
+  <input type="file" id="fileInput" accept=".lang,.txt" hidden>
+  <input type="file" id="jsonInput" accept=".json,.gz" hidden>
+  <input type="file" id="enInput" accept=".lang,.txt" hidden>
+</header>
+
+<div class="restore" id="restore" style="display:none">
+  <span>🕯️</span>
+  <div class="grow2"><span data-i18n="restore.found"></span> <b id="restoreName"></b> (<span id="restoreWhen"></span>)</div>
+  <button class="p" id="restoreYes" data-i18n="restore.continue"></button>
+  <button id="restoreNo" data-i18n="restore.startOver"></button>
+</div>
+
+<main>
+  <aside class="side" id="side" style="display:none">
+    <div class="filters" id="filters">
+      <button class="filt on" data-f="missing"><span class="l"><i class="dot dot-missing"></i><span data-i18n="filter.missing"></span></span><span class="cnt" id="c-missing">0</span></button>
+      <button class="filt" data-f="done"><span class="l"><i class="dot dot-done"></i><span data-i18n="filter.done"></span></span><span class="cnt" id="c-done">0</span></button>
+      <button class="filt" data-f="same"><span class="l"><i class="dot dot-same"></i><span data-i18n="filter.same"></span></span><span class="cnt" id="c-same">0</span></button>
+      <button class="filt" data-f="all"><span class="l"><i class="dot dot-all"></i><span data-i18n="filter.all"></span></span><span class="cnt" id="c-all">0</span></button>
+      <button class="filt" data-f="ws" data-i18n-title="filter.wsTitle"><span class="l"><i class="dot dot-ws"></i><span data-i18n="filter.ws"></span></span><span class="cnt" id="c-ws">0</span></button>
+    </div>
+    <div class="block"><div class="lbl" data-i18n="side.sections"></div></div>
+    <div class="sections" id="sections"></div>
+  </aside>
+
+  <section class="work" id="work">
+    <div class="empty" id="empty">
+      <div class="drop" id="drop">
+        <div class="lg">🗺️</div>
+        <h1>*.lang</h1>
+        <p data-i18n-html="drop.text"></p>
+        <button class="btn primary" id="btnPick" data-i18n="drop.pick"></button>
+        <div class="legend">
+          <span><i style="background:var(--tok-var)"></i><span data-i18n-html="legend.var"></span></span>
+          <span><i style="background:var(--tok-ref)"></i>[item/input=…]</span>
+          <span><i style="background:var(--tok-fmt)"></i><span data-i18n="legend.fmt"></span></span>
+          <span><i style="background:var(--tok-nl)"></i>\n</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabs" style="display:none">
+      <button class="tab on" data-v="editor" data-i18n="tab.editor"></button>
+      <button class="tab" data-v="review"><span data-i18n="tab.review"></span> <span class="tcount" id="tabReviewCount">0</span></button>
+      <button class="tab" data-v="diff" data-i18n="tab.diff"></button>
+    </div>
+
+    <div class="toolbar" id="toolbar" style="display:none">
+      <div class="search">
+        <span class="ic">⌕</span>
+        <input type="text" id="search" data-i18n-ph="search.ph" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="qbtn" id="btnFindDbl" data-i18n-title="btn.findDblTitle" data-i18n="btn.findDbl"></button>
+      <button class="qbtn" id="btnFindTab" data-i18n-title="btn.findTabTitle" data-i18n="btn.findTab"></button>
+      <span class="qhint" id="queryHint"></span>
+      <span class="hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd> <span data-i18n="hint.ctrlEnter"></span></span>
+    </div>
+    <div class="mtbar" id="mtbar" style="display:none">
+      <label class="toggle on" id="spellToggle" data-i18n-title="toggle.spellTitle">
+        <span class="tk"></span><span data-i18n="toggle.spell"></span>
+      </label>
+      <label class="toggle on" id="acToggle" data-i18n-title="toggle.acTitle">
+        <span class="tk"></span><span data-i18n="toggle.ac"></span>
+      </label>
+      <div class="grp">
+        <span data-i18n="mt.label"></span>
+        <span class="mtprov" data-i18n="mt.google" data-i18n-title="mt.providerTitle"></span>
+      </div>
+      <div class="grp"><span data-i18n="mt.langLabel"></span><input class="mini" id="mtTarget" spellcheck="false" data-i18n-title="mt.langTitle"></div>
+      <div class="sp"></div>
+      <span class="mthint" data-i18n="mt.perLineHint"></span>
+    </div>
+    <div class="list" id="list" style="display:none"></div>
+
+    <div class="reviewbar" id="reviewbar" style="display:none">
+      <div class="search" style="max-width:340px">
+        <span class="ic">⌕</span>
+        <input type="text" id="reviewSearch" data-i18n-ph="review.searchPh" autocomplete="off">
+      </div>
+      <div class="rchips">
+        <button class="rchip on" data-r="all"><span data-i18n="review.all"></span> <span class="n" id="rc-all">0</span></button>
+        <button class="rchip" data-r="mt"><span data-i18n="review.mt"></span> <span class="n" id="rc-mt">0</span></button>
+        <button class="rchip" data-r="issues"><span data-i18n="review.issues"></span> <span class="n" id="rc-issues">0</span></button>
+        <button class="rchip" data-r="same"><span data-i18n="review.sameEng"></span> <span class="n" id="rc-same">0</span></button>
+      </div>
+      <div class="sp"></div>
+      <span class="hint" data-i18n="review.scopeHint"></span>
+    </div>
+    <div class="reviewlist" id="reviewlist" style="display:none"></div>
+
+    <div class="diffbar" id="diffbar" style="display:none">
+      <button class="btn" id="btnDiffFile" data-i18n="diff.loadFile"></button>
+      <span class="diffname" id="diffName"></span>
+      <label class="toggle on" id="diffOnlyToggle" data-i18n-title="diff.onlyDiffTitle">
+        <span class="tk"></span><span data-i18n="diff.onlyDiff"></span>
+      </label>
+      <div class="sp"></div>
+      <span class="diffstat" id="diffStat"></span>
+    </div>
+    <div class="difflist" id="difflist" style="display:none"></div>
+    <input type="file" id="diffInput" accept=".lang,.txt" hidden>
+    <div class="footnote" id="footnote" style="display:none"></div>
+  </section>
+</main>
+
+<div id="toast"></div>
+
+<script src="./scripts/app.js"></script>
+</body>
+</html>

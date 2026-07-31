@@ -1,0 +1,10 @@
+{
+  "name": "necesse-lang-translator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-standalone.mjs",
+    "check": "node scripts/check-build.mjs"
+  }
+}
