@@ -37,13 +37,16 @@ const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}`;
 
 const managerTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/glossary\/manager\.js["'])[^>]*><\/script>/i;
 const qaTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/glossary\/qa\.js["'])[^>]*><\/script>\s*/i;
+const localScriptTag = /<script\b[^>]*\bsrc=["']\.\/[^"']+["'][^>]*><\/script>\s*/gi;
 
-const standalone = html
+let standalone = html
   .replace('<link rel="stylesheet" href="./styles/app.css">', `<style>${css}</style>`)
   .replace('<script src="./scripts/i18n/locales.js"></script>\n', "")
   .replace('<script src="./scripts/app.js"></script>', `<script>${combinedApp}</script>`)
   .replace(managerTag, `<script type="module">${bundledGlossary}</script>`)
   .replace(qaTag, "");
+
+standalone = standalone.replace(localScriptTag, "");
 
 await mkdir(resolve(root, "dist"), { recursive: true });
 await writeFile(resolve(root, "dist/necesse-lang-translator.html"), standalone, "utf8");
