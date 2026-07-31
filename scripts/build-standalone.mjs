@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(root, "src");
-const [html, css, locales, app, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa] = await Promise.all([
+const [html, css, locales, app, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryNavigation] = await Promise.all([
   readFile(resolve(source, "index.html"), "utf8"),
   readFile(resolve(source, "styles/app.css"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locales.js"), "utf8"),
@@ -12,7 +12,8 @@ const [html, css, locales, app, glossaryLoader, glossaryManager, glossaryMatcher
   readFile(resolve(source, "scripts/glossary/loader.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/manager.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/matcher.js"), "utf8"),
-  readFile(resolve(source, "scripts/glossary/qa.js"), "utf8")
+  readFile(resolve(source, "scripts/glossary/qa.js"), "utf8"),
+  readFile(resolve(source, "scripts/glossary/navigation.js"), "utf8")
 ]);
 
 const originalHeader = `/* ============================================================================
@@ -33,7 +34,7 @@ const stripModuleSyntax = sourceText => sourceText
 
 const managerBundle = [glossaryLoader, glossaryManager].map(stripModuleSyntax).join("\n");
 const qaBundle = [glossaryMatcher, glossaryQa].map(stripModuleSyntax).join("\n");
-const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}`;
+const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}\n{\n${glossaryNavigation}\n}`;
 
 const managerTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/glossary\/manager\.js["'])[^>]*><\/script>/i;
 const qaTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/glossary\/qa\.js["'])[^>]*><\/script>\s*/i;
