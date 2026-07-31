@@ -37,7 +37,14 @@
       "properties": {
         "source": { "type": "string", "minLength": 1 },
         "target": { "type": "string", "minLength": 1 },
+        "forms": {
+          "description": "Grammatical forms of the preferred target term.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
         "alternatives": {
+          "description": "Different but acceptable translations.",
           "type": "array",
           "items": { "type": "string", "minLength": 1 },
           "uniqueItems": true
