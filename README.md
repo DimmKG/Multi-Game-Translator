@@ -12,12 +12,20 @@ The project begins by preserving the behaviour of the original standalone HTML w
 - `legacy/necesse-lang-translator.original.html` - untouched original baseline
 - `dist/necesse-lang-translator.html` - generated standalone build
 
-## Build
+## Build and verification
 
 Requirements: Node.js 18 or newer.
 
+Build the standalone application:
+
 ```powershell
 npm run build
+```
+
+Build it and verify that it still matches the preserved original baseline:
+
+```powershell
+npm run verify
 ```
 
 The generated standalone application is written to:
@@ -25,6 +33,8 @@ The generated standalone application is written to:
 ```text
 dist/necesse-lang-translator.html
 ```
+
+GitHub Actions runs the same verification automatically for pushes and pull requests.
 
 ## Development direction
 
