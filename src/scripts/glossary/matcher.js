@@ -21,7 +21,7 @@ function matchingSource(sourceText, entry) {
 }
 
 function acceptedTargets(entry) {
-  return [entry.target, ...(entry.alternatives || [])].filter(Boolean);
+  return [entry.target, ...(entry.forms || []), ...(entry.alternatives || [])].filter(Boolean);
 }
 
 export function inspectGlossaryEntry(sourceText, targetText, entry, glossary = {}) {
@@ -50,6 +50,7 @@ export function inspectGlossaryEntry(sourceText, targetText, entry, glossary = {
       type: "missing-preferred",
       source: entry.source,
       preferred: entry.target,
+      forms: Object.freeze([...(entry.forms || [])]),
       alternatives: Object.freeze([...(entry.alternatives || [])]),
       glossaryId: glossary.id || "",
       glossaryName: glossary.name || "",
