@@ -1,6 +1,6 @@
 # Glossaries
 
-Glossaries provide preferred, alternative and forbidden terminology without hard-coding a specific translation into the application.
+Glossaries provide preferred, grammatical, alternative and forbidden terminology without hard-coding a specific translation into the application.
 
 ## Local use
 
@@ -25,11 +25,14 @@ Required top-level fields:
 
 Each entry requires `source` and `target`. Optional fields include:
 
-- `alternatives`: other accepted target forms
+- `forms`: grammatical forms of the preferred `target`, such as definite, plural or declined forms
+- `alternatives`: different translations that are also acceptable
 - `forbidden`: forms that should trigger QA warnings
 - `caseSensitive` and `wholeWord`: matching behaviour
 - `status`: `approved`, `draft`, `deprecated` or `context-dependent`
 - `category`, `context` and `note`: human guidance
+
+Keep `forms` and `alternatives` conceptually separate. For example, `Заселникът` is a grammatical form of `Заселник`, while `Колонист` is a different acceptable translation.
 
 See `glossaries/examples/bg.example.json` for a complete example.
 
