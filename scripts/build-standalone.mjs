@@ -31,9 +31,9 @@ const stripModuleSyntax = sourceText => sourceText
   .replace(/^import[^\n]+\n/gm, "")
   .replace(/^export\s+/gm, "");
 
-const bundledGlossary = [glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa]
-  .map(stripModuleSyntax)
-  .join("\n");
+const managerBundle = [glossaryLoader, glossaryManager].map(stripModuleSyntax).join("\n");
+const qaBundle = [glossaryMatcher, glossaryQa].map(stripModuleSyntax).join("\n");
+const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}`;
 
 const standalone = html
   .replace('<link rel="stylesheet" href="./styles/app.css">', `<style>${css}</style>`)
