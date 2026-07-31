@@ -8,7 +8,8 @@ The project begins by preserving the behaviour of the original standalone HTML w
 
 - `src/index.html` - interface markup
 - `src/styles/app.css` - application styles
-- `src/scripts/app.js` - current application logic
+- `src/scripts/app.js` - application logic
+- `src/scripts/i18n/locales.js` - built-in interface languages
 - `legacy/necesse-lang-translator.original.html` - untouched original baseline
 - `dist/necesse-lang-translator.html` - generated standalone build
 
@@ -60,7 +61,7 @@ The generated standalone application is written to:
 dist/necesse-lang-translator.html
 ```
 
-GitHub Actions runs the same verification automatically for pushes and pull requests.
+GitHub Actions runs the same verification automatically for pushes and pull requests. `npm run verify` validates both interface locales and glossaries before rebuilding the standalone file.
 
 ## Glossaries
 
