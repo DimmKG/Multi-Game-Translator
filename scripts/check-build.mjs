@@ -1,14 +1,28 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const original = await readFile(resolve("legacy/necesse-lang-translator.original.html"), "utf8");
 const built = await readFile(resolve("dist/necesse-lang-translator.html"), "utf8");
+const failures = [];
 
-const normalize = value => value.replace(/\r\n/g, "\n").replace(/>\s+</g, "><").trim();
+const requireText = (text, label) => {
+  if (!built.includes(text)) failures.push(`Missing ${label}.`);
+};
 
-if (normalize(original) !== normalize(built)) {
-  console.error("The standalone build differs from the original baseline.");
+requireText("<!DOCTYPE html>", "HTML document declaration");
+requireText("<style>", "embedded application styles");
+requireText("const I18N = {", "embedded interface locales");
+requireText("const GLOSSARY_FORMAT", "embedded glossary loader");
+requireText("globalThis.NecesseGlossaries", "embedded Glossary Manager API");
+requireText("necesse-translator.glossaries.v1", "Glossary Manager storage key");
+
+if (/<link[^>]+href=["']\.\//i.test(built)) failures.push("Standalone build still references a local stylesheet.");
+if (/<script[^>]+src=["']\.\//i.test(built)) failures.push("Standalone build still references a local script.");
+if (/^\s*import\s/m.test(built)) failures.push("Standalone build contains an unresolved JavaScript import.");
+if (/^\s*export\s/m.test(built)) failures.push("Standalone build contains an unresolved JavaScript export.");
+
+if (failures.length) {
+  console.error("Standalone integrity checks failed:\n" + failures.map(item => `- ${item}`).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log("Standalone build matches the original baseline.");
+  console.log("Standalone build is self-contained and includes the required application modules.");
 }
