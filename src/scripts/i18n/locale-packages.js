@@ -5,39 +5,7 @@ const LOCALE_VERSION = 1;
 const STORAGE_KEY = "necesse-translator.interface-locales.v1";
 const BUILTIN_CODES = new Set(["en", "bg", "ru"]);
 const CODE_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-
-const TEXT = {
-  en: {
-    button: "Interface languages", title: "Interface languages",
-    intro: "Import partial or complete interface translations. Missing messages use English.",
-    import: "Import locale", export: "Export English template", installed: "Installed locales",
-    empty: "No additional interface languages installed.", remove: "Remove", close: "Close",
-    loaded: name => `Interface language “${name}” was installed.`,
-    replaced: name => `Interface language “${name}” was updated.`,
-    removed: name => `Interface language “${name}” was removed.`,
-    error: "Could not load interface locale: ", messages: n => `${n} translated messages`
-  },
-  ru: {
-    button: "Языки интерфейса", title: "Языки интерфейса",
-    intro: "Импортируйте полный или частичный перевод интерфейса. Пропущенные сообщения используются из английского.",
-    import: "Импорт локали", export: "Экспорт английского шаблона", installed: "Установленные локали",
-    empty: "Дополнительные языки интерфейса не установлены.", remove: "Удалить", close: "Закрыть",
-    loaded: name => `Язык интерфейса «${name}» установлен.`,
-    replaced: name => `Язык интерфейса «${name}» обновлён.`,
-    removed: name => `Язык интерфейса «${name}» удалён.`,
-    error: "Не удалось загрузить локаль интерфейса: ", messages: n => `Переведено сообщений: ${n}`
-  },
-  bg: {
-    button: "Езици на интерфейса", title: "Езици на интерфейса",
-    intro: "Импортирайте пълен или частичен превод на интерфейса. Липсващите съобщения използват английския текст.",
-    import: "Импортиране на локализация", export: "Експортиране на английски шаблон", installed: "Инсталирани локализации",
-    empty: "Няма допълнително инсталирани езици на интерфейса.", remove: "Премахване", close: "Затваряне",
-    loaded: name => `Езикът „${name}“ беше инсталиран.`,
-    replaced: name => `Езикът „${name}“ беше обновен.`,
-    removed: name => `Езикът „${name}“ беше премахнат.`,
-    error: "Локализацията не може да бъде заредена: ", messages: n => `${n} преведени съобщения`
-  }
-};
+const t = (key, vars) => globalThis.NecesseI18n?.t(`interfaceLocales.${key}`, vars) || key;
 
 function assertObject(value, label) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} must be an object.`);
@@ -80,7 +48,6 @@ export function applyInterfaceLocale(locale) {
 const state = { locales: [] };
 const ui = {};
 const currentUiLanguage = () => document.getElementById("uiLang")?.value || "en";
-const t = () => TEXT[currentUiLanguage()] || TEXT.en;
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.locales));
@@ -115,7 +82,7 @@ function remove(code) {
   if (currentUiLanguage() === code) document.getElementById("uiLang").value = "en";
   save();
   document.getElementById("uiLang")?.dispatchEvent(new Event("change"));
-  status(t().removed(locale?.nativeName || code));
+  status(t("removed", { name: locale?.nativeName || code }));
   render();
 }
 
@@ -137,20 +104,19 @@ function status(message, error = false) {
 
 function render() {
   if (!ui.dialog) return;
-  const text = t();
-  ui.open.textContent = text.button; ui.title.textContent = text.title; ui.intro.textContent = text.intro;
-  ui.import.textContent = text.import; ui.export.textContent = text.export; ui.heading.textContent = text.installed; ui.close.textContent = text.close;
+  ui.open.textContent = t("button"); ui.title.textContent = t("title"); ui.intro.textContent = t("intro");
+  ui.import.textContent = t("import"); ui.export.textContent = t("export"); ui.heading.textContent = t("installed"); ui.close.textContent = t("close");
   ui.list.replaceChildren();
   if (!state.locales.length) {
-    const empty = document.createElement("p"); empty.className = "lp-note"; empty.textContent = text.empty; ui.list.append(empty);
+    const empty = document.createElement("p"); empty.className = "lp-note"; empty.textContent = t("empty"); ui.list.append(empty);
   }
   for (const locale of state.locales) {
     const row = document.createElement("div"); row.className = "lp-row";
     const info = document.createElement("div"); info.className = "lp-info";
     const strong = document.createElement("strong"); strong.textContent = `${locale.nativeName} (${locale.code})`;
-    const meta = document.createElement("span"); meta.textContent = [text.messages(Object.keys(locale.messages).length), locale.updatedAt].filter(Boolean).join(" · ");
+    const meta = document.createElement("span"); meta.textContent = [t("messages", { n: Object.keys(locale.messages).length }), locale.updatedAt].filter(Boolean).join(" · ");
     info.append(strong, meta);
-    const removeButton = document.createElement("button"); removeButton.textContent = text.remove; removeButton.addEventListener("click", () => remove(locale.code));
+    const removeButton = document.createElement("button"); removeButton.textContent = t("remove"); removeButton.addEventListener("click", () => remove(locale.code));
     row.append(info, removeButton); ui.list.append(row);
   }
 }
@@ -189,8 +155,8 @@ function build() {
     try {
       const locale = normalizeInterfaceLocale(JSON.parse((await file.text()).replace(/^\uFEFF/, "")));
       const replaced = install(locale);
-      status((replaced ? t().replaced : t().loaded)(locale.nativeName));
-    } catch (error) { status(t().error + error.message, true); }
+      status(t(replaced ? "replaced" : "loaded", { name: locale.nativeName }));
+    } catch (error) { status(t("error") + error.message, true); }
     finally { ui.file.value = ""; }
   });
   select?.addEventListener("change", render);
