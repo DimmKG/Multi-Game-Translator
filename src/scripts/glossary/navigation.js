@@ -1,31 +1,7 @@
 "use strict";
 
-const NAV_TEXT = {
-  en: {
-    filter: "Terminology",
-    title: "Show only translations with terminology issues",
-    summary: count => `${count} terminology ${count === 1 ? "issue" : "issues"}`,
-    next: "Next terminology issue",
-    none: "No terminology issues found."
-  },
-  ru: {
-    filter: "Терминология",
-    title: "Показывать только переводы с терминологическими проблемами",
-    summary: count => `Терминологических проблем: ${count}`,
-    next: "Следующая терминологическая проблема",
-    none: "Терминологических проблем не найдено."
-  },
-  bg: {
-    filter: "Терминология",
-    title: "Показване само на преводите с терминологични проблеми",
-    summary: count => `${count} ${count === 1 ? "терминологичен проблем" : "терминологични проблема"}`,
-    next: "Следващ терминологичен проблем",
-    none: "Не са открити терминологични проблеми."
-  }
-};
-
-const navLanguage = () => document.getElementById("uiLang")?.value || "en";
-const navMessages = () => NAV_TEXT[navLanguage()] || NAV_TEXT.en;
+const navT = (key, vars) => globalThis.NecesseI18n?.t(key, vars) || key;
+const navPlural = (base, count, vars) => globalThis.NecesseI18n?.plural(base, count, vars) || String(count);
 let terminologyFilterActive = false;
 let currentIssueIndex = -1;
 let refreshQueued = false;
@@ -58,14 +34,13 @@ function updateControls() {
   if (!navUi.filter || !navUi.summary) return;
   const cards = flaggedCards();
   const count = cards.length;
-  const text = navMessages();
-  navUi.label.textContent = text.filter;
-  navUi.filter.title = text.title;
+  navUi.label.textContent = navT("terminology.filter");
+  navUi.filter.title = navT("terminology.filterTitle");
   navUi.filter.classList.toggle("on", terminologyFilterActive);
   navUi.filter.classList.toggle("warn", count > 0);
   navUi.count.textContent = String(count);
-  navUi.summary.textContent = text.summary(count);
-  navUi.summary.title = text.next;
+  navUi.summary.textContent = navPlural("terminology.count", count);
+  navUi.summary.title = navT("terminology.next");
   navUi.summary.disabled = count === 0;
   applyTerminologyVisibility();
 }
@@ -101,8 +76,6 @@ function toggleTerminologyFilter() {
   currentIssueIndex = -1;
 
   if (activate) {
-    // The application must render every entry before terminology visibility is
-    // applied, but only the terminology button should remain visibly selected.
     activateAllEntries();
     terminologyFilterActive = true;
     clearStandardFilterSelection();
@@ -117,7 +90,7 @@ function toggleTerminologyFilter() {
 function focusNextIssue() {
   const cards = flaggedCards().filter(card => !card.classList.contains("term-nav-hidden"));
   if (!cards.length) {
-    showToast(navMessages().none);
+    showToast(navT("terminology.none"));
     return;
   }
   currentIssueIndex = (currentIssueIndex + 1) % cards.length;
