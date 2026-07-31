@@ -1,5 +1,7 @@
 "use strict";
 
+const PROTECTED_TOKEN_RE = /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|[0-9A-Za-z])|\\n/g;
+
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -10,10 +12,16 @@ function termPattern(term, wholeWord) {
   return `(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`;
 }
 
+export function stripProtectedTokens(text) {
+  if (typeof text !== "string") return "";
+  return text.replace(PROTECTED_TOKEN_RE, " ");
+}
+
 export function containsGlossaryTerm(text, term, options = {}) {
   if (typeof text !== "string" || typeof term !== "string" || term.length === 0) return false;
+  const searchable = options.ignoreProtectedTokens === false ? text : stripProtectedTokens(text);
   const flags = options.caseSensitive ? "u" : "iu";
-  return new RegExp(termPattern(term, options.wholeWord !== false), flags).test(text);
+  return new RegExp(termPattern(term, options.wholeWord !== false), flags).test(searchable);
 }
 
 function matchingSource(sourceText, entry) {
