@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://actepukc.github.io/Necesse-Lang-Translator/schemas/glossary-v1.schema.json",
+  "title": "Necesse Translator Glossary",
+  "type": "object",
+  "required": ["format", "version", "id", "name", "sourceLanguage", "targetLanguage", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string", "format": "uri-reference" },
+    "format": { "const": "necesse-glossary" },
+    "version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "sourceLanguage": { "$ref": "#/$defs/languageTag" },
+    "targetLanguage": { "$ref": "#/$defs/languageTag" },
+    "game": { "type": "string", "minLength": 1 },
+    "authors": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "updatedAt": { "type": "string", "format": "date" },
+    "entries": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "languageTag": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+    },
+    "entry": {
+      "type": "object",
+      "required": ["source", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "alternatives": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "forbidden": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "caseSensitive": { "type": "boolean", "default": false },
+        "wholeWord": { "type": "boolean", "default": true },
+        "status": {
+          "type": "string",
+          "enum": ["approved", "draft", "deprecated", "context-dependent"],
+          "default": "approved"
+        },
+        "category": { "type": "string", "minLength": 1 },
+        "context": { "type": "string" },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}
