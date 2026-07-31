@@ -13,17 +13,19 @@
     {
       "source": "Settler",
       "target": "Заселник",
+      "forms": ["Заселникът", "Заселника", "Заселници", "Заселниците"],
+      "alternatives": ["Колонист"],
       "forbidden": ["Преселник"],
       "caseSensitive": false,
       "wholeWord": true,
       "status": "approved",
       "category": "character",
-      "note": "Example terminology entry."
+      "note": "Forms are grammatical variants; alternatives are different acceptable translations."
     },
     {
       "source": "Caveling",
       "target": "Пещерник",
-      "alternatives": ["Пещерници"],
+      "forms": ["Пещерникът", "Пещерника", "Пещерници", "Пещерниците"],
       "forbidden": ["Пещерняк", "Пещерняци"],
       "caseSensitive": false,
       "wholeWord": true,
