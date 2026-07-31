@@ -40,7 +40,7 @@ const standalone = html
   .replace('<script src="./scripts/i18n/locales.js"></script>\n', "")
   .replace('<script src="./scripts/app.js"></script>', `<script>${combinedApp}</script>`)
   .replace('<script type="module" src="./scripts/glossary/manager.js"></script>', `<script type="module">${bundledGlossary}</script>`)
-  .replace('<script type="module" src="./scripts/glossary/qa.js"></script>\n', "");
+  .replace('<script type="module" src="./scripts/glossary/qa.js"></script>', "");
 
 await mkdir(resolve(root, "dist"), { recursive: true });
 await writeFile(resolve(root, "dist/necesse-lang-translator.html"), standalone, "utf8");
