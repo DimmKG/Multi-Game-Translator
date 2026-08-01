@@ -54,6 +54,7 @@
     const empty = document.createElement("option");
     empty.value = "";
     empty.textContent = "—";
+    empty.disabled = true;
     select.append(empty);
 
     for (const [code, label] of LANGUAGE_OPTIONS) {
@@ -69,7 +70,11 @@
     return select;
   }
 
-  function syncInput(input, select, code) {
+  function commitSelection(input, select, code) {
+    if (!code) {
+      select.value = "";
+      return;
+    }
     input.value = code;
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
@@ -94,7 +99,7 @@
     const chosen = current || inferred;
 
     select.value = chosen;
-    if (chosen && input.value !== chosen) syncInput(input, select, chosen);
+    if (chosen && input.value !== chosen) commitSelection(input, select, chosen);
     if (!chosen) input.value = "";
     applyAvailability(select);
   }
@@ -107,7 +112,8 @@
     const select = buildSelector(input);
 
     select.addEventListener("change", () => {
-      syncInput(input, select, select.value);
+      if (!select.value) return;
+      commitSelection(input, select, select.value);
       applyAvailability(select);
     });
 
@@ -141,7 +147,7 @@
       get: () => select.value,
       set(code) {
         const normalized = normalizeProjectCode(code);
-        syncInput(input, select, normalized);
+        commitSelection(input, select, normalized);
         applyAvailability(select);
       }
     });
