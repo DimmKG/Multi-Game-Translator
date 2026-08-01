@@ -54,15 +54,15 @@
   // Strip download-duplication artifacts ("ru_1_.lang", "ru (1).lang") without
   // touching real locale codes like pt-BR, zh-CN or es-419.
   function cleanName(name){
-    let base = String(name || "ru.lang").replace(/\.lang$/i, "");
+    let base = String(name || "").replace(/\.lang$/i, "");
     base = base.replace(/\s*\(\d+\)\s*$/, "");   // "ru (1)" -> "ru"
     base = base.replace(/_\d+_?/g, "");           // "ru_1_" / "ru_1" -> "ru"  (locales never use "_")
     base = base.replace(/^_+|_+$/g, "");
-    return (base || "ru") + ".lang";
+    return base ? base + ".lang" : "translation.lang";
   }
 
   const state = {
-    filename: "ru.lang",
+    filename: "",
     eol: "\r\n",
     items: [],          // parsed lines in order
     filter: "missing",
@@ -71,7 +71,7 @@
     // machine-translation / spellcheck
     spellcheck: true,
     mtProvider: "google",
-    targetLang: "ru",
+    targetLang: "",
     byId: new Map(),
     savedAt: 0,
     view: "editor",
