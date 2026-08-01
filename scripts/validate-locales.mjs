@@ -1,33 +1,49 @@
-import { readFile } from "node:fs/promises";
-import vm from "node:vm";
+import { readFile, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const path = resolve(root, "src/scripts/i18n/locales.js");
-const source = await readFile(path, "utf8");
-const context = vm.createContext(Object.create(null));
-vm.runInContext(`${source}\n;globalThis.__I18N__ = I18N;`, context, { filename: path, timeout: 1000 });
-const locales = context.__I18N__;
-if (!locales || typeof locales !== "object" || Array.isArray(locales)) throw new Error("Locale source must define an I18N object.");
-if (!locales.en) throw new Error("The English fallback locale is missing.");
-const baseKeys = Object.keys(locales.en);
+const directory = resolve(root, "src/scripts/i18n/locales");
+const manifest = JSON.parse(await readFile(resolve(directory, "manifest.json"), "utf8"));
+const files = manifest.locales.map(locale => locale.file);
+const locales = [];
+for (const file of files) locales.push(JSON.parse(await readFile(resolve(directory, file), "utf8")));
+
+if (!locales.length || locales[0].code !== "en") throw new Error("The English fallback locale must load first.");
+const english = locales[0];
+const baseKeys = Object.keys(english.messages);
 const baseSet = new Set(baseKeys);
-const tokens = value => [...String(value).matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)].map(x => x[1]).sort();
+const tokens = value => [...String(value).matchAll(/\{([A-Za-z][A-Za-z0-9_]*)\}/g)].map(match => match[1]).sort();
 const errors = [];
-for (const [code, messages] of Object.entries(locales)) {
-  if (!messages || typeof messages !== "object" || Array.isArray(messages)) { errors.push(`${code}: locale must be an object`); continue; }
-  const keys = Object.keys(messages);
-  const keySet = new Set(keys);
-  const missing = baseKeys.filter(key => !keySet.has(key));
+const seen = new Set();
+
+for (const locale of locales) {
+  if (seen.has(locale.code)) errors.push(`${locale.code}: duplicate locale code`);
+  seen.add(locale.code);
+  if (!locale.messages || typeof locale.messages !== "object" || Array.isArray(locale.messages)) {
+    errors.push(`${locale.code}: messages must be an object`);
+    continue;
+  }
+  const keys = Object.keys(locale.messages);
   const unknown = keys.filter(key => !baseSet.has(key));
-  if (missing.length) errors.push(`${code}: missing keys: ${missing.join(", ")}`);
-  if (unknown.length) errors.push(`${code}: unknown keys: ${unknown.join(", ")}`);
-  for (const key of baseKeys) {
-    if (!keySet.has(key)) continue;
-    if (typeof messages[key] !== "string") { errors.push(`${code}.${key}: value must be a string`); continue; }
-    if (tokens(locales.en[key]).join("\0") !== tokens(messages[key]).join("\0")) errors.push(`${code}.${key}: placeholders differ`);
+  if (unknown.length) errors.push(`${locale.code}: unknown keys: ${unknown.join(", ")}`);
+  if (locale.reviewed && locale.code !== "en") {
+    const missing = baseKeys.filter(key => !Object.hasOwn(locale.messages, key));
+    if (missing.length) errors.push(`${locale.code}: reviewed locale is missing keys: ${missing.join(", ")}`);
+  }
+  for (const [key, value] of Object.entries(locale.messages)) {
+    if (typeof value !== "string") {
+      errors.push(`${locale.code}.${key}: value must be a string`);
+      continue;
+    }
+    if (Object.hasOwn(english.messages, key) && tokens(english.messages[key]).join("\0") !== tokens(value).join("\0")) {
+      errors.push(`${locale.code}.${key}: placeholders differ`);
+    }
   }
 }
-if (errors.length) { console.error("Interface locale validation failed:\n" + errors.map(x => `- ${x}`).join("\n")); process.exit(1); }
-console.log(`Validated ${Object.keys(locales).length} interface locales with ${baseKeys.length} keys each.`);
+
+if (errors.length) {
+  console.error("Interface locale validation failed:\n" + errors.map(error => `- ${error}`).join("\n"));
+  process.exit(1);
+}
+console.log(`Validated ${locales.length} built-in JSON locales against ${baseKeys.length} English keys.`);

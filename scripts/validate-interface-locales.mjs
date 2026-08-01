@@ -1,16 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
-import vm from "node:vm";
 
 const root = resolve(".");
 const directory = resolve(root, "interface-locales");
-const localeSource = await readFile(resolve(root, "src/scripts/i18n/locales.js"), "utf8");
-const settingsSource = await readFile(resolve(root, "src/scripts/i18n/settings-messages.js"), "utf8");
-const context = {};
-vm.createContext(context);
-vm.runInContext(`${localeSource}\nglobalThis.I18N = I18N;\n${settingsSource}\nglobalThis.__I18N = I18N;`, context);
-const englishKeys = new Set(Object.keys(context.__I18N.en));
-const builtins = new Set(["en", "bg", "ru"]);
+const builtInDirectory = resolve(root, "src/scripts/i18n/locales");
+const manifest = JSON.parse(await readFile(resolve(builtInDirectory, "manifest.json"), "utf8"));
+const english = JSON.parse(await readFile(resolve(builtInDirectory, "en.json"), "utf8"));
+const englishKeys = new Set(Object.keys(english.messages));
+const builtins = new Set(manifest.locales.map(locale => locale.code));
 const codePattern = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 const failures = [];
 let checked = 0;
@@ -54,5 +51,5 @@ if (failures.length) {
   console.error("Interface locale validation failed:\n" + failures.map(item => `- ${item}`).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log(`Validated ${checked} interface locale package${checked === 1 ? "" : "s"}.`);
+  console.log(`Validated ${checked} interface locale package${checked === 1 ? "" : "s"} against ${builtins.size} built-in JSON locales.`);
 }
