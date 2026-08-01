@@ -2,24 +2,26 @@
 
 A browser-based editor for Necesse `.lang` translation files.
 
-## Current baseline
+It supports local editing, English reference files, review and comparison views, terminology glossaries, installable interface translations and a generated standalone HTML build.
 
-The project begins by preserving the behaviour of the original standalone HTML while separating the source into maintainable files:
+## Project structure
 
-- `src/index.html` - interface markup
-- `src/styles/app.css` - application styles
-- `src/scripts/app.js` - application logic
-- `src/scripts/i18n/locales.js` - built-in interface languages
-- `legacy/necesse-lang-translator.original.html` - untouched original baseline
-- `dist/necesse-lang-translator.html` - generated standalone build
+- `src/index.html` — interface markup
+- `src/styles/app.css` — application styles
+- `src/scripts/app.js` — core editor logic
+- `src/scripts/i18n/` — built-in and installable interface localization support
+- `src/scripts/glossary/` — glossary loading, terminology QA and navigation
+- `src/glossaries/` — public online catalog and browser-accessible glossary files
+- `schemas/` — normative JSON schemas
+- `docs/` — authoring and usage guides
+- `legacy/necesse-lang-translator.original.html` — preserved original baseline
+- `dist/necesse-lang-translator.html` — generated standalone build
 
-## Run locally in a browser
+## Run locally
 
-The source version should be opened through a local HTTP server rather than directly through a `file://` URL. This allows external interface locales, glossaries and other data files to be loaded normally.
+The source version should be opened through the included local HTTP server rather than directly through a `file://` URL. HTTP mode enables the public glossary catalog and other external data files.
 
 Requirements: Node.js 18 or newer.
-
-Start the source version:
 
 ```powershell
 npm run dev
@@ -39,55 +41,86 @@ npm run preview
 
 No third-party packages are required for either command.
 
-## Build and verification
+## Standalone build
 
-Build the standalone application:
+Build the single-file offline application:
 
 ```powershell
 npm run build
 ```
 
-Build it and run all repository checks:
-
-```powershell
-npm run verify
-```
-
-The verification currently checks the standalone build against the preserved original and validates glossary files and catalogs.
-
-The generated standalone application is written to:
+The generated file is written to:
 
 ```text
 dist/necesse-lang-translator.html
 ```
 
-GitHub Actions runs the same verification automatically for pushes and pull requests. `npm run verify` validates both interface locales and glossaries before rebuilding the standalone file.
+The standalone file can be opened directly through `file://`. Local glossary import and installable interface locale import remain available, while online catalog controls are hidden because browsers do not permit the same HTTP loading behaviour in direct-file mode.
 
-## Glossaries
+## Verification
 
-The repository now defines versioned JSON formats for local glossaries and online glossary catalogs:
-
-- `schemas/glossary-v1.schema.json`
-- `schemas/glossary-catalog-v1.schema.json`
-- `glossaries/catalog.json`
-- `glossaries/examples/bg.example.json`
-
-Validate them separately with:
+Run all tests, validators and the standalone build check:
 
 ```powershell
+npm run verify
+```
+
+GitHub Actions runs the same verification for pushes and pull requests.
+
+Individual validation commands include:
+
+```powershell
+npm run validate:locales
+npm run validate:interface-locales
 npm run validate:glossaries
 ```
 
-See [`docs/glossaries.md`](docs/glossaries.md) for the format, offline behaviour and contribution rules.
+## Glossaries and terminology QA
 
-## Development direction
+Glossaries define preferred terminology, grammatical forms, acceptable alternatives and forbidden wording without hard-coding a specific target language into the application.
 
-The first milestone is structural only. Existing behaviour and technical guidance must be preserved while the code is separated into modules.
+Features include:
 
-Planned follow-up work:
+- local JSON import;
+- hosted online catalog loading;
+- saved enable/disable state;
+- explicit catalog update checks through `updatedAt`;
+- grammatical `forms` and acceptable `alternatives`;
+- forbidden terminology warnings;
+- protected placeholder and formatting-token masking;
+- terminology filtering, next-issue navigation and Review integration.
 
-1. Convert Russian-only technical comments and mixed-language instructions to unified English without removing their meaning.
-2. Extract interface localization into validated external locale packs.
-3. Add local and online glossary loading through the versioned JSON format and catalog.
-4. Introduce project storage, source update tracking, terminology QA and additional review states.
-5. Publish the web build through GitHub Pages while continuing to generate a standalone HTML file.
+Start here:
+
+- [Glossary authoring and publishing guide](docs/glossaries.md)
+- [Bulgarian example glossary](glossaries/examples/bg.example.json)
+- [Glossary schema](schemas/glossary-v1.schema.json)
+- [Catalog schema](schemas/glossary-catalog-v1.schema.json)
+
+## Interface localization
+
+The editor includes built-in interface languages and also accepts installable JSON locale packages.
+
+An installable package may be partial. Missing keys automatically use English, and importing the same language code again replaces the stored package.
+
+Start here:
+
+- [Interface locale package guide](docs/interface-locales.md)
+- [Partial Spanish example](interface-locales/examples/es.partial.example.json)
+- [Interface locale schema](schemas/interface-locale-v1.schema.json)
+
+The shared i18n system covers the core editor, glossary management, terminology warnings and navigation, Review terminology badges and the interface-language manager.
+
+## Current status
+
+The main functional milestone is complete:
+
+- modular source and generated standalone build;
+- GitHub Pages-compatible public application tree;
+- built-in and installable interface localization;
+- local and online glossaries;
+- terminology QA, filtering and Review integration;
+- glossary version tracking and explicit updates;
+- automated validation and regression tests.
+
+Remaining work is primarily documentation refinement and interface polishing, including settings, optional navigation-panel collapsing and improved narrow-screen behaviour.
