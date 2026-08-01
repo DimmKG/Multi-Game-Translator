@@ -23,16 +23,20 @@
     }
     const id = definition.id.trim();
     if (providers.has(id)) throw new TypeError("Duplicate machine-translation provider: " + id);
+    const settings = Array.isArray(definition.settings) ? definition.settings : [];
+    globalThis.NecesseMtProviderSettings?.define(id, settings);
     const provider = Object.freeze({
       id,
       name: definition.name || id,
       normalizeLanguage: typeof definition.normalizeLanguage === "function"
         ? definition.normalizeLanguage
         : code => String(code || "").trim(),
+      settings: Object.freeze([...settings]),
       translate: definition.translate
     });
     providers.set(id, provider);
     if (!defaultId || definition.default) defaultId = id;
+    globalThis.dispatchEvent?.(new CustomEvent("necesse:mt-provider-registered", { detail: { providerId: id } }));
     return provider;
   }
 
@@ -48,11 +52,13 @@
     if (!targetLanguage) {
       throw new MtProviderError("target-language-required", "A target language is required.", { provider: provider.id });
     }
+    const settings = globalThis.NecesseMtProviderSettings?.resolve(provider.id) || {};
     return provider.translate({
       text: String(request.text || ""),
       sourceLanguage,
       targetLanguage,
-      signal: request.signal
+      signal: request.signal,
+      settings
     });
   }
 
@@ -60,6 +66,7 @@
     id: "google",
     name: "Google",
     default: true,
+    settings: [],
     normalizeLanguage(code) {
       let value = String(code || "").trim().replace(/_/g, "-");
       if (!value) return "";
