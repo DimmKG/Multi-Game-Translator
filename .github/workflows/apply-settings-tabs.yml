@@ -1,0 +1,42 @@
+name: Apply Settings tabs
+
+on:
+  push:
+    branches:
+      - agent/settings-tabs
+
+permissions:
+  contents: write
+
+concurrency:
+  group: settings-tabs
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/settings-tabs
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Apply integration
+        run: node scripts/apply-settings-tabs.mjs
+
+      - name: Verify
+        run: npm run verify
+
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src scripts test docs dist
+          git diff --cached --quiet && exit 0
+          git commit -m "Integrate responsive Settings tabs"
+          git push origin HEAD:agent/settings-tabs
