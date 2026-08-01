@@ -8,6 +8,12 @@ Use the hosted application:
 
 The editor works locally in the browser and supports reference files, translation review, file comparison, terminology glossaries, interface localization and an offline standalone build.
 
+## Origin and credits
+
+The project began with a minimal standalone HTML editor created by **DimmKG** and shared in the Necesse Discord community on 30 July 2026 in response to a request for a translation-focused alternative to a plain text editor.
+
+The current project preserves that original baseline in `legacy/necesse-lang-translator.original.html` and expands it with modular source files, review and comparison tools, terminology QA, interface localization, validation, automated tests, an offline build and a hosted web application.
+
 ## Features
 
 - open and edit Necesse `.lang` files locally;
@@ -23,6 +29,21 @@ The editor works locally in the browser and supports reference files, translatio
 - open the generated standalone application without a web server.
 
 Files are processed in the browser. The application does not upload localization files to a server.
+
+## Translation-file safety
+
+The editor separates each localization key from its translated value. During normal editing, translators change only the text after `=`, while the key itself is displayed separately and is not part of the editable translation field.
+
+The application also checks protected content such as placeholders, references, formatting codes and explicit newline tokens. Missing or changed tokens are shown as review warnings before export. The comparison view can be used as an additional final check against another `.lang` file.
+
+These checks are intended to reduce accidental changes to structures such as:
+
+```text
+codeName=
+<variable>
+[item/input=...]
+\n
+```
 
 ## Run locally
 
