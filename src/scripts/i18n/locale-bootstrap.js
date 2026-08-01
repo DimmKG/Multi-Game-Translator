@@ -2,6 +2,10 @@
 
 (function initializeSharedInterfaceI18n() {
   const language = () => document.getElementById("uiLang")?.value || "en";
+  const rtlLanguages = new Set(["ar"]);
+  const applyDirection = (code = language()) => {
+    document.documentElement.dir = rtlLanguages.has(String(code).toLowerCase()) ? "rtl" : "ltr";
+  };
   const translate = (key, vars) => {
     const locale = I18N[language()] || I18N.en;
     let value = locale?.[key] != null ? locale[key] : (I18N.en?.[key] != null ? I18N.en[key] : key);
@@ -13,7 +17,12 @@
     return String(value);
   };
   const plural = (base, count, vars = {}) => translate(base + "." + (count === 1 ? "one" : "other"), { ...vars, n: count });
-  globalThis.NecesseI18n = Object.freeze({ t: translate, plural });
+  globalThis.NecesseI18n = Object.freeze({ t: translate, plural, applyDirection });
+
+  document.addEventListener("change", event => {
+    if (event.target?.id === "uiLang") applyDirection(event.target.value);
+  });
+  window.addEventListener("load", () => applyDirection());
 })();
 
 (function restoreInstalledInterfaceLocales() {
