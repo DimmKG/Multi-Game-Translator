@@ -48,6 +48,7 @@ jobs:
           providers = Path('test/mt-providers.test.mjs')
           text = providers.read_text(encoding='utf-8')
           text = text.replace('/async function translate(id, request/', '/async function translate\\(id, request/')
+          text = text.replace('/registry.translate(validProvider(provider)/', '/registry\\.translate\\(validProvider\\(provider\\)/')
           providers.write_text(text, encoding='utf-8')
 
           target = Path('test/mt-target-language.test.mjs')
