@@ -9,7 +9,7 @@
       "nativeName": "English",
       "reviewed": true,
       "file": "en.json",
-      "messageCount": 190
+      "messageCount": 221
     },
     {
       "code": "ar",
@@ -17,7 +17,7 @@
       "nativeName": "العربية",
       "reviewed": false,
       "file": "ar.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "bg",
@@ -25,7 +25,7 @@
       "nativeName": "български",
       "reviewed": true,
       "file": "bg.json",
-      "messageCount": 190
+      "messageCount": 221
     },
     {
       "code": "ca",
@@ -33,7 +33,7 @@
       "nativeName": "català",
       "reviewed": false,
       "file": "ca.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "cs",
@@ -41,7 +41,7 @@
       "nativeName": "čeština",
       "reviewed": false,
       "file": "cs.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "da",
@@ -49,7 +49,7 @@
       "nativeName": "dansk",
       "reviewed": false,
       "file": "da.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "de",
@@ -57,7 +57,7 @@
       "nativeName": "Deutsch",
       "reviewed": false,
       "file": "de.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "es",
@@ -65,7 +65,7 @@
       "nativeName": "español",
       "reviewed": false,
       "file": "es.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "fi",
@@ -73,7 +73,7 @@
       "nativeName": "suomi",
       "reviewed": false,
       "file": "fi.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "fr",
@@ -81,7 +81,7 @@
       "nativeName": "français",
       "reviewed": false,
       "file": "fr.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "hr",
@@ -89,7 +89,7 @@
       "nativeName": "hrvatski",
       "reviewed": false,
       "file": "hr.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "hu",
@@ -97,7 +97,7 @@
       "nativeName": "magyar",
       "reviewed": false,
       "file": "hu.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "id",
@@ -105,7 +105,7 @@
       "nativeName": "Indonesia",
       "reviewed": false,
       "file": "id.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "it",
@@ -113,7 +113,7 @@
       "nativeName": "italiano",
       "reviewed": false,
       "file": "it.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "ja",
@@ -121,7 +121,7 @@
       "nativeName": "日本語",
       "reviewed": false,
       "file": "ja.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "ko",
@@ -129,7 +129,7 @@
       "nativeName": "한국어",
       "reviewed": false,
       "file": "ko.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "lt",
@@ -137,7 +137,7 @@
       "nativeName": "lietuvių",
       "reviewed": false,
       "file": "lt.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "nl",
@@ -145,7 +145,7 @@
       "nativeName": "Nederlands",
       "reviewed": false,
       "file": "nl.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "no",
@@ -153,7 +153,7 @@
       "nativeName": "norsk",
       "reviewed": false,
       "file": "no.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "pl",
@@ -161,7 +161,7 @@
       "nativeName": "polski",
       "reviewed": false,
       "file": "pl.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "pt-BR",
@@ -169,7 +169,7 @@
       "nativeName": "português (Brasil)",
       "reviewed": false,
       "file": "pt-BR.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "ru",
@@ -177,7 +177,7 @@
       "nativeName": "русский",
       "reviewed": true,
       "file": "ru.json",
-      "messageCount": 190
+      "messageCount": 221
     },
     {
       "code": "se",
@@ -185,7 +185,7 @@
       "nativeName": "davvisámegiella",
       "reviewed": false,
       "file": "se.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "th",
@@ -193,7 +193,7 @@
       "nativeName": "ไทย",
       "reviewed": false,
       "file": "th.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "tr",
@@ -201,7 +201,7 @@
       "nativeName": "Türkçe",
       "reviewed": false,
       "file": "tr.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "uk",
@@ -209,7 +209,7 @@
       "nativeName": "українська",
       "reviewed": false,
       "file": "uk.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "vi",
@@ -217,7 +217,7 @@
       "nativeName": "Tiếng Việt",
       "reviewed": false,
       "file": "vi.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "zh-CN",
@@ -225,7 +225,7 @@
       "nativeName": "中文（中国）",
       "reviewed": false,
       "file": "zh-CN.json",
-      "messageCount": 138
+      "messageCount": 119
     },
     {
       "code": "zh-TW",
@@ -233,7 +233,7 @@
       "nativeName": "中文（台灣）",
       "reviewed": false,
       "file": "zh-TW.json",
-      "messageCount": 138
+      "messageCount": 119
     }
   ]
 }
