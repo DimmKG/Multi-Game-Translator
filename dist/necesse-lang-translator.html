@@ -532,7 +532,7 @@
       </label>
       <div class="grp">
         <span data-i18n="mt.label"></span>
-        <span class="mtprov" data-i18n="mt.google" data-i18n-title="mt.providerTitle"></span>
+        <select class="mtprov" id="mtProvider" data-i18n-title="mt.providerTitle" aria-label="Machine translation provider"></select>
       </div>
       <div class="grp"><span data-i18n="mt.langLabel"></span><input class="mini" id="mtTarget" spellcheck="false" data-i18n-title="mt.langTitle"></div>
       <div class="sp"></div>
@@ -5108,6 +5108,109 @@ globalThis.NecesseLocales.register({
     // Ignore invalid or unavailable saved locale data.
   }
 })();
+"use strict";
+
+(function initializeMtProviders() {
+  class MtProviderError extends Error {
+    constructor(code, message, options = {}) {
+      super(message || code, options);
+      this.name = "MtProviderError";
+      this.code = code;
+      this.provider = options.provider || "";
+      this.status = options.status || 0;
+    }
+  }
+
+  const providers = new Map();
+  let defaultId = "";
+
+  function register(definition) {
+    if (!definition || typeof definition.id !== "string" || !definition.id.trim()) {
+      throw new TypeError("A machine-translation provider id is required.");
+    }
+    if (typeof definition.translate !== "function") {
+      throw new TypeError("Provider " + definition.id + " must define translate().");
+    }
+    const id = definition.id.trim();
+    if (providers.has(id)) throw new TypeError("Duplicate machine-translation provider: " + id);
+    const provider = Object.freeze({
+      id,
+      name: definition.name || id,
+      normalizeLanguage: typeof definition.normalizeLanguage === "function"
+        ? definition.normalizeLanguage
+        : code => String(code || "").trim(),
+      translate: definition.translate
+    });
+    providers.set(id, provider);
+    if (!defaultId || definition.default) defaultId = id;
+    return provider;
+  }
+
+  function get(id) {
+    return providers.get(String(id || "")) || null;
+  }
+
+  async function translate(id, request = {}) {
+    const provider = get(id || defaultId);
+    if (!provider) throw new MtProviderError("unknown-provider", "Unknown machine-translation provider.", { provider: id });
+    const targetLanguage = provider.normalizeLanguage(request.targetLanguage);
+    const sourceLanguage = provider.normalizeLanguage(request.sourceLanguage || "en");
+    if (!targetLanguage) {
+      throw new MtProviderError("target-language-required", "A target language is required.", { provider: provider.id });
+    }
+    return provider.translate({
+      text: String(request.text || ""),
+      sourceLanguage,
+      targetLanguage,
+      signal: request.signal
+    });
+  }
+
+  register({
+    id: "google",
+    name: "Google",
+    default: true,
+    normalizeLanguage(code) {
+      let value = String(code || "").trim().replace(/_/g, "-");
+      if (!value) return "";
+      if (/^pr(-br)?$/i.test(value)) value = "pt" + value.slice(2);
+      const aliases = {
+        "pt-br": "pt", "pt-pt": "pt",
+        "zh-cn": "zh-CN", "zh-tw": "zh-TW", "zh-hk": "zh-TW",
+        "es-419": "es", "es-es": "es", "es-mx": "es",
+        "en-us": "en", "en-gb": "en",
+        "nb-no": "no", "nn-no": "no"
+      };
+      return aliases[value.toLowerCase()] || value;
+    },
+    async translate({ text, sourceLanguage, targetLanguage, signal }) {
+      const url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" + encodeURIComponent(sourceLanguage) + "&tl=" + encodeURIComponent(targetLanguage) + "&dt=t&q=" + encodeURIComponent(text);
+      const response = await fetch(url, { signal });
+      if (!response.ok) {
+        throw new MtProviderError("http-error", "Google " + response.status, {
+          provider: "google",
+          status: response.status
+        });
+      }
+      const payload = await response.json();
+      const segments = payload && payload[0];
+      if (!Array.isArray(segments)) {
+        throw new MtProviderError("invalid-response", "Google returned an invalid response.", { provider: "google" });
+      }
+      return segments.map(segment => (segment && segment[0]) ? segment[0] : "").join("");
+    }
+  });
+
+  globalThis.NecesseMtProviders = Object.freeze({
+    register,
+    get,
+    has: id => providers.has(String(id || "")),
+    getAll: () => [...providers.values()],
+    translate,
+    get defaultId() { return defaultId; },
+    MtProviderError
+  });
+})();
 (function(){
   const LS_KEY = "necesse_lang_translator_v1";
   const MISS = "MISSING_TRANSLATION:";
@@ -6020,34 +6123,25 @@ function targetFromName(name){
   }
  function indexItems(){ state.byId = new Map(); for (const it of state.items) if (it.type==="entry") state.byId.set(it.id, it); }
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  // Only these remain; sessions saved with a removed provider (e.g. mymemory) fall back.
-  // Google only. Sessions saved with a provider that has since been removed
-  // (mymemory, yandex, lingva) fall back to it on load.
-  const MT_PROVIDERS = ["google"];
-  function validProvider(p){ return MT_PROVIDERS.includes(p) ? p : MT_PROVIDERS[0]; }
+  const MT_PROVIDER_KEY = "necesse-translator.mt-provider.v1";
+  function providerRegistry(){ return globalThis.NecesseMtProviders || null; }
+  function validProvider(provider){
+    const registry = providerRegistry();
+    return registry && registry.has(provider) ? provider : (registry?.defaultId || "google");
+  }
+  function preferredProvider(){
+    try { return validProvider(localStorage.getItem(MT_PROVIDER_KEY)); }
+    catch(e) { return validProvider(""); }
+  }
+  function setPreferredProvider(provider){
+    try { localStorage.setItem(MT_PROVIDER_KEY, validProvider(provider)); } catch(e) {}
+  }
   function decodeEntities(s){ const t = document.createElement("textarea"); t.innerHTML = s; return t.value; }
 
-  // Necesse filenames use BCP-47-ish codes; Google's gtx endpoint wants its own set.
-  // Also fix common typos (pr-BR → pt-BR: R is next to T on QWERTY).
-  function normalizeMtLang(code){
-    let c = String(code || "").trim().replace(/_/g, "-");
-    if (!c) return "ru";
-    if (/^pr(-br)?$/i.test(c)) c = "pt" + c.slice(2);
-    const aliases = {
-      "pt-br": "pt", "pt-pt": "pt",
-      "zh-cn": "zh-CN", "zh-tw": "zh-TW", "zh-hk": "zh-TW",
-      "es-419": "es", "es-es": "es", "es-mx": "es",
-      "en-us": "en", "en-gb": "en",
-      "nb-no": "no", "nn-no": "no",
-    };
-    const hit = aliases[c.toLowerCase()];
-    return hit || c;
-  }
-  // Prefer live input value so MT works even before blur/change fires.
   function currentTargetLang(){
     const live = (($("mtTarget") && $("mtTarget").value) || "").trim();
     if (live) state.targetLang = live;
-    return state.targetLang || "ru";
+    return state.targetLang || "";
   }
 
   // Replace format tokens with sentinels the MT engine should leave untouched,
@@ -6065,23 +6159,22 @@ function targetFromName(name){
   }
 
   async function callProvider(provider, text, target){
+    const registry = providerRegistry();
+    if (!registry) throw new Error(t("mt.errUnknownProvider"));
     const ctl = new AbortController();
     const to = setTimeout(() => ctl.abort(), 13000);
     try{
-      if (provider === "google"){
-        const tl = normalizeMtLang(target);
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
-        const r = await fetch(url, {signal:ctl.signal});
-        if (!r.ok) throw new Error("Google "+r.status);
-        const j = await r.json();
-        const seg = j && j[0];
-        if (!Array.isArray(seg)) throw new Error(t("mt.errGoogle"));
-        return seg.map(s => (s && s[0]) ? s[0] : "").join("");
-      }
-      throw new Error(t("mt.errUnknownProvider"));
+      return await registry.translate(validProvider(provider), {
+        text,
+        sourceLanguage: "en",
+        targetLanguage: target,
+        signal: ctl.signal
+      });
     } catch(err){
       if (err.name === "AbortError") throw new Error(t("mt.errTimeout"));
       if (err instanceof TypeError) throw new Error(t("mt.errNetwork"));
+      if (err.code === "invalid-response") throw new Error(t("mt.errGoogle"));
+      if (err.code === "unknown-provider") throw new Error(t("mt.errUnknownProvider"));
       throw err;
     } finally { clearTimeout(to); }
   }
@@ -6268,6 +6361,19 @@ function targetFromName(name){
     $("topActions").style.display = "flex";
     $("outName").value = state.filename;
     state.mtProvider = validProvider(state.mtProvider);
+    const providerSelect = $("mtProvider");
+    if (providerSelect){
+      providerSelect.innerHTML = "";
+      const registry = providerRegistry();
+      for (const provider of (registry ? registry.getAll() : [])){
+        const option = document.createElement("option");
+        option.value = provider.id;
+        option.textContent = provider.name;
+        providerSelect.appendChild(option);
+      }
+      providerSelect.value = state.mtProvider;
+      providerSelect.disabled = providerSelect.options.length < 2;
+    }
     $("mtTarget").value = state.targetLang;
     $("spellToggle").classList.toggle("on", state.spellcheck);
     $("acToggle").classList.toggle("on", state.acEnabled);
@@ -6284,6 +6390,7 @@ function targetFromName(name){
   function loadText(text, filename){
     const {eol, items} = parse(text);
     state.eol = eol; state.items = items; state.filename = cleanName(filename);
+    state.mtProvider = preferredProvider();
     state.targetLang = targetFromName(state.filename);
     state.filter = "missing"; state.query = "";
     $("search").value = "";
@@ -6405,6 +6512,12 @@ function targetFromName(name){
   });
 
   // MT + spellcheck controls
+  $("mtProvider")?.addEventListener("change", event => {
+    state.mtProvider = validProvider(event.target.value);
+    event.target.value = state.mtProvider;
+    setPreferredProvider(state.mtProvider);
+    scheduleSave();
+  });
   // Push spellcheck settings onto already-rendered textareas — never rebuild the list.
   function applySpellcheckToVisible(){
     const on = !!state.spellcheck;
@@ -6676,7 +6789,165 @@ function targetFromName(name){
 
   tryRestore();
 })();
-</script>
+
+"use strict";
+
+(function initializeMtTargetLanguage() {
+  const LANGUAGE_OPTIONS = Object.freeze([
+    ["ar", "العربية"], ["bg", "Български"], ["ca", "Català"], ["cs", "Čeština"],
+    ["da", "Dansk"], ["de", "Deutsch"], ["en", "English"], ["es", "Español"],
+    ["fi", "Suomi"], ["fr", "Français"], ["hr", "Hrvatski"], ["hu", "Magyar"],
+    ["id", "Bahasa Indonesia"], ["it", "Italiano"], ["ja", "日本語"], ["ko", "한국어"],
+    ["lt", "Lietuvių"], ["nl", "Nederlands"], ["no", "Norsk"], ["pl", "Polski"],
+    ["pt-BR", "Português (Brasil)"], ["pt-PT", "Português (Portugal)"], ["ru", "Русский"],
+    ["se", "Svenska"], ["th", "ไทย"], ["tr", "Türkçe"], ["uk", "Українська"],
+    ["vi", "Tiếng Việt"], ["zh-CN", "中文（简体）"], ["zh-TW", "中文（繁體）"]
+  ]);
+
+  const RECOGNIZED = new Map(LANGUAGE_OPTIONS.map(([code]) => [code.toLowerCase(), code]));
+  const LEGACY_ALIASES = new Map([
+    ["pr", "pt-BR"], ["pr-br", "pt-BR"], ["pt", "pt-BR"],
+    ["zh-hk", "zh-TW"], ["nb-no", "no"], ["nn-no", "no"]
+  ]);
+
+  function t(key) {
+    return globalThis.NecesseI18n?.t(key) || key;
+  }
+
+  function normalizeProjectCode(value) {
+    const raw = String(value || "").trim().replace(/_/g, "-");
+    if (!raw) return "";
+    const lower = raw.toLowerCase();
+    return LEGACY_ALIASES.get(lower) || RECOGNIZED.get(lower) || "";
+  }
+
+  function codeFromFilename(filename) {
+    const name = String(filename || "").trim().replace(/^.*[\\/]/, "");
+    if (!/\.lang$/i.test(name)) return "";
+    const base = name.replace(/\.lang$/i, "")
+      .replace(/\s*\(\d+\)\s*$/, "")
+      .replace(/_\d+_?$/g, "");
+    return normalizeProjectCode(base);
+  }
+
+  function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = `#mtTarget[hidden]{display:none!important}#mtTargetSelect{width:auto;min-width:180px;max-width:240px}.mtbtn[data-mt-target-missing="true"]{opacity:.45;cursor:not-allowed}`;
+    document.head.append(style);
+  }
+
+  function buildSelector(input) {
+    const select = document.createElement("select");
+    select.id = "mtTargetSelect";
+    select.className = input.className;
+    select.title = input.title || t("mt.langTitle");
+    select.setAttribute("aria-label", select.title);
+
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "—";
+    empty.disabled = true;
+    select.append(empty);
+
+    for (const [code, label] of LANGUAGE_OPTIONS) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = `${label} (${code})`;
+      select.append(option);
+    }
+
+    input.hidden = true;
+    input.tabIndex = -1;
+    input.insertAdjacentElement("afterend", select);
+    return select;
+  }
+
+  function commitSelection(input, select, code) {
+    if (!code) {
+      select.value = "";
+      return;
+    }
+    input.value = code;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    select.value = code;
+  }
+
+  function applyAvailability(select) {
+    const disabled = !select.value;
+    for (const button of document.querySelectorAll(".mtbtn")) {
+      button.disabled = disabled || button.classList.contains("loading");
+      button.dataset.mtTargetMissing = disabled ? "true" : "false";
+    }
+  }
+
+  function filename() {
+    return document.getElementById("outName")?.value || "";
+  }
+
+  function syncFromWorkspace(input, select) {
+    const current = normalizeProjectCode(input.value);
+    const inferred = codeFromFilename(filename());
+    const chosen = current || inferred;
+
+    select.value = chosen;
+    if (chosen && input.value !== chosen) commitSelection(input, select, chosen);
+    if (!chosen) input.value = "";
+    applyAvailability(select);
+  }
+
+  function initialize() {
+    const input = document.getElementById("mtTarget");
+    if (!input || document.getElementById("mtTargetSelect")) return;
+
+    injectStyles();
+    const select = buildSelector(input);
+
+    select.addEventListener("change", () => {
+      if (!select.value) return;
+      commitSelection(input, select, select.value);
+      applyAvailability(select);
+    });
+
+    const workspaceObserver = new MutationObserver(() => syncFromWorkspace(input, select));
+    const actions = document.getElementById("topActions");
+    const list = document.getElementById("list");
+    if (actions) workspaceObserver.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    if (list) workspaceObserver.observe(list, { childList: true });
+
+    document.getElementById("outName")?.addEventListener("change", () => syncFromWorkspace(input, select));
+    document.getElementById("outName")?.addEventListener("blur", () => syncFromWorkspace(input, select));
+    document.getElementById("uiLang")?.addEventListener("change", () => {
+      select.title = t("mt.langTitle");
+      select.setAttribute("aria-label", select.title);
+    });
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest?.(".mtbtn");
+      if (!button || select.value) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      select.focus();
+    }, true);
+
+    syncFromWorkspace(input, select);
+
+    globalThis.NecesseMtTarget = Object.freeze({
+      languages: LANGUAGE_OPTIONS.map(([code, name]) => ({ code, name })),
+      normalizeProjectCode,
+      codeFromFilename,
+      get: () => select.value,
+      set(code) {
+        const normalized = normalizeProjectCode(code);
+        commitSelection(input, select, normalized);
+        applyAvailability(select);
+      }
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
+})();</script>
 <script>"use strict";
 
 (function initializeSettings() {
@@ -7737,6 +8008,167 @@ function start() {
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 else start();
+
+}
+{
+"use strict";
+
+(function initializeMtTargetLanguage() {
+  const LANGUAGE_OPTIONS = Object.freeze([
+    ["ar", "العربية"], ["bg", "Български"], ["ca", "Català"], ["cs", "Čeština"],
+    ["da", "Dansk"], ["de", "Deutsch"], ["en", "English"], ["es", "Español"],
+    ["fi", "Suomi"], ["fr", "Français"], ["hr", "Hrvatski"], ["hu", "Magyar"],
+    ["id", "Bahasa Indonesia"], ["it", "Italiano"], ["ja", "日本語"], ["ko", "한국어"],
+    ["lt", "Lietuvių"], ["nl", "Nederlands"], ["no", "Norsk"], ["pl", "Polski"],
+    ["pt-BR", "Português (Brasil)"], ["pt-PT", "Português (Portugal)"], ["ru", "Русский"],
+    ["se", "Svenska"], ["th", "ไทย"], ["tr", "Türkçe"], ["uk", "Українська"],
+    ["vi", "Tiếng Việt"], ["zh-CN", "中文（简体）"], ["zh-TW", "中文（繁體）"]
+  ]);
+
+  const RECOGNIZED = new Map(LANGUAGE_OPTIONS.map(([code]) => [code.toLowerCase(), code]));
+  const LEGACY_ALIASES = new Map([
+    ["pr", "pt-BR"], ["pr-br", "pt-BR"], ["pt", "pt-BR"],
+    ["zh-hk", "zh-TW"], ["nb-no", "no"], ["nn-no", "no"]
+  ]);
+
+  function t(key) {
+    return globalThis.NecesseI18n?.t(key) || key;
+  }
+
+  function normalizeProjectCode(value) {
+    const raw = String(value || "").trim().replace(/_/g, "-");
+    if (!raw) return "";
+    const lower = raw.toLowerCase();
+    return LEGACY_ALIASES.get(lower) || RECOGNIZED.get(lower) || "";
+  }
+
+  function codeFromFilename(filename) {
+    const name = String(filename || "").trim().replace(/^.*[\\/]/, "");
+    if (!/\.lang$/i.test(name)) return "";
+    const base = name.replace(/\.lang$/i, "")
+      .replace(/\s*\(\d+\)\s*$/, "")
+      .replace(/_\d+_?$/g, "");
+    return normalizeProjectCode(base);
+  }
+
+  function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = `#mtTarget[hidden]{display:none!important}#mtTargetSelect{width:auto;min-width:180px;max-width:240px}.mtbtn[data-mt-target-missing="true"]{opacity:.45;cursor:not-allowed}`;
+    document.head.append(style);
+  }
+
+  function buildSelector(input) {
+    const select = document.createElement("select");
+    select.id = "mtTargetSelect";
+    select.className = input.className;
+    select.title = input.title || t("mt.langTitle");
+    select.setAttribute("aria-label", select.title);
+
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "—";
+    empty.disabled = true;
+    select.append(empty);
+
+    for (const [code, label] of LANGUAGE_OPTIONS) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = `${label} (${code})`;
+      select.append(option);
+    }
+
+    input.hidden = true;
+    input.tabIndex = -1;
+    input.insertAdjacentElement("afterend", select);
+    return select;
+  }
+
+  function commitSelection(input, select, code) {
+    if (!code) {
+      select.value = "";
+      return;
+    }
+    input.value = code;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    select.value = code;
+  }
+
+  function applyAvailability(select) {
+    const disabled = !select.value;
+    for (const button of document.querySelectorAll(".mtbtn")) {
+      button.disabled = disabled || button.classList.contains("loading");
+      button.dataset.mtTargetMissing = disabled ? "true" : "false";
+    }
+  }
+
+  function filename() {
+    return document.getElementById("outName")?.value || "";
+  }
+
+  function syncFromWorkspace(input, select) {
+    const current = normalizeProjectCode(input.value);
+    const inferred = codeFromFilename(filename());
+    const chosen = current || inferred;
+
+    select.value = chosen;
+    if (chosen && input.value !== chosen) commitSelection(input, select, chosen);
+    if (!chosen) input.value = "";
+    applyAvailability(select);
+  }
+
+  function initialize() {
+    const input = document.getElementById("mtTarget");
+    if (!input || document.getElementById("mtTargetSelect")) return;
+
+    injectStyles();
+    const select = buildSelector(input);
+
+    select.addEventListener("change", () => {
+      if (!select.value) return;
+      commitSelection(input, select, select.value);
+      applyAvailability(select);
+    });
+
+    const workspaceObserver = new MutationObserver(() => syncFromWorkspace(input, select));
+    const actions = document.getElementById("topActions");
+    const list = document.getElementById("list");
+    if (actions) workspaceObserver.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    if (list) workspaceObserver.observe(list, { childList: true });
+
+    document.getElementById("outName")?.addEventListener("change", () => syncFromWorkspace(input, select));
+    document.getElementById("outName")?.addEventListener("blur", () => syncFromWorkspace(input, select));
+    document.getElementById("uiLang")?.addEventListener("change", () => {
+      select.title = t("mt.langTitle");
+      select.setAttribute("aria-label", select.title);
+    });
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest?.(".mtbtn");
+      if (!button || select.value) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      select.focus();
+    }, true);
+
+    syncFromWorkspace(input, select);
+
+    globalThis.NecesseMtTarget = Object.freeze({
+      languages: LANGUAGE_OPTIONS.map(([code, name]) => ({ code, name })),
+      normalizeProjectCode,
+      codeFromFilename,
+      get: () => select.value,
+      set(code) {
+        const normalized = normalizeProjectCode(code);
+        commitSelection(input, select, normalized);
+        applyAvailability(select);
+      }
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
+})();
 
 }
 {

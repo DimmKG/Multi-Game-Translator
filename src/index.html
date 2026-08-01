@@ -133,7 +133,7 @@
       </label>
       <div class="grp">
         <span data-i18n="mt.label"></span>
-        <span class="mtprov" data-i18n="mt.google" data-i18n-title="mt.providerTitle"></span>
+        <select class="mtprov" id="mtProvider" data-i18n-title="mt.providerTitle" aria-label="Machine translation provider"></select>
       </div>
       <div class="grp"><span data-i18n="mt.langLabel"></span><input class="mini" id="mtTarget" spellcheck="false" data-i18n-title="mt.langTitle"></div>
       <div class="sp"></div>
@@ -177,7 +177,9 @@
 <script src="./scripts/i18n/locales.js"></script>
 <script src="./scripts/i18n/built-in-locales.generated.js"></script>
 <script src="./scripts/i18n/locale-bootstrap.js"></script>
+<script src="./scripts/mt/providers.js"></script>
 <script src="./scripts/app.js"></script>
+<script src="./scripts/mt/target-language.js"></script>
 <script src="./scripts/settings.js"></script>
 <script type="module" src="./scripts/i18n/locale-packages.js"></script>
 <script type="module" src="./scripts/glossary/manager.js"></script>

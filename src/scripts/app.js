@@ -914,34 +914,25 @@ function targetFromName(name){
   }
  function indexItems(){ state.byId = new Map(); for (const it of state.items) if (it.type==="entry") state.byId.set(it.id, it); }
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  // Only these remain; sessions saved with a removed provider (e.g. mymemory) fall back.
-  // Google only. Sessions saved with a provider that has since been removed
-  // (mymemory, yandex, lingva) fall back to it on load.
-  const MT_PROVIDERS = ["google"];
-  function validProvider(p){ return MT_PROVIDERS.includes(p) ? p : MT_PROVIDERS[0]; }
+  const MT_PROVIDER_KEY = "necesse-translator.mt-provider.v1";
+  function providerRegistry(){ return globalThis.NecesseMtProviders || null; }
+  function validProvider(provider){
+    const registry = providerRegistry();
+    return registry && registry.has(provider) ? provider : (registry?.defaultId || "google");
+  }
+  function preferredProvider(){
+    try { return validProvider(localStorage.getItem(MT_PROVIDER_KEY)); }
+    catch(e) { return validProvider(""); }
+  }
+  function setPreferredProvider(provider){
+    try { localStorage.setItem(MT_PROVIDER_KEY, validProvider(provider)); } catch(e) {}
+  }
   function decodeEntities(s){ const t = document.createElement("textarea"); t.innerHTML = s; return t.value; }
 
-  // Necesse filenames use BCP-47-ish codes; Google's gtx endpoint wants its own set.
-  // Also fix common typos (pr-BR → pt-BR: R is next to T on QWERTY).
-  function normalizeMtLang(code){
-    let c = String(code || "").trim().replace(/_/g, "-");
-    if (!c) return "ru";
-    if (/^pr(-br)?$/i.test(c)) c = "pt" + c.slice(2);
-    const aliases = {
-      "pt-br": "pt", "pt-pt": "pt",
-      "zh-cn": "zh-CN", "zh-tw": "zh-TW", "zh-hk": "zh-TW",
-      "es-419": "es", "es-es": "es", "es-mx": "es",
-      "en-us": "en", "en-gb": "en",
-      "nb-no": "no", "nn-no": "no",
-    };
-    const hit = aliases[c.toLowerCase()];
-    return hit || c;
-  }
-  // Prefer live input value so MT works even before blur/change fires.
   function currentTargetLang(){
     const live = (($("mtTarget") && $("mtTarget").value) || "").trim();
     if (live) state.targetLang = live;
-    return state.targetLang || "ru";
+    return state.targetLang || "";
   }
 
   // Replace format tokens with sentinels the MT engine should leave untouched,
@@ -959,23 +950,22 @@ function targetFromName(name){
   }
 
   async function callProvider(provider, text, target){
+    const registry = providerRegistry();
+    if (!registry) throw new Error(t("mt.errUnknownProvider"));
     const ctl = new AbortController();
     const to = setTimeout(() => ctl.abort(), 13000);
     try{
-      if (provider === "google"){
-        const tl = normalizeMtLang(target);
-        const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`;
-        const r = await fetch(url, {signal:ctl.signal});
-        if (!r.ok) throw new Error("Google "+r.status);
-        const j = await r.json();
-        const seg = j && j[0];
-        if (!Array.isArray(seg)) throw new Error(t("mt.errGoogle"));
-        return seg.map(s => (s && s[0]) ? s[0] : "").join("");
-      }
-      throw new Error(t("mt.errUnknownProvider"));
+      return await registry.translate(validProvider(provider), {
+        text,
+        sourceLanguage: "en",
+        targetLanguage: target,
+        signal: ctl.signal
+      });
     } catch(err){
       if (err.name === "AbortError") throw new Error(t("mt.errTimeout"));
       if (err instanceof TypeError) throw new Error(t("mt.errNetwork"));
+      if (err.code === "invalid-response") throw new Error(t("mt.errGoogle"));
+      if (err.code === "unknown-provider") throw new Error(t("mt.errUnknownProvider"));
       throw err;
     } finally { clearTimeout(to); }
   }
@@ -1162,6 +1152,19 @@ function targetFromName(name){
     $("topActions").style.display = "flex";
     $("outName").value = state.filename;
     state.mtProvider = validProvider(state.mtProvider);
+    const providerSelect = $("mtProvider");
+    if (providerSelect){
+      providerSelect.innerHTML = "";
+      const registry = providerRegistry();
+      for (const provider of (registry ? registry.getAll() : [])){
+        const option = document.createElement("option");
+        option.value = provider.id;
+        option.textContent = provider.name;
+        providerSelect.appendChild(option);
+      }
+      providerSelect.value = state.mtProvider;
+      providerSelect.disabled = providerSelect.options.length < 2;
+    }
     $("mtTarget").value = state.targetLang;
     $("spellToggle").classList.toggle("on", state.spellcheck);
     $("acToggle").classList.toggle("on", state.acEnabled);
@@ -1178,6 +1181,7 @@ function targetFromName(name){
   function loadText(text, filename){
     const {eol, items} = parse(text);
     state.eol = eol; state.items = items; state.filename = cleanName(filename);
+    state.mtProvider = preferredProvider();
     state.targetLang = targetFromName(state.filename);
     state.filter = "missing"; state.query = "";
     $("search").value = "";
@@ -1299,6 +1303,12 @@ function targetFromName(name){
   });
 
   // MT + spellcheck controls
+  $("mtProvider")?.addEventListener("change", event => {
+    state.mtProvider = validProvider(event.target.value);
+    event.target.value = state.mtProvider;
+    setPreferredProvider(state.mtProvider);
+    scheduleSave();
+  });
   // Push spellcheck settings onto already-rendered textareas — never rebuild the list.
   function applySpellcheckToVisible(){
     const on = !!state.spellcheck;

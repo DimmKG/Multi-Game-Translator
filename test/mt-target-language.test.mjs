@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const targetLanguage = await readFile(new URL("../src/scripts/mt/target-language.js", import.meta.url), "utf8");
-const navigation = await readFile(new URL("../src/scripts/glossary/navigation.js", import.meta.url), "utf8");
+const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
 const build = await readFile(new URL("../scripts/build-standalone.mjs", import.meta.url), "utf8");
 
 test("MT target language has an explicit unselected state", () => {
@@ -35,7 +35,7 @@ test("machine translation stays unavailable without a target", () => {
 });
 
 test("hosted and standalone builds load the MT target module", () => {
-  assert.match(navigation, /scripts\/mt\/target-language\.js/);
+  assert.match(html, /scripts\/mt\/target-language\.js/);
   assert.match(build, /scripts\/mt\/target-language\.js/);
   assert.match(build, /targetLanguage/);
 });
