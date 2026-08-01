@@ -42,46 +42,45 @@
 
   /* ---------- top bar ---------- */
   header{
-    display:flex;align-items:center;gap:12px 16px;padding:12px 18px;flex-wrap:wrap;
+    display:grid;grid-template-columns:minmax(180px,1fr) auto minmax(220px,340px);
+    align-items:center;gap:10px 16px;padding:12px 18px;
     background:linear-gradient(180deg,#221c14,#1a1610);
     border-bottom:1px solid var(--line);flex:0 0 auto;
   }
-  .brand{display:flex;align-items:baseline;gap:10px;user-select:none}
+  .brand{display:flex;align-items:baseline;gap:10px;user-select:none;min-width:0}
   .brand .mark{
     font-family:var(--mono);font-weight:700;letter-spacing:.5px;color:var(--torch);
     font-size:15px;text-shadow:0 0 14px rgba(232,161,58,.35);
   }
   .brand .sub{font-size:11px;color:var(--ink-faint);letter-spacing:.14em;text-transform:uppercase}
 
-  .grow{flex:1}
+  .grow{display:none}
   select.uilang{background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink-dim);
     font-family:var(--sans);font-size:12.5px;padding:6px 9px;outline:none;transition:.12s;
-    flex:0 0 108px;width:108px}
+    width:auto;min-width:120px;max-width:min(240px,36vw)}
   select.uilang:hover{color:var(--ink)}
   select.uilang:focus{border-color:var(--torch);box-shadow:0 0 0 3px rgba(232,161,58,.12)}
-  .filebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;flex:0 1 auto}
+  .filebar{grid-column:1/-1;display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;justify-content:flex-start;min-width:0;width:100%}
   .btn{
     border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
-    padding:7px 13px;border-radius:7px;font-size:13px;transition:.15s;white-space:nowrap;
-    text-align:center;overflow:hidden;text-overflow:ellipsis;
+    padding:7px 13px;border-radius:7px;font-size:13px;transition:.15s;
+    text-align:center;white-space:normal;overflow-wrap:anywhere;min-height:36px;
   }
   .btn:hover{border-color:var(--torch);color:#fff}
   .btn.primary{background:var(--torch);border-color:var(--torch);color:#1a1204;font-weight:600}
   .btn.primary:hover{background:#f2b256;color:#1a1204}
   .btn.ghost{background:transparent}
   .btn:disabled{opacity:.4;cursor:not-allowed;border-color:var(--line)!important;color:var(--ink-dim)!important}
-  /* Fixed widths sized for the longer RU labels so EN/RU switch doesn't reflow the bar */
-  #btnEnRef{width:148px;flex:0 0 148px;padding-left:8px;padding-right:8px}
-  #btnSaveJson,#btnLoadJson{width:158px;flex:0 0 158px;padding-left:8px;padding-right:8px}
-  #btnNew{width:108px;flex:0 0 108px;padding-left:8px;padding-right:8px}
-  #btnExport{width:128px;flex:0 0 128px;padding-left:8px;padding-right:8px}
-  .fname{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-faint);white-space:nowrap;flex:0 0 auto}
-  .fname input{width:118px;background:var(--bg);border:1px solid var(--line);border-radius:7px;
+  #btnEnRef,#btnSaveJson,#btnLoadJson,#btnNew,#btnExport{
+    width:auto;min-width:0;flex:0 1 auto;padding-left:11px;padding-right:11px
+  }
+  .fname{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-faint);white-space:nowrap;flex:1 1 210px;min-width:170px}
+  .fname input{width:auto;min-width:100px;flex:1 1 130px;background:var(--bg);border:1px solid var(--line);border-radius:7px;
     color:var(--ink);font-family:var(--mono);font-size:12.5px;padding:7px 9px;outline:none;transition:.12s}
   .fname input:focus{border-color:var(--torch);box-shadow:0 0 0 3px rgba(232,161,58,.12)}
 
   /* ---------- progress meter ---------- */
-  .meter{display:flex;align-items:center;gap:10px;width:240px;flex:0 0 240px;max-width:240px}
+  .meter{display:flex;align-items:center;gap:10px;width:100%;min-width:220px;max-width:340px;justify-self:end}
   .meter .bar{position:relative;flex:1;min-width:0;height:8px;border-radius:6px;background:#2a241b;overflow:hidden;border:1px solid var(--line-soft)}
   .meter .fill{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,#c9821f,var(--torch));transition:width .3s}
   .meter .pct{font-family:var(--mono);font-size:12px;color:var(--ink-dim);width:112px;flex:0 0 112px;text-align:right;white-space:nowrap}
@@ -279,7 +278,7 @@
 
   /* ---------- save-status pill ---------- */
   .savepill{display:flex;align-items:center;gap:8px;padding:6px 11px;border-radius:8px;border:1px solid var(--line);
-    width:198px;flex:0 0 198px;overflow:hidden;
+    width:auto;min-width:170px;max-width:320px;flex:1 1 220px;overflow:hidden;
     background:var(--panel-2);font-size:12px;color:var(--ink-dim);cursor:pointer;transition:.12s;white-space:nowrap;font-family:var(--mono)}
   .savepill:hover{border-color:var(--ok);color:var(--ink)}
   .savepill .sdot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:0 0 auto;transition:.2s;box-shadow:0 0 8px rgba(127,201,139,.5)}
@@ -393,16 +392,57 @@
   ::-webkit-scrollbar{width:11px;height:11px}
   ::-webkit-scrollbar-thumb{background:#332b20;border-radius:8px;border:3px solid var(--panel)}
   ::-webkit-scrollbar-thumb:hover{background:#463a2a}
-  @media (max-width:1100px){ .grow{display:none} }
+  @media (max-width:900px){
+    header{grid-template-columns:minmax(0,1fr) auto}
+    .meter{grid-column:1/-1;justify-self:stretch;max-width:none}
+  }
   @media (max-width:560px){
     header{gap:8px 10px;padding:10px 12px}
+    .brand .sub{display:none}
+    select.uilang{min-width:104px;max-width:46vw}
     .btn{padding:6px 10px;font-size:12px}
-    .savepill{padding:5px 9px;font-size:11px;width:168px;flex-basis:168px}
-    .fname input{width:90px}
-    .meter{order:5;width:100%;flex:1 1 100%;max-width:none}
-    #btnEnRef,#btnSaveJson,#btnLoadJson,#btnNew,#btnExport{flex:1 1 auto;width:auto}
+    .savepill{padding:5px 9px;font-size:11px;min-width:150px;max-width:none;flex:1 1 100%}
+    .fname{flex:1 1 100%;min-width:0}
+    .fname input{min-width:0}
+    #btnEnRef,#btnSaveJson,#btnLoadJson,#btnNew,#btnExport{flex:1 1 150px;width:auto}
   }
   @media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* ---------- compact localized header revision ---------- */
+header{
+  display:flex;align-items:center;gap:8px 12px;padding:10px 16px;flex-wrap:wrap;
+}
+header>.brand{flex:0 1 auto;min-width:0;margin-inline-end:auto}
+header>.grow{display:none}
+header>select.uilang{flex:0 0 auto;width:auto;min-width:118px;max-width:220px}
+header>button{flex:0 0 auto;width:auto;max-width:none;white-space:nowrap}
+header>.meter{flex:0 1 300px;width:auto;min-width:210px;max-width:340px;margin-inline-start:4px}
+.filebar{
+  order:10;flex:1 1 100%;width:100%;min-width:0;display:flex;align-items:center;
+  gap:8px;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;
+  padding-block:2px 3px;scrollbar-width:thin;overscroll-behavior-inline:contain;
+}
+.filebar>*{flex:0 0 auto}
+.filebar .btn{white-space:nowrap;overflow:visible;overflow-wrap:normal;min-height:34px}
+.filebar .savepill{width:auto;min-width:170px;max-width:260px;flex:0 0 auto}
+.filebar .fname{flex:1 0 220px;min-width:190px;max-width:420px;margin-inline-start:auto}
+.filebar .fname input{width:auto;min-width:110px;flex:1 1 150px}
+#btnEnRef,#btnSaveJson,#btnLoadJson,#btnNew,#btnExport{width:auto;min-width:max-content;flex:0 0 auto}
+@media (max-width:900px){
+  header{padding:9px 12px}
+  header>.meter{order:5;flex:1 1 100%;max-width:none;margin-inline-start:0}
+  .filebar{order:10}
+}
+@media (max-width:560px){
+  header{gap:7px 8px;padding:8px 10px}
+  header>.brand .sub{display:none}
+  header>select.uilang{min-width:104px;max-width:46vw}
+  header>button{padding:6px 9px}
+  header>.meter{min-width:0}
+  .filebar .savepill{min-width:150px;max-width:220px}
+  .filebar .fname{flex-basis:190px;min-width:170px;margin-inline-start:0}
+}
 </style>
 <style>
   /* Keep machine-readable values stable inside right-to-left interface text. */
