@@ -26,6 +26,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Fix integration helper
+        run: node scripts/fix-metadata-guidance-helper.mjs
+
       - name: Apply metadata guidance integration
         run: node scripts/apply-metadata-guidance-integration.mjs
 
