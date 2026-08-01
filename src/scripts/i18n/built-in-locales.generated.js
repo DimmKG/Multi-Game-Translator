@@ -239,7 +239,11 @@ globalThis.NecesseLocales.register({
     "btn.newTranslationTitle": "Create a new translation from a selected reference .lang file",
     "toast.newTranslationCreated": "New translation created from {file} · {n} strings",
     "err.newTranslationNoEntries": "The selected reference file contains no translation entries",
-    "err.targetFilenameRequired": "Enter the target .lang filename before downloading"
+    "err.targetFilenameRequired": "Enter the target .lang filename before downloading",
+    "metadata.localname": "Language name written in this language (for example, Български).",
+    "metadata.engname": "Language name written in English (for example, Bulgarian).",
+    "metadata.extrasymbols": "Additional characters that must be available in the game font. Keep this as a character list, not a sentence.",
+    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse."
   }
 });
 
@@ -604,7 +608,11 @@ globalThis.NecesseLocales.register({
     "btn.newTranslationTitle": "Създава нов превод от избран референтен .lang файл",
     "toast.newTranslationCreated": "Създаден е нов превод от {file} · {n} низа",
     "err.newTranslationNoEntries": "Избраният референтен файл не съдържа низове за превод",
-    "err.targetFilenameRequired": "Въведете името на целевия .lang файл преди изтегляне"
+    "err.targetFilenameRequired": "Въведете името на целевия .lang файл преди изтегляне",
+    "metadata.localname": "Името на езика, изписано на самия език (например Български).",
+    "metadata.engname": "Името на езика, изписано на английски (например Bulgarian).",
+    "metadata.extrasymbols": "Допълнителни знаци, които трябва да присъстват в шрифта на играта. Това е списък със знаци, а не изречение.",
+    "metadata.langCredits": "Имената на преводачите в езиковите заслуги. Запази разделителя и формата, очаквани от Necesse."
   }
 });
 
@@ -3145,7 +3153,11 @@ globalThis.NecesseLocales.register({
     "btn.newTranslationTitle": "Создать новый перевод из выбранного референсного файла .lang",
     "toast.newTranslationCreated": "Новый перевод создан из {file} · строк: {n}",
     "err.newTranslationNoEntries": "Выбранный референсный файл не содержит строк для перевода",
-    "err.targetFilenameRequired": "Введите имя целевого файла .lang перед скачиванием"
+    "err.targetFilenameRequired": "Введите имя целевого файла .lang перед скачиванием",
+    "metadata.localname": "Название языка, написанное на самом языке (например Русский).",
+    "metadata.engname": "Название языка, написанное на английском (например Russian).",
+    "metadata.extrasymbols": "Дополнительные символы, которые должны присутствовать в игровом шрифте. Это список символов, а не предложение.",
+    "metadata.langCredits": "Имена переводчиков в языковых титрах. Сохраните разделитель и формат, ожидаемые Necesse."
   }
 });
 
