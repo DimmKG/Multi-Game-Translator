@@ -73,35 +73,23 @@ function setupNewTranslationUi() {
         input.value = "";
         return;
       }
-      const generated = new File([result.text], "translation.lang", { type: "text/plain;charset=utf-8" });
-      const existingInput = $("fileInput");
-      if (typeof existingInput?.onchange !== "function") return;
-      existingInput.onchange({ target: { files: [generated], value: "" } });
-      setTimeout(() => {
-        const outputName = $("outName");
-        if (outputName) outputName.value = "";
-        const target = $("mtTarget");
-        if (target) {
-          target.value = "";
-          target.dispatchEvent(new Event("input", { bubbles: true }));
-          target.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-        showToast(localeText("toast.newTranslationCreated").replace("{file}", result.referenceFilename).replace("{n}", String(result.entryCount)));
-      }, 120);
+      const loader = globalThis.NecesseLangTranslator?.loadWorkspaceFromText;
+      if (typeof loader !== "function") {
+        showToast(localeText("err.generic"));
+        input.value = "";
+        return;
+      }
+      loader(result.text, {
+        filename: "",
+        referenceFilename: result.referenceFilename,
+        targetLang: ""
+      });
+      showToast(localeText("toast.newTranslationCreated").replace("{file}", result.referenceFilename).replace("{n}", String(result.entryCount)));
       input.value = "";
     };
     reader.onerror = () => showToast(localeText("err.readFile").replace("{msg}", reader.error?.message || localeText("err.generic")));
     reader.readAsText(file, "UTF-8");
   });
-
-  $("btnExport")?.addEventListener("click", event => {
-    const outputName = $("outName");
-    if (outputName?.value.trim()) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    showToast(localeText("err.targetFilenameRequired"));
-    outputName?.focus();
-  }, true);
 
   $("uiLang")?.addEventListener("change", () => setTimeout(localize, 0));
   localize();

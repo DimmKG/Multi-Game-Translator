@@ -34,10 +34,20 @@ test("new translation reports an empty reference without inventing entries", () 
 });
 
 test("new translation UI requires an explicit target filename", async () => {
-  const app = await readFile(new URL("../src/scripts/new-translation.js", import.meta.url), "utf8");
+  const app = await readFile(new URL("../src/scripts/app.js", import.meta.url), "utf8");
   assert.match(app, /err\.targetFilenameRequired/);
-  assert.match(app, /outputName\?\.value\.trim\(\)/);
-  assert.doesNotMatch(app, /ru\.lang/);
+  assert.match(app, /\(\$\("outName"\)\.value \|\| ""\)\.trim\(\) \|\| state\.filename/);
+  assert.match(app, /if \(!name\)\{/);
 });
 
 import { readFile } from "node:fs/promises";
+
+
+test("new translation uses the shared workspace loader instead of a synthetic file event", async () => {
+  const app = await readFile(new URL("../src/scripts/app.js", import.meta.url), "utf8");
+  const ui = await readFile(new URL("../src/scripts/new-translation.js", import.meta.url), "utf8");
+  assert.match(app, /NecesseLangTranslator = Object\.freeze\(\{loadWorkspaceFromText\}\)/);
+  assert.match(ui, /NecesseLangTranslator\?\.loadWorkspaceFromText/);
+  assert.doesNotMatch(ui, /new File\(\[result\.text\]/);
+  assert.doesNotMatch(ui, /existingInput\.onchange/);
+});
