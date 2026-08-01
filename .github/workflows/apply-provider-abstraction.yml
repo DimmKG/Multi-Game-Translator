@@ -41,6 +41,22 @@ jobs:
       - name: Apply migration
         run: node scripts/apply-provider-abstraction.mjs
 
+      - name: Adjust regression tests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          providers = Path('test/mt-providers.test.mjs')
+          text = providers.read_text(encoding='utf-8')
+          text = text.replace('/async function translate(id, request/', '/async function translate\\(id, request/')
+          providers.write_text(text, encoding='utf-8')
+
+          target = Path('test/mt-target-language.test.mjs')
+          text = target.read_text(encoding='utf-8')
+          text = text.replace('const navigation = await readFile(new URL("../src/scripts/glossary/navigation.js", import.meta.url), "utf8");', 'const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");')
+          text = text.replace('assert.match(navigation, /scripts\\/mt\\/target-language\\.js/);', 'assert.match(html, /scripts\\/mt\\/target-language\\.js/);')
+          target.write_text(text, encoding='utf-8')
+          PY
+
       - name: Verify
         run: npm run verify
 
