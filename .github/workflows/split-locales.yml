@@ -1,4 +1,4 @@
-name: Split built-in locales
+name: Convert built-in locales to JSON
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  migrate:
+  convert:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -19,15 +19,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Split locale files
-        run: node scripts/split-built-in-locales-v2.mjs
-      - name: Verify existing project
-        run: npm run verify
-      - name: Commit generated locale files
+      - name: Convert locale files
+        run: node scripts/convert-split-locales-to-json.mjs
+      - name: Validate generated JSON
+        run: |
+          node -e "const fs=require('fs');const path='src/scripts/i18n/locales';const files=fs.readdirSync(path).filter(x=>x.endsWith('.json'));if(!files.length)throw new Error('No locale JSON files');for(const file of files){const value=JSON.parse(fs.readFileSync(path+'/'+file,'utf8'));if(value.code+'.json'!==file||!value.messages||typeof value.messages!=='object')throw new Error('Invalid locale: '+file)}console.log('Validated '+files.length+' locale JSON files')"
+      - name: Commit generated JSON files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/scripts/i18n/locales
+          git add -A src/scripts/i18n/locales
           git diff --cached --quiet && exit 0
-          git commit -m "Generate split built-in locale files"
+          git commit -m "Convert built-in locales to JSON"
           git push
