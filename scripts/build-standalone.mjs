@@ -15,6 +15,7 @@ const [html, css, locales, builtInLocales, localeBootstrap, localePackages, prov
   readFile(resolve(source, "scripts/mt/secret-vault.js"), "utf8"),
   readFile(resolve(source, "scripts/mt/providers.js"), "utf8"),
   readFile(resolve(source, "scripts/app.js"), "utf8"),
+  readFile(resolve(source, "scripts/new-translation.js"), "utf8"),
   readFile(resolve(source, "scripts/settings.js"), "utf8"),
   readFile(resolve(source, "scripts/font-settings.js"), "utf8"),
   readFile(resolve(source, "scripts/mt/provider-settings-ui.js"), "utf8"),
@@ -50,7 +51,9 @@ const qaBundle = [glossaryMatcher, glossaryQa].map(stripModuleSyntax).join("\n")
 const reviewBundle = glossaryReview.replace(/^import[^\n]+\n/gm, "");
 const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}\n{\n${reviewBundle}\n}\n{\n${targetLanguage}\n}\n{\n${glossaryNavigation}\n}`;
 const bundledLocalePackages = `{\n${stripModuleSyntax(localePackages)}\n}`;
+const bundledNewTranslation = `{\n${stripModuleSyntax(newTranslation)}\n}`;
 
+const newTranslationTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/new-translation\.js["'])[^>]*><\/script>/i;
 const localePackageTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/i18n\/locale-packages\.js["'])[^>]*><\/script>/i;
 const managerTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/glossary\/manager\.js["'])[^>]*><\/script>/i;
 const qaTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/glossary\/qa\.js["'])[^>]*><\/script>\s*/i;
@@ -66,6 +69,7 @@ let standalone = html
   .replace('<script src="./scripts/mt/secret-vault.js"></script>\n', "")
   .replace('<script src="./scripts/mt/providers.js"></script>\n', "")
   .replace('<script src="./scripts/app.js"></script>', `<script>${combinedApp}</script>`)
+  .replace(newTranslationTag, `<script>${bundledNewTranslation}</script>`)
   .replace('<script src="./scripts/mt/target-language.js"></script>\n', "")
   .replace('<script src="./scripts/settings.js"></script>', `<script>${settings}</script>`)
   .replace('<script src="./scripts/font-settings.js"></script>', `<script>${fontSettings}</script>`)
