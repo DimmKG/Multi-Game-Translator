@@ -25,6 +25,12 @@ test("reference reminder is persisted and can be disabled", () => {
   assert.match(settings, /MutationObserver/);
 });
 
+test("reference observer cannot react to its own reminder attributes", () => {
+  assert.match(settings, /dataset\.referenceReminder\s*!==\s*nextValue/);
+  assert.match(settings, /observer\.observe\(referenceButton,\s*\{\s*childList:\s*true,\s*subtree:\s*true,\s*characterData:\s*true\s*\}\)/);
+  assert.doesNotMatch(settings, /observer\.observe\(referenceButton,[^\n]*attributes:\s*true/);
+});
+
 test("settings messages are shared through I18N", () => {
   assert.match(messages, /settings\.referenceReminder/);
   assert.match(messages, /globalThis\.I18N/);
