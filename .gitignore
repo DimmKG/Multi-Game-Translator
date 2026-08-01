@@ -1,5 +1,6 @@
 # Normal files
 node_modules/
+.preview/
 .DS_Store
 Thumbs.db
 # Local copyrighted game localization fixtures
