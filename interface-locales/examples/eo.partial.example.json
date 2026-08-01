@@ -1,0 +1,21 @@
+{
+  "$schema": "../../schemas/interface-locale-v1.schema.json",
+  "format": "necesse-interface-locale",
+  "version": 1,
+  "code": "eo",
+  "name": "Esperanto",
+  "nativeName": "Esperanto",
+  "authors": ["Example only"],
+  "updatedAt": "2026-08-01",
+  "messages": {
+    "app.title": "Necesse — tradukilo por .lang",
+    "app.sub": "tradukilo",
+    "drop.pick": "Elekti .lang-dosieron",
+    "tab.editor": "Redaktilo",
+    "tab.review": "Revizio",
+    "tab.diff": "Komparo",
+    "filter.missing": "Netradukitaj",
+    "filter.done": "Tradukitaj",
+    "filter.all": "Ĉiuj tekstoj"
+  }
+}
