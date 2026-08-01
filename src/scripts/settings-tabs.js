@@ -24,7 +24,8 @@
   function labelFor(id) {
     const key = `settings.tab.${id}`;
     const translated = globalThis.NecesseI18n?.t(key);
-    return translated && translated !== key ? translated : FALLBACK[id];
+    const placeholderOnly = typeof translated === "string" && /^[\s—–-]+$/u.test(translated);
+    return translated && translated !== key && !placeholderOnly ? translated : FALLBACK[id];
   }
 
   function persistActive(id) {
@@ -88,9 +89,7 @@
     return "general";
   }
 
-  function adoptExisting() {
-    if (!ui.legacyList) return;
-    const children = [...ui.legacyList.children];
+  function adoptExisting(children) {
     for (const child of children) register(classify(child), child);
   }
 
@@ -98,7 +97,7 @@
     for (const record of records) {
       for (const node of record.addedNodes) {
         if (!(node instanceof Element) || node === ui.tablist || node === ui.panels) continue;
-        if (node.parentElement?.classList.contains("settings-tab-panel")) continue;
+        if (node.matches(".settings-tab-panel") || node.parentElement?.classList.contains("settings-tab-panel")) continue;
         register(classify(node), node);
       }
     }
@@ -130,6 +129,7 @@
   function initialize() {
     const list = document.querySelector(".settings-list");
     if (!list || list.closest(".settings-tabs-shell")) return;
+    const existingChildren = [...list.children];
     ui.legacyList = list;
     ui.shell = document.createElement("div");
     ui.shell.className = "settings-tabs-shell";
@@ -143,7 +143,7 @@
     ui.shell.append(ui.tablist, list);
 
     for (const id of ORDER) ensureTab(id);
-    adoptExisting();
+    adoptExisting(existingChildren);
     ui.tablist.addEventListener("keydown", handleKeys);
     injectStyles();
     renderLabels();

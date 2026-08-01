@@ -28,6 +28,20 @@ test("existing Settings modules remain compatible with settings-list", () => {
   assert.match(source, /settings-provider-section/);
 });
 
+test("initial content is captured before tab panels are created", () => {
+  const snapshot = source.indexOf("const existingChildren = [...list.children]");
+  const createTabs = source.indexOf("for (const id of ORDER) ensureTab(id)");
+  const adopt = source.indexOf("adoptExisting(existingChildren)");
+  assert.ok(snapshot >= 0 && createTabs > snapshot && adopt > createTabs);
+  assert.match(source, /node\.matches\("\.settings-tab-panel"\)/);
+});
+
+test("missing locale placeholders fall back to readable tab labels", () => {
+  assert.match(source, /placeholderOnly/);
+  assert.match(source, /\^\[\\s—–-\]\+\$/);
+  assert.match(source, /FALLBACK\[id\]/);
+});
+
 test("hosted and standalone builds load Settings tabs", () => {
   assert.match(html, /settings-tabs\.js/);
   assert.match(build, /settingsTabs/);
