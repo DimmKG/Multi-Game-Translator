@@ -1,4 +1,4 @@
-name: Build locale assets
+name: Integrate JSON locales
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build-locales:
+  integrate:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -21,14 +21,15 @@ jobs:
           node-version: 20
       - name: Generate locale assets
         run: node scripts/generate-locale-assets.mjs
-      - name: Validate generated assets
-        run: |
-          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('src/scripts/i18n/locales/manifest.json','utf8'));if(m.format!=='necesse-built-in-locales'||!Array.isArray(m.locales)||!m.locales.length)throw new Error('Invalid locale manifest');const b=fs.readFileSync('src/scripts/i18n/built-in-locales.generated.js','utf8');if(!b.includes('NecesseLocales.register')||!b.includes('GENERATED FILE'))throw new Error('Invalid runtime bundle');console.log('Validated '+m.locales.length+' generated locales')"
-      - name: Commit generated assets
+      - name: Integrate JSON locale runtime
+        run: node scripts/integrate-json-locales.mjs
+      - name: Verify complete project
+        run: npm run verify
+      - name: Commit verified integration
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/scripts/i18n/locales/manifest.json src/scripts/i18n/built-in-locales.generated.js
+          git add src/index.html src/scripts/i18n scripts/build-standalone.mjs scripts/check-build.mjs scripts/validate-locales.mjs scripts/validate-interface-locales.mjs test/settings.test.mjs
           git diff --cached --quiet && exit 0
-          git commit -m "Generate built-in locale assets"
+          git commit -m "Integrate built-in JSON locales"
           git push
