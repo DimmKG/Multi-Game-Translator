@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(root, "src");
-const [html, css, locales, builtInLocales, localeBootstrap, localePackages, app, settings, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
+const [html, css, locales, builtInLocales, localeBootstrap, localePackages, app, settings, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
   readFile(resolve(source, "index.html"), "utf8"),
   readFile(resolve(source, "styles/app.css"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locales.js"), "utf8"),
@@ -13,6 +13,7 @@ const [html, css, locales, builtInLocales, localeBootstrap, localePackages, app,
   readFile(resolve(source, "scripts/i18n/locale-packages.js"), "utf8"),
   readFile(resolve(source, "scripts/app.js"), "utf8"),
   readFile(resolve(source, "scripts/settings.js"), "utf8"),
+  readFile(resolve(source, "scripts/mt/target-language.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/loader.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/manager.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/matcher.js"), "utf8"),
@@ -40,7 +41,7 @@ const stripModuleSyntax = sourceText => sourceText
 const managerBundle = [glossaryLoader, glossaryManager].map(stripModuleSyntax).join("\n");
 const qaBundle = [glossaryMatcher, glossaryQa].map(stripModuleSyntax).join("\n");
 const reviewBundle = glossaryReview.replace(/^import[^\n]+\n/gm, "");
-const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}\n{\n${reviewBundle}\n}\n{\n${glossaryNavigation}\n}`;
+const bundledGlossary = `{\n${managerBundle}\n}\n{\n${qaBundle}\n}\n{\n${reviewBundle}\n}\n{\n${targetLanguage}\n}\n{\n${glossaryNavigation}\n}`;
 const bundledLocalePackages = `{\n${stripModuleSyntax(localePackages)}\n}`;
 
 const localePackageTag = /<script\b(?=[^>]*\btype=["']module["'])(?=[^>]*\bsrc=["']\.\/scripts\/i18n\/locale-packages\.js["'])[^>]*><\/script>/i;
