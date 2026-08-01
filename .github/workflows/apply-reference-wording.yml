@@ -42,6 +42,9 @@ jobs:
       - name: Apply wording and locale changes
         run: node scripts/apply-reference-wording.mjs
 
+      - name: Remove stale provisional locale wording
+        run: node scripts/cleanup-provisional-reference-keys.mjs
+
       - name: Verify and rebuild
         run: npm run verify
 
@@ -49,7 +52,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src test dist scripts/apply-reference-wording.mjs
+          git add src test dist scripts/apply-reference-wording.mjs scripts/cleanup-provisional-reference-keys.mjs
           git diff --cached --quiet && exit 0
           git commit -m "Generalize reference-file wording"
           git push origin HEAD:agent/reference-wording-locale-pass
