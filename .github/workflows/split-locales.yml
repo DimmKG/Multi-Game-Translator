@@ -20,14 +20,14 @@ jobs:
         with:
           node-version: 20
       - name: Split locale files
-        run: node scripts/split-built-in-locales.mjs
-      - name: Verify project
+        run: node scripts/split-built-in-locales-v2.mjs
+      - name: Verify existing project
         run: npm run verify
-      - name: Commit generated migration
+      - name: Commit generated locale files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add src/scripts/i18n/locales
           git diff --cached --quiet && exit 0
-          git commit -m "Split built-in interface locales"
+          git commit -m "Generate split built-in locale files"
           git push
