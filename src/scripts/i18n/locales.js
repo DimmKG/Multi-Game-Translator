@@ -2,6 +2,8 @@
    INTERFACE LOCALIZATION
    To add a built-in language, copy an existing locale block and translate only
    the values. Keep all message keys and placeholders such as {n} and {name}.
+   Except English(en), Bulgarian(bg) and Russian(ru), all others are AI generated, until 
+   properly checked they are considered partially correct.
    ========================================================================== */
 const I18N = {
   "en": {
