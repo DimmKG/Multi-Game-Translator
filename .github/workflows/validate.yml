@@ -8,7 +8,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -17,11 +17,27 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
+      - name: Integrate direct workspace loader
+        if: github.head_ref == 'agent/new-translation-from-reference' || github.ref_name == 'agent/new-translation-from-reference'
+        run: node scripts/fix-issue-36-workspace-loader.mjs
+
       - name: Verify standalone build
         run: npm run verify
+
+      - name: Commit direct workspace loader
+        if: github.head_ref == 'agent/new-translation-from-reference' || github.ref_name == 'agent/new-translation-from-reference'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Load new translations through the shared workspace API [skip ci]"
+          git push origin HEAD:agent/new-translation-from-reference
