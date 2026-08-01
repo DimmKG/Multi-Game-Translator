@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/reference-wording-locale-pass
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
