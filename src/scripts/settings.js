@@ -38,7 +38,8 @@
     if (!button) return;
     const needed = Boolean(state.referenceReminder && translationFileOpen() && !englishReferenceLoaded());
     button.classList.toggle("settings-reference-needed", needed);
-    button.setAttribute("data-reference-reminder", needed ? "true" : "false");
+    const nextValue = needed ? "true" : "false";
+    if (button.dataset.referenceReminder !== nextValue) button.dataset.referenceReminder = nextValue;
   }
 
   function render() {
@@ -124,9 +125,11 @@
     });
     document.getElementById("uiLang")?.addEventListener("change", render);
 
-    const watched = [document.getElementById("topActions"), document.getElementById("btnEnRef")].filter(Boolean);
+    const actions = document.getElementById("topActions");
+    const referenceButton = document.getElementById("btnEnRef");
     observer = new MutationObserver(applyReferenceReminder);
-    watched.forEach(node => observer.observe(node, { attributes: true, childList: true, subtree: true, characterData: true }));
+    if (actions) observer.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    if (referenceButton) observer.observe(referenceButton, { childList: true, subtree: true, characterData: true });
 
     render();
     applyReferenceReminder();
