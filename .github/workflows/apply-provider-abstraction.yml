@@ -47,8 +47,11 @@ jobs:
           from pathlib import Path
           providers = Path('test/mt-providers.test.mjs')
           text = providers.read_text(encoding='utf-8')
+          text = text.replace('/function register(definition)/', '/function register\\(definition\\)/')
           text = text.replace('/async function translate(id, request/', '/async function translate\\(id, request/')
+          text = text.replace('assert.match(providers, /^pr(-br)?/);', 'assert.ok(providers.includes("if (/^pr(-br)?$/i.test(value))"));')
           text = text.replace('/registry.translate(validProvider(provider)/', '/registry\\.translate\\(validProvider\\(provider\\)/')
+          text = text.replace('/setPreferredProvider(state.mtProvider)/', '/setPreferredProvider\\(state\\.mtProvider\\)/')
           text = text.replace('/scripts/mt/providers.js/', '/scripts\\/mt\\/providers\\.js/')
           providers.write_text(text, encoding='utf-8')
 
