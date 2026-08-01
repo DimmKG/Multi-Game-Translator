@@ -3,7 +3,7 @@ import { stat } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { createServer } from "node:http";
 
-const rootName = process.argv[2] === "dist" ? "dist" : "src";
+const rootName = process.argv[2] || "src";
 const root = resolve(rootName);
 const port = Number(process.env.PORT || 4173);
 
