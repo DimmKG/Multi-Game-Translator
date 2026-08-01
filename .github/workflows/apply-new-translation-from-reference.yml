@@ -1,0 +1,38 @@
+name: Apply new translation workflow
+
+on:
+  push:
+    branches:
+      - agent/new-translation-from-reference
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/new-translation-from-reference
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Apply implementation
+        run: node scripts/apply-new-translation-from-reference.mjs
+
+      - name: Verify project
+        run: npm run verify
+
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src test dist
+          git diff --cached --quiet && exit 0
+          git commit -m "Add new translation from reference workflow"
+          git push origin HEAD:agent/new-translation-from-reference
