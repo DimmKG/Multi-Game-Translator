@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-standalone.mjs",
+    "build": "node scripts/generate-locale-assets.mjs && node scripts/build-standalone.mjs",
     "check": "node scripts/check-build.mjs",
     "test": "node --test",
     "validate:glossaries": "node scripts/validate-glossaries.mjs",
