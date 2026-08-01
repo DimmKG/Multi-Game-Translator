@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const index = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
 const settings = await readFile(new URL("../src/scripts/settings.js", import.meta.url), "utf8");
+const localeBootstrap = await readFile(new URL("../src/scripts/i18n/locale-bootstrap.js", import.meta.url), "utf8");
 const englishLocale = JSON.parse(await readFile(new URL("../src/scripts/i18n/locales/en.json", import.meta.url), "utf8"));
 const build = await readFile(new URL("../scripts/build-standalone.mjs", import.meta.url), "utf8");
 
@@ -37,6 +38,13 @@ test("settings messages are stored in the English locale", () => {
   assert.equal(englishLocale.messages["settings.button"], "Settings");
   assert.equal(englishLocale.messages["settings.referenceReminder"], "Highlight missing en.lang reference");
   assert.equal(englishLocale.messages["settings.close"], "Close");
+});
+
+test("interface direction switches for Arabic and resets for other languages", () => {
+  assert.match(localeBootstrap, /rtlLanguages\s*=\s*new Set\(\["ar"\]\)/);
+  assert.match(localeBootstrap, /document\.documentElement\.dir\s*=\s*rtlLanguages\.has/);
+  assert.match(localeBootstrap, /\?\s*"rtl"\s*:\s*"ltr"/);
+  assert.match(localeBootstrap, /event\.target\?\.id\s*===\s*"uiLang"/);
 });
 
 test("standalone build embeds settings and generated locales", () => {
