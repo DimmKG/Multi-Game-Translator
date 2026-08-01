@@ -1,0 +1,14 @@
+{
+  "format": "necesse-glossary-catalog",
+  "version": 1,
+  "glossaries": [
+    {
+      "id": "necesse-bg-example",
+      "name": "Necesse Bulgarian Glossary Example",
+      "sourceLanguage": "en",
+      "targetLanguage": "bg",
+      "url": "./necesse-bg-example.json",
+      "enabled": true
+    }
+  ]
+}
