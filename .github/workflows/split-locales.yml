@@ -1,4 +1,4 @@
-name: Convert built-in locales to JSON
+name: Build locale assets
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  convert:
+  build-locales:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -19,16 +19,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Convert locale files
-        run: node scripts/convert-split-locales-to-json.mjs
-      - name: Validate generated JSON
+      - name: Generate locale assets
+        run: node scripts/generate-locale-assets.mjs
+      - name: Validate generated assets
         run: |
-          node -e "const fs=require('fs');const path='src/scripts/i18n/locales';const files=fs.readdirSync(path).filter(x=>x.endsWith('.json'));if(!files.length)throw new Error('No locale JSON files');for(const file of files){const value=JSON.parse(fs.readFileSync(path+'/'+file,'utf8'));if(value.code+'.json'!==file||!value.messages||typeof value.messages!=='object')throw new Error('Invalid locale: '+file)}console.log('Validated '+files.length+' locale JSON files')"
-      - name: Commit generated JSON files
+          node -e "const fs=require('fs');const m=JSON.parse(fs.readFileSync('src/scripts/i18n/locales/manifest.json','utf8'));if(m.format!=='necesse-built-in-locales'||!Array.isArray(m.locales)||!m.locales.length)throw new Error('Invalid locale manifest');const b=fs.readFileSync('src/scripts/i18n/built-in-locales.generated.js','utf8');if(!b.includes('NecesseLocales.register')||!b.includes('GENERATED FILE'))throw new Error('Invalid runtime bundle');console.log('Validated '+m.locales.length+' generated locales')"
+      - name: Commit generated assets
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A src/scripts/i18n/locales
+          git add src/scripts/i18n/locales/manifest.json src/scripts/i18n/built-in-locales.generated.js
           git diff --cached --quiet && exit 0
-          git commit -m "Convert built-in locales to JSON"
+          git commit -m "Generate built-in locale assets"
           git push
