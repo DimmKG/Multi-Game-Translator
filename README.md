@@ -2,20 +2,48 @@
 
 A browser-based editor for Necesse `.lang` translation files.
 
-It supports local editing, English reference files, review and comparison views, terminology glossaries, installable interface translations and a generated standalone HTML build.
+Use the hosted application:
 
-## Project structure
+**https://actepukc.github.io/Necesse-Lang-Translator/**
 
-- `src/index.html` — interface markup
-- `src/styles/app.css` — application styles
-- `src/scripts/app.js` — core editor logic
-- `src/scripts/i18n/` — built-in and installable interface localization support
-- `src/scripts/glossary/` — glossary loading, terminology QA and navigation
-- `src/glossaries/` — public online catalog and browser-accessible glossary files
-- `schemas/` — normative JSON schemas
-- `docs/` — authoring and usage guides
-- `legacy/necesse-lang-translator.original.html` — preserved original baseline
-- `dist/necesse-lang-translator.html` — generated standalone build
+The editor works locally in the browser and supports reference files, translation review, file comparison, terminology glossaries, interface localization and an offline standalone build.
+
+## Origin and credits
+
+The project began with a minimal standalone HTML editor created by **DimmKG** and shared in the Necesse Discord community on 30 July 2026 in response to a request for a translation-focused alternative to a plain text editor.
+
+The current project preserves that original baseline in `legacy/necesse-lang-translator.original.html` and expands it with modular source files, review and comparison tools, terminology QA, interface localization, validation, automated tests, an offline build and a hosted web application.
+
+## Features
+
+- open and edit Necesse `.lang` files locally;
+- detect missing and unchanged translations;
+- compare against an English reference file;
+- save and restore translation progress;
+- review translated entries and detected issues;
+- compare two localization files;
+- load local or hosted terminology glossaries;
+- detect preferred, alternative and forbidden terminology;
+- preserve placeholders and formatting tokens;
+- use built-in or installable interface languages;
+- open the generated standalone application without a web server.
+
+Files are processed in the browser. The application does not upload localization files to a server.
+
+## Translation-file safety
+
+The editor separates each localization key from its translated value. During normal editing, translators change only the text after `=`, while the key itself is displayed separately and is not part of the editable translation field.
+
+The application also checks protected content such as placeholders, references, formatting codes and explicit newline tokens. Missing or changed tokens are shown as review warnings before export. The comparison view can be used as an additional final check against another `.lang` file.
+
+These checks are intended to reduce accidental changes to structures such as:
+
+```text
+codeName=
+<variable>
+[item/input=...]
+\n
+```
 
 ## Run locally
 
@@ -33,13 +61,7 @@ Then open:
 http://127.0.0.1:4173
 ```
 
-Build and serve the generated standalone version:
-
-```powershell
-npm run preview
-```
-
-No third-party packages are required for either command.
+No third-party packages are required.
 
 ## Standalone build
 
@@ -55,7 +77,7 @@ The generated file is written to:
 dist/necesse-lang-translator.html
 ```
 
-The standalone file can be opened directly through `file://`. Local glossary import and installable interface locale import remain available, while online catalog controls are hidden because browsers do not permit the same HTTP loading behaviour in direct-file mode.
+The standalone file can be opened directly through `file://`. Local glossary import and installable interface-locale import remain available. Online catalog controls are hidden because direct-file pages cannot load the same external resources as the hosted version.
 
 ## Verification
 
@@ -101,26 +123,29 @@ Start here:
 
 The editor includes built-in interface languages and also accepts installable JSON locale packages.
 
-An installable package may be partial. Missing keys automatically use English, and importing the same language code again replaces the stored package.
+An installable package may be partial. Missing keys automatically use English. Importing the same non-built-in language code again replaces the stored package.
 
 Start here:
 
 - [Interface locale package guide](docs/interface-locales.md)
-- [Partial Spanish example](interface-locales/examples/es.partial.example.json)
+- [Partial Esperanto example](interface-locales/examples/eo.partial.example.json)
 - [Interface locale schema](schemas/interface-locale-v1.schema.json)
 
-The shared i18n system covers the core editor, glossary management, terminology warnings and navigation, Review terminology badges and the interface-language manager.
+The shared interface-localization system covers the editor, settings, glossary management, terminology warnings, review tools and the interface-language manager. Right-to-left layout is enabled for Arabic, while filenames, localization keys and other technical values remain left-to-right.
 
-## Current status
+## Project structure
 
-The main functional milestone is complete:
+- `src/index.html` — interface markup
+- `src/styles/app.css` — application styles
+- `src/scripts/app.js` — core editor logic
+- `src/scripts/i18n/` — built-in and installable interface localization
+- `src/scripts/glossary/` — glossary loading, terminology QA and navigation
+- `src/glossaries/` — public glossary catalog and browser-accessible glossary files
+- `schemas/` — JSON schemas
+- `docs/` — authoring and usage guides
+- `legacy/necesse-lang-translator.original.html` — preserved original baseline
+- `dist/necesse-lang-translator.html` — generated standalone build
 
-- modular source and generated standalone build;
-- GitHub Pages-compatible public application tree;
-- built-in and installable interface localization;
-- local and online glossaries;
-- terminology QA, filtering and Review integration;
-- glossary version tracking and explicit updates;
-- automated validation and regression tests.
+## Feedback
 
-Remaining work is primarily documentation refinement and interface polishing, including settings, optional navigation-panel collapsing and improved narrow-screen behaviour.
+Feedback from translators is welcome, especially reports about real localization workflows, language-specific behaviour, terminology checks, accessibility and narrow-screen usability. Open a GitHub issue with a clear description and, where useful, a screenshot or small reproducible sample.
