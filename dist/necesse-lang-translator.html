@@ -407,6 +407,42 @@
     #btnEnRef,#btnSaveJson,#btnLoadJson,#btnNew,#btnExport{flex:1 1 150px;width:auto}
   }
   @media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+
+/* ---------- compact localized header revision ---------- */
+header{
+  display:flex;align-items:center;gap:8px 12px;padding:10px 16px;flex-wrap:wrap;
+}
+header>.brand{flex:0 1 auto;min-width:0;margin-inline-end:auto}
+header>.grow{display:none}
+header>select.uilang{flex:0 0 auto;width:auto;min-width:118px;max-width:220px}
+header>button{flex:0 0 auto;width:auto;max-width:none;white-space:nowrap}
+header>.meter{flex:0 1 300px;width:auto;min-width:210px;max-width:340px;margin-inline-start:4px}
+.filebar{
+  order:10;flex:1 1 100%;width:100%;min-width:0;display:flex;align-items:center;
+  gap:8px;flex-wrap:nowrap;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;
+  padding-block:2px 3px;scrollbar-width:thin;overscroll-behavior-inline:contain;
+}
+.filebar>*{flex:0 0 auto}
+.filebar .btn{white-space:nowrap;overflow:visible;overflow-wrap:normal;min-height:34px}
+.filebar .savepill{width:auto;min-width:170px;max-width:260px;flex:0 0 auto}
+.filebar .fname{flex:1 0 220px;min-width:190px;max-width:420px;margin-inline-start:auto}
+.filebar .fname input{width:auto;min-width:110px;flex:1 1 150px}
+#btnEnRef,#btnSaveJson,#btnLoadJson,#btnNew,#btnExport{width:auto;min-width:max-content;flex:0 0 auto}
+@media (max-width:900px){
+  header{padding:9px 12px}
+  header>.meter{order:5;flex:1 1 100%;max-width:none;margin-inline-start:0}
+  .filebar{order:10}
+}
+@media (max-width:560px){
+  header{gap:7px 8px;padding:8px 10px}
+  header>.brand .sub{display:none}
+  header>select.uilang{min-width:104px;max-width:46vw}
+  header>button{padding:6px 9px}
+  header>.meter{min-width:0}
+  .filebar .savepill{min-width:150px;max-width:220px}
+  .filebar .fname{flex-basis:190px;min-width:170px;margin-inline-start:0}
+}
 </style>
 <style>
   /* Keep machine-readable values stable inside right-to-left interface text. */
