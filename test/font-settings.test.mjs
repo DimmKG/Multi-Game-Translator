@@ -30,3 +30,11 @@ test("font preview includes multiple writing systems", () => {
   assert.match(source, /日本語/);
   assert.match(source, /中文/);
 });
+
+const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8");
+const build = await readFile(new URL("../scripts/build-standalone.mjs", import.meta.url), "utf8");
+
+test("hosted and standalone builds load font settings", () => {
+  assert.match(html, /font-settings\.js/);
+  assert.match(build, /fontSettings/);
+});
