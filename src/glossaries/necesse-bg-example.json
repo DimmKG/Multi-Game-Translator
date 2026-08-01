@@ -1,0 +1,35 @@
+{
+  "format": "necesse-glossary",
+  "version": 1,
+  "id": "necesse-bg-example",
+  "name": "Necesse Bulgarian Glossary Example",
+  "sourceLanguage": "en",
+  "targetLanguage": "bg",
+  "game": "Necesse",
+  "authors": ["Example only"],
+  "updatedAt": "2026-07-31",
+  "entries": [
+    {
+      "source": "Settler",
+      "target": "Заселник",
+      "forms": ["Заселникът", "Заселника", "Заселници", "Заселниците"],
+      "alternatives": ["Колонист"],
+      "forbidden": ["Преселник"],
+      "caseSensitive": false,
+      "wholeWord": true,
+      "status": "approved",
+      "category": "character",
+      "note": "Forms are grammatical variants; alternatives are different acceptable translations."
+    },
+    {
+      "source": "Caveling",
+      "target": "Пещерник",
+      "forms": ["Пещерникът", "Пещерника", "Пещерници", "Пещерниците"],
+      "forbidden": ["Пещерняк", "Пещерняци"],
+      "caseSensitive": false,
+      "wholeWord": true,
+      "status": "approved",
+      "category": "creature"
+    }
+  ]
+}
