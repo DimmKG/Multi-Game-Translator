@@ -16,7 +16,7 @@ The editor currently provides:
 - a provider selector and global preferred-provider persistence;
 - matching hosted and standalone builds.
 
-Google remains the only registered provider. The next work is to add provider configuration and additional conventional translation services without introducing AI-prompt complexity yet.
+Google remains the only registered provider. The provider configuration foundation, encrypted secret vault and configurable font preferences are complete. The current sequence is issue #35 (Settings tabs), issue #27 (reference/provider wording and locale pass), Stage 3B (LibreTranslate-compatible provider), then Stage 3C (DeepL).
 
 The language used by the interface, the language represented by the loaded `.lang` file, the source/reference file and the language used by machine translation are separate concepts and must remain independent.
 
@@ -74,9 +74,9 @@ Stage 3 is deliberately split into smaller provider-focused steps. The exact num
 
 ### Stage 3A: provider configuration foundation
 
-Goal: provide a safe shared place for provider-specific settings before adding providers that require configuration.
+Completed through PR #32, followed by the encrypted secret vault in PR #33 and configurable font preferences in PR #34.
 
-Planned changes:
+Implemented:
 
 - define provider metadata for configurable fields;
 - add provider settings to the existing Settings panel rather than the main translation toolbar;
@@ -195,7 +195,10 @@ For an automatically recognized filename:
 
 - [x] Stage 1 — safe target-language selection ([PR #26](https://github.com/AcTePuKc/Necesse-Lang-Translator/pull/26))
 - [x] Stage 2 — provider abstraction ([PR #28](https://github.com/AcTePuKc/Necesse-Lang-Translator/pull/28))
-- [ ] Stage 3A — provider configuration foundation
+- [x] Stage 3A — provider configuration foundation ([PR #32](https://github.com/AcTePuKc/Necesse-Lang-Translator/pull/32))
+- [x] Encrypted provider-secret vault ([PR #33](https://github.com/AcTePuKc/Necesse-Lang-Translator/pull/33))
+- [x] Configurable font preferences ([PR #34](https://github.com/AcTePuKc/Necesse-Lang-Translator/pull/34))
+- [ ] Issue #35 — Settings tabs and responsive dialog
 - [ ] Issue #27 — reference-file wording and locale pass
 - [ ] Stage 3B — LibreTranslate-compatible provider
 - [ ] Stage 3C — DeepL provider

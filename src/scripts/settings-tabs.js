@@ -98,7 +98,7 @@
     for (const record of records) {
       for (const node of record.addedNodes) {
         if (!(node instanceof Element) || node === ui.tablist || node === ui.panels) continue;
-        if (node.closest?.(".settings-tabs-shell")) continue;
+        if (node.parentElement?.classList.contains("settings-tab-panel")) continue;
         register(classify(node), node);
       }
     }
@@ -137,10 +137,10 @@
     ui.tablist.className = "settings-tablist";
     ui.tablist.setAttribute("role", "tablist");
     ui.tablist.setAttribute("aria-label", "Settings sections");
-    ui.panels = document.createElement("div");
-    ui.panels.className = "settings-tab-panels";
-    ui.shell.append(ui.tablist, ui.panels);
+    ui.panels = list;
+    ui.panels.classList.add("settings-tab-panels");
     list.replaceWith(ui.shell);
+    ui.shell.append(ui.tablist, list);
 
     for (const id of ORDER) ensureTab(id);
     adoptExisting();

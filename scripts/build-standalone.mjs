@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(root, "src");
-const [html, css, locales, builtInLocales, localeBootstrap, localePackages, providerSettings, secretVault, providers, app, settings, fontSettings, providerSettingsUi, secretVaultUi, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
+const [html, css, locales, builtInLocales, localeBootstrap, localePackages, providerSettings, secretVault, providers, app, settings, fontSettings, providerSettingsUi, secretVaultUi, settingsTabs, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
   readFile(resolve(source, "index.html"), "utf8"),
   readFile(resolve(source, "styles/app.css"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locales.js"), "utf8"),
@@ -19,6 +19,7 @@ const [html, css, locales, builtInLocales, localeBootstrap, localePackages, prov
   readFile(resolve(source, "scripts/font-settings.js"), "utf8"),
   readFile(resolve(source, "scripts/mt/provider-settings-ui.js"), "utf8"),
   readFile(resolve(source, "scripts/mt/secret-vault-ui.js"), "utf8"),
+  readFile(resolve(source, "scripts/settings-tabs.js"), "utf8"),
   readFile(resolve(source, "scripts/mt/target-language.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/loader.js"), "utf8"),
   readFile(resolve(source, "scripts/glossary/manager.js"), "utf8"),
@@ -70,6 +71,7 @@ let standalone = html
   .replace('<script src="./scripts/font-settings.js"></script>', `<script>${fontSettings}</script>`)
   .replace('<script src="./scripts/mt/provider-settings-ui.js"></script>', `<script>${providerSettingsUi}</script>`)
   .replace('<script src="./scripts/mt/secret-vault-ui.js"></script>', `<script>${secretVaultUi}</script>`)
+  .replace('<script src="./scripts/settings-tabs.js"></script>', `<script>${settingsTabs}</script>`)
   .replace(localePackageTag, `<script type="module">${bundledLocalePackages}</script>`)
   .replace(managerTag, `<script type="module">${bundledGlossary}</script>`)
   .replace(qaTag, "")
