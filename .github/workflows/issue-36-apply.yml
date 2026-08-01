@@ -1,0 +1,31 @@
+name: Apply Issue 36 implementation
+
+on:
+  push:
+    branches:
+      - agent/new-translation-from-reference
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/new-translation-from-reference
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/apply-issue-36.mjs
+      - run: npm run verify
+      - name: Commit generated implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src scripts test dist
+          git commit -m "Implement new translation from reference [skip ci]"
+          git push origin HEAD:agent/new-translation-from-reference
