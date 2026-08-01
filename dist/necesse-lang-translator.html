@@ -5185,6 +5185,10 @@ globalThis.NecesseLocales.register({
     return secrets.get(id) || null;
   }
 
+  function notifySecretsChanged() {
+    globalThis.dispatchEvent?.(new CustomEvent("necesse:mt-secrets-changed"));
+  }
+
   function setSecret(providerId, fieldId, value) {
     const provider = String(providerId || "");
     const field = fieldDefinition(provider, fieldId);
@@ -5193,6 +5197,7 @@ globalThis.NecesseLocales.register({
     const text = String(value ?? "");
     if (text) bucket.set(field.id, text);
     else bucket.delete(field.id);
+    notifySecretsChanged();
   }
 
   function getSecret(providerId, fieldId) {
@@ -5202,6 +5207,41 @@ globalThis.NecesseLocales.register({
   function clearSecrets(providerId) {
     if (providerId === undefined) secrets.clear();
     else secrets.delete(String(providerId || ""));
+    notifySecretsChanged();
+  }
+
+  function exportSecrets() {
+    const result = {};
+    for (const [providerId, bucket] of secrets) {
+      const fields = {};
+      for (const [fieldId, value] of bucket) if (value) fields[fieldId] = value;
+      if (Object.keys(fields).length) result[providerId] = fields;
+    }
+    return result;
+  }
+
+  function importSecrets(snapshot, options = {}) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+      throw new TypeError("Provider secret snapshot must be an object.");
+    }
+    if (options.replace !== false) secrets.clear();
+    for (const [providerId, fields] of Object.entries(snapshot)) {
+      if (!fields || typeof fields !== "object" || Array.isArray(fields)) continue;
+      for (const [fieldId, value] of Object.entries(fields)) {
+        const field = fieldDefinition(providerId, fieldId);
+        if (!field || field.type !== "secret") continue;
+        const text = String(value ?? "");
+        if (text) secretBucket(providerId, true).set(field.id, text);
+      }
+    }
+    notifySecretsChanged();
+    return exportSecrets();
+  }
+
+  function secretCount() {
+    let count = 0;
+    for (const bucket of secrets.values()) count += bucket.size;
+    return count;
   }
 
   function resolve(providerId) {
@@ -5228,9 +5268,178 @@ globalThis.NecesseLocales.register({
     setSecret,
     getSecret,
     clearSecrets,
+    exportSecrets,
+    importSecrets,
+    secretCount,
     resolve,
     exportPublic,
     secretPersistence: "memory-only"
+  });
+})();
+"use strict";
+
+(function initializeMtSecretVault() {
+  const FORMAT = "necesse-provider-secrets";
+  const VERSION = 1;
+  const ITERATIONS = 600000;
+  const SALT_BYTES = 16;
+  const IV_BYTES = 12;
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  class SecretVaultError extends Error {
+    constructor(code, message, options = {}) {
+      super(message || code, options);
+      this.name = "SecretVaultError";
+      this.code = code;
+    }
+  }
+
+  function cryptoApi() {
+    const api = globalThis.crypto;
+    if (!api?.subtle || typeof api.getRandomValues !== "function") {
+      throw new SecretVaultError("crypto-unavailable", "Web Crypto is not available.");
+    }
+    return api;
+  }
+
+  function bytesToBase64(bytes) {
+    let binary = "";
+    for (const value of bytes) binary += String.fromCharCode(value);
+    return btoa(binary);
+  }
+
+  function base64ToBytes(value, field) {
+    try {
+      const binary = atob(String(value || ""));
+      return Uint8Array.from(binary, character => character.charCodeAt(0));
+    } catch {
+      throw new SecretVaultError("invalid-format", "Invalid base64 data in " + field + ".");
+    }
+  }
+
+  function cleanSecrets(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new SecretVaultError("invalid-secrets", "Provider secrets must be an object.");
+    }
+    const result = {};
+    for (const [providerId, fields] of Object.entries(value)) {
+      if (!fields || typeof fields !== "object" || Array.isArray(fields)) continue;
+      const cleanFields = {};
+      for (const [fieldId, secret] of Object.entries(fields)) {
+        const text = String(secret ?? "");
+        if (text) cleanFields[String(fieldId)] = text;
+      }
+      if (Object.keys(cleanFields).length) result[String(providerId)] = cleanFields;
+    }
+    return result;
+  }
+
+  function metadata(container) {
+    return {
+      format: container.format,
+      version: container.version,
+      kdf: container.kdf,
+      cipher: container.cipher
+    };
+  }
+
+  function validateContainer(container) {
+    if (!container || typeof container !== "object" || Array.isArray(container)) {
+      throw new SecretVaultError("invalid-format", "The encrypted secret file is invalid.");
+    }
+    if (container.format !== FORMAT) {
+      throw new SecretVaultError("invalid-format", "This is not a provider secret vault.");
+    }
+    if (container.version !== VERSION) {
+      throw new SecretVaultError("unsupported-version", "Unsupported provider secret vault version.");
+    }
+    if (container.kdf?.name !== "PBKDF2" || container.kdf?.hash !== "SHA-256" || container.kdf?.iterations !== ITERATIONS) {
+      throw new SecretVaultError("unsupported-kdf", "Unsupported key derivation settings.");
+    }
+    if (container.cipher?.name !== "AES-GCM" || container.cipher?.length !== 256) {
+      throw new SecretVaultError("unsupported-cipher", "Unsupported encryption settings.");
+    }
+    if (typeof container.ciphertext !== "string") {
+      throw new SecretVaultError("invalid-format", "The encrypted payload is missing.");
+    }
+    return container;
+  }
+
+  async function deriveKey(passphrase, salt, usages) {
+    const password = String(passphrase || "");
+    if (!password) throw new SecretVaultError("passphrase-required", "A passphrase is required.");
+    const api = cryptoApi();
+    const material = await api.subtle.importKey("raw", encoder.encode(password), "PBKDF2", false, ["deriveKey"]);
+    return api.subtle.deriveKey(
+      { name: "PBKDF2", hash: "SHA-256", salt, iterations: ITERATIONS },
+      material,
+      { name: "AES-GCM", length: 256 },
+      false,
+      usages
+    );
+  }
+
+  async function encrypt(secrets, passphrase) {
+    const api = cryptoApi();
+    const salt = api.getRandomValues(new Uint8Array(SALT_BYTES));
+    const iv = api.getRandomValues(new Uint8Array(IV_BYTES));
+    const container = {
+      format: FORMAT,
+      version: VERSION,
+      kdf: {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        iterations: ITERATIONS,
+        salt: bytesToBase64(salt)
+      },
+      cipher: {
+        name: "AES-GCM",
+        length: 256,
+        iv: bytesToBase64(iv)
+      }
+    };
+    const key = await deriveKey(passphrase, salt, ["encrypt"]);
+    const additionalData = encoder.encode(JSON.stringify(metadata(container)));
+    const plaintext = encoder.encode(JSON.stringify({ secrets: cleanSecrets(secrets) }));
+    const ciphertext = await api.subtle.encrypt({ name: "AES-GCM", iv, additionalData, tagLength: 128 }, key, plaintext);
+    return JSON.stringify({ ...container, ciphertext: bytesToBase64(new Uint8Array(ciphertext)) }, null, 2);
+  }
+
+  async function decrypt(serialized, passphrase) {
+    let parsed;
+    try {
+      parsed = JSON.parse(String(serialized || ""));
+    } catch {
+      throw new SecretVaultError("invalid-format", "The encrypted secret file is not valid JSON.");
+    }
+    const container = validateContainer(parsed);
+    const salt = base64ToBytes(container.kdf.salt, "kdf.salt");
+    const iv = base64ToBytes(container.cipher.iv, "cipher.iv");
+    const ciphertext = base64ToBytes(container.ciphertext, "ciphertext");
+    if (salt.length !== SALT_BYTES || iv.length !== IV_BYTES || !ciphertext.length) {
+      throw new SecretVaultError("invalid-format", "The encrypted secret file has invalid lengths.");
+    }
+    const api = cryptoApi();
+    const key = await deriveKey(passphrase, salt, ["decrypt"]);
+    const additionalData = encoder.encode(JSON.stringify(metadata(container)));
+    try {
+      const plaintext = await api.subtle.decrypt({ name: "AES-GCM", iv, additionalData, tagLength: 128 }, key, ciphertext);
+      const payload = JSON.parse(decoder.decode(plaintext));
+      return cleanSecrets(payload?.secrets || {});
+    } catch (error) {
+      if (error instanceof SecretVaultError) throw error;
+      throw new SecretVaultError("decryption-failed", "The passphrase is incorrect or the file was modified.", { cause: error });
+    }
+  }
+
+  globalThis.NecesseMtSecretVault = Object.freeze({
+    encrypt,
+    decrypt,
+    format: FORMAT,
+    version: VERSION,
+    iterations: ITERATIONS,
+    SecretVaultError
   });
 })();
 "use strict";
@@ -7327,6 +7536,231 @@ function targetFromName(name){
   else initialize();
 
   globalThis.NecesseMtProviderSettingsUi = Object.freeze({ render });
+})();
+</script>
+<script>"use strict";
+
+(function initializeMtSecretVaultUi() {
+  const ui = {};
+  const fallback = Object.freeze({
+    "settings.secretVaultTitle": "Encrypted provider secrets",
+    "settings.secretVaultHint": "Secrets stay in memory unless you export this password-protected file. The password is never saved.",
+    "settings.secretVaultEmpty": "No provider secrets are currently unlocked.",
+    "settings.secretVaultUnlocked": "{n} provider secret(s) are currently unlocked.",
+    "settings.secretVaultExport": "Export encrypted secrets",
+    "settings.secretVaultImport": "Import encrypted secrets",
+    "settings.secretVaultClear": "Lock and clear secrets",
+    "settings.secretVaultCreatePassword": "Create a password for the encrypted file",
+    "settings.secretVaultEnterPassword": "Enter the encrypted file password",
+    "settings.secretVaultPassword": "Password",
+    "settings.secretVaultConfirmPassword": "Confirm password",
+    "settings.secretVaultPasswordMismatch": "The passwords do not match.",
+    "settings.secretVaultCancel": "Cancel",
+    "settings.secretVaultContinue": "Continue",
+    "settings.secretVaultExportError": "Could not export encrypted secrets.",
+    "settings.secretVaultImportError": "Could not import encrypted secrets."
+  });
+  const t = key => {
+    const translated = globalThis.NecesseI18n?.t(key);
+    return translated && translated !== key ? translated : (fallback[key] || key);
+  };
+
+  function secretCount() {
+    return globalThis.NecesseMtProviderSettings?.secretCount?.() || 0;
+  }
+
+  function update() {
+    if (!ui.section) return;
+    const count = secretCount();
+    ui.status.textContent = count
+      ? t("settings.secretVaultUnlocked").replace("{n}", count)
+      : t("settings.secretVaultEmpty");
+    ui.export.disabled = count === 0;
+    ui.clear.disabled = count === 0;
+  }
+
+  function askPassphrase(confirmValue) {
+    return new Promise(resolve => {
+      const dialog = document.createElement("dialog");
+      dialog.className = "settings-vault-dialog";
+      const form = document.createElement("form");
+      form.method = "dialog";
+      const title = document.createElement("h3");
+      title.textContent = confirmValue ? t("settings.secretVaultCreatePassword") : t("settings.secretVaultEnterPassword");
+      const password = document.createElement("input");
+      password.type = "password";
+      password.autocomplete = "new-password";
+      password.required = true;
+      password.placeholder = t("settings.secretVaultPassword");
+      const confirmation = document.createElement("input");
+      confirmation.type = "password";
+      confirmation.autocomplete = "new-password";
+      confirmation.required = confirmValue;
+      confirmation.placeholder = t("settings.secretVaultConfirmPassword");
+      if (!confirmValue) confirmation.hidden = true;
+      const error = document.createElement("p");
+      error.className = "settings-vault-error";
+      const actions = document.createElement("div");
+      actions.className = "settings-vault-actions";
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.textContent = t("settings.secretVaultCancel");
+      const accept = document.createElement("button");
+      accept.type = "submit";
+      accept.className = "btn primary";
+      accept.textContent = t("settings.secretVaultContinue");
+      actions.append(cancel, accept);
+      form.append(title, password, confirmation, error, actions);
+      dialog.append(form);
+      document.body.append(dialog);
+
+      function finish(value) {
+        dialog.close();
+        dialog.remove();
+        resolve(value);
+      }
+
+      cancel.addEventListener("click", () => finish(""));
+      dialog.addEventListener("cancel", event => {
+        event.preventDefault();
+        finish("");
+      });
+      form.addEventListener("submit", event => {
+        event.preventDefault();
+        if (!password.value) return;
+        if (confirmValue && password.value !== confirmation.value) {
+          error.textContent = t("settings.secretVaultPasswordMismatch");
+          confirmation.focus();
+          return;
+        }
+        finish(password.value);
+      });
+      dialog.showModal();
+      password.focus();
+    });
+  }
+
+  function download(text) {
+    const blob = new Blob([text], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    const date = new Date().toISOString().slice(0, 10);
+    anchor.href = url;
+    anchor.download = `necesse-provider-secrets-${date}.json`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  async function exportVault() {
+    const store = globalThis.NecesseMtProviderSettings;
+    const vault = globalThis.NecesseMtSecretVault;
+    if (!store || !vault || !secretCount()) return;
+    const passphrase = await askPassphrase(true);
+    if (!passphrase) return;
+    try {
+      download(await vault.encrypt(store.exportSecrets(), passphrase));
+    } catch (error) {
+      alert(t("settings.secretVaultExportError") + " " + (error?.message || error));
+    }
+  }
+
+  async function importVault(file) {
+    const store = globalThis.NecesseMtProviderSettings;
+    const vault = globalThis.NecesseMtSecretVault;
+    if (!file || !store || !vault) return;
+    const passphrase = await askPassphrase(false);
+    if (!passphrase) return;
+    try {
+      const secrets = await vault.decrypt(await file.text(), passphrase);
+      store.importSecrets(secrets, { replace: true });
+      globalThis.NecesseMtProviderSettingsUi?.render?.();
+      update();
+    } catch (error) {
+      alert(t("settings.secretVaultImportError") + " " + (error?.message || error));
+    }
+  }
+
+  function build() {
+    const list = document.querySelector(".settings-list");
+    if (!list || ui.section) return;
+    const section = document.createElement("section");
+    section.className = "settings-provider-section settings-vault-section";
+    const title = document.createElement("h3");
+    title.className = "settings-provider-title";
+    title.textContent = t("settings.secretVaultTitle");
+    const hint = document.createElement("p");
+    hint.className = "settings-vault-hint";
+    hint.textContent = t("settings.secretVaultHint");
+    ui.status = document.createElement("p");
+    ui.status.className = "settings-vault-status";
+    const actions = document.createElement("div");
+    actions.className = "settings-vault-actions";
+    ui.export = document.createElement("button");
+    ui.export.type = "button";
+    ui.export.textContent = t("settings.secretVaultExport");
+    ui.import = document.createElement("button");
+    ui.import.type = "button";
+    ui.import.textContent = t("settings.secretVaultImport");
+    ui.clear = document.createElement("button");
+    ui.clear.type = "button";
+    ui.clear.textContent = t("settings.secretVaultClear");
+    ui.file = document.createElement("input");
+    ui.file.type = "file";
+    ui.file.accept = ".json,application/json";
+    ui.file.hidden = true;
+    actions.append(ui.export, ui.import, ui.clear);
+    section.append(title, hint, ui.status, actions, ui.file);
+    list.append(section);
+    ui.section = section;
+
+    ui.export.addEventListener("click", exportVault);
+    ui.import.addEventListener("click", () => ui.file.click());
+    ui.file.addEventListener("change", async () => {
+      const [file] = ui.file.files || [];
+      ui.file.value = "";
+      await importVault(file);
+    });
+    ui.clear.addEventListener("click", () => {
+      globalThis.NecesseMtProviderSettings?.clearSecrets?.();
+      globalThis.NecesseMtProviderSettingsUi?.render?.();
+      update();
+    });
+    update();
+  }
+
+  function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = `.settings-vault-hint,.settings-vault-status{margin:0;color:var(--muted,#9aa3b2);font-size:12px;line-height:1.45}.settings-vault-actions{display:flex;gap:8px;flex-wrap:wrap}.settings-vault-dialog{width:min(460px,calc(100% - 32px));padding:20px;border:1px solid var(--line,#343944);border-radius:12px;background:var(--panel,#171a20);color:inherit}.settings-vault-dialog::backdrop{background:rgba(0,0,0,.72)}.settings-vault-dialog form{display:grid;gap:12px}.settings-vault-dialog h3{margin:0}.settings-vault-dialog input{padding:10px;border:1px solid var(--line,#343944);border-radius:8px;background:var(--bg,#101217);color:inherit}.settings-vault-error{min-height:1.2em;margin:0;color:var(--warn,#d9a441);font-size:12px}`;
+    document.head.append(style);
+  }
+
+  function renderText() {
+    if (!ui.section) return;
+    ui.section.querySelector(".settings-provider-title").textContent = t("settings.secretVaultTitle");
+    ui.section.querySelector(".settings-vault-hint").textContent = t("settings.secretVaultHint");
+    ui.export.textContent = t("settings.secretVaultExport");
+    ui.import.textContent = t("settings.secretVaultImport");
+    ui.clear.textContent = t("settings.secretVaultClear");
+    update();
+  }
+
+  function initialize() {
+    injectStyles();
+    build();
+    globalThis.addEventListener?.("necesse:mt-secrets-changed", update);
+    document.getElementById("uiLang")?.addEventListener("change", renderText);
+    document.querySelector(".settings-open")?.addEventListener("click", () => {
+      build();
+      renderText();
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
+
+  globalThis.NecesseMtSecretVaultUi = Object.freeze({ update });
 })();
 </script>
 <script type="module">{
