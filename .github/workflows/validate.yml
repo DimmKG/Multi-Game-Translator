@@ -27,7 +27,9 @@ jobs:
           node-version: 22
 
       - name: Apply token-aware Compare integration
-        run: node scripts/apply-token-aware-compare-integration.mjs
+        run: |
+          node scripts/apply-token-aware-compare-integration.mjs
+          node scripts/apply-token-aware-compare-fixes.mjs
 
       - name: Verify project and standalone build
         run: npm run verify
@@ -37,7 +39,7 @@ jobs:
           git restore --source=HEAD -- .github/workflows/validate.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm scripts/apply-token-aware-compare-integration.mjs
+          git rm scripts/apply-token-aware-compare-integration.mjs scripts/apply-token-aware-compare-fixes.mjs
           git add -A
           git commit -m "Integrate token-aware Compare UI"
           git push origin HEAD:agent/token-aware-compare
