@@ -404,6 +404,42 @@
   }
   @media (prefers-reduced-motion: reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
+<style>
+  /* Keep machine-readable values stable inside right-to-left interface text. */
+  html[dir="rtl"] .brand .mark,
+  html[dir="rtl"] .fname input,
+  html[dir="rtl"] #restoreName,
+  html[dir="rtl"] #restoreWhen,
+  html[dir="rtl"] .meter .pct,
+  html[dir="rtl"] .filt .cnt,
+  html[dir="rtl"] .sec-jump,
+  html[dir="rtl"] .sec-head,
+  html[dir="rtl"] .key,
+  html[dir="rtl"] .rkey,
+  html[dir="rtl"] .chip,
+  html[dir="rtl"] .mtprov,
+  html[dir="rtl"] #mtTarget,
+  html[dir="rtl"] .qhint,
+  html[dir="rtl"] .hint kbd,
+  html[dir="rtl"] .diffname,
+  html[dir="rtl"] .diffstat,
+  html[dir="rtl"] .difflist,
+  html[dir="rtl"] .legend span:nth-child(2),
+  html[dir="rtl"] .legend span:nth-child(4) {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+  }
+
+  /* Let source and translation content choose direction from the actual text. */
+  html[dir="rtl"] .search input,
+  html[dir="rtl"] .orig,
+  html[dir="rtl"] .ren,
+  html[dir="rtl"] textarea {
+    unicode-bidi: plaintext;
+    text-align: start;
+  }
+</style>
 </head>
 <body>
 
@@ -5028,6 +5064,10 @@ globalThis.NecesseLocales.register({
 
 (function initializeSharedInterfaceI18n() {
   const language = () => document.getElementById("uiLang")?.value || "en";
+  const rtlLanguages = new Set(["ar"]);
+  const applyDirection = (code = language()) => {
+    document.documentElement.dir = rtlLanguages.has(String(code).toLowerCase()) ? "rtl" : "ltr";
+  };
   const translate = (key, vars) => {
     const locale = I18N[language()] || I18N.en;
     let value = locale?.[key] != null ? locale[key] : (I18N.en?.[key] != null ? I18N.en[key] : key);
@@ -5039,7 +5079,12 @@ globalThis.NecesseLocales.register({
     return String(value);
   };
   const plural = (base, count, vars = {}) => translate(base + "." + (count === 1 ? "one" : "other"), { ...vars, n: count });
-  globalThis.NecesseI18n = Object.freeze({ t: translate, plural });
+  globalThis.NecesseI18n = Object.freeze({ t: translate, plural, applyDirection });
+
+  document.addEventListener("change", event => {
+    if (event.target?.id === "uiLang") applyDirection(event.target.value);
+  });
+  window.addEventListener("load", () => applyDirection());
 })();
 
 (function restoreInstalledInterfaceLocales() {

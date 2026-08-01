@@ -5,6 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Necesse — .lang</title>
 <link rel="stylesheet" href="./styles/app.css">
+<style>
+  /* Keep machine-readable values stable inside right-to-left interface text. */
+  html[dir="rtl"] .brand .mark,
+  html[dir="rtl"] .fname input,
+  html[dir="rtl"] #restoreName,
+  html[dir="rtl"] #restoreWhen,
+  html[dir="rtl"] .meter .pct,
+  html[dir="rtl"] .filt .cnt,
+  html[dir="rtl"] .sec-jump,
+  html[dir="rtl"] .sec-head,
+  html[dir="rtl"] .key,
+  html[dir="rtl"] .rkey,
+  html[dir="rtl"] .chip,
+  html[dir="rtl"] .mtprov,
+  html[dir="rtl"] #mtTarget,
+  html[dir="rtl"] .qhint,
+  html[dir="rtl"] .hint kbd,
+  html[dir="rtl"] .diffname,
+  html[dir="rtl"] .diffstat,
+  html[dir="rtl"] .difflist,
+  html[dir="rtl"] .legend span:nth-child(2),
+  html[dir="rtl"] .legend span:nth-child(4) {
+    direction: ltr;
+    unicode-bidi: isolate;
+    text-align: left;
+  }
+
+  /* Let source and translation content choose direction from the actual text. */
+  html[dir="rtl"] .search input,
+  html[dir="rtl"] .orig,
+  html[dir="rtl"] .ren,
+  html[dir="rtl"] textarea {
+    unicode-bidi: plaintext;
+    text-align: start;
+  }
+</style>
 </head>
 <body>
 
