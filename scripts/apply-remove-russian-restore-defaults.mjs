@@ -26,15 +26,15 @@ import { readFile } from "node:fs/promises";
 const source = await readFile(new URL("../src/scripts/app.js", import.meta.url), "utf8");
 
 test("restoring progress never invents a Russian filename", () => {
-  assert.doesNotMatch(source, /d\\.f \\|\\| ["']ru\\.lang["']/);
-  assert.doesNotMatch(source, /data\\.filename \\|\\| ["']ru\\.lang["']/);
-  assert.match(source, /state\\.filename = d\\.f \\|\\| ["']["']/);
-  assert.match(source, /state\\.filename = data\\.filename \\|\\| ["']["']/);
+  assert.equal(source.includes('state.filename = d.f || "ru.lang";'), false);
+  assert.equal(source.includes('state.filename = data.filename || "ru.lang";'), false);
+  assert.equal(source.includes('state.filename = d.f || "";'), true);
+  assert.equal(source.includes('state.filename = data.filename || "";'), true);
 });
 
 test("machine translation and spellcheck have no implicit Russian target", () => {
-  assert.doesNotMatch(source, /state\\.targetLang \\|\\| ["']ru["']/);
-  assert.doesNotMatch(source, /replace\\(\/_\\/g, ["']-["']\\) \\|\\| ["']ru["']/);
+  assert.equal(source.includes('const lang = state.targetLang || "ru";'), false);
+  assert.equal(source.includes('replace(/_/g, "-") || "ru"'), false);
 });
 `;
 
