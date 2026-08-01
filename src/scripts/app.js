@@ -1117,7 +1117,7 @@ function targetFromName(name){
   }
 
   function deserializeV2(d){
-    state.filename = d.f || "ru.lang";
+    state.filename = d.f || "";
     state.referenceFilename = d.n || "";
     state.eol = d.e ? "\r\n" : "\n";
     state.savedAt = d.s || 0;
@@ -1140,7 +1140,7 @@ function targetFromName(name){
 
   // legacy verbose format
   function deserializeV1(data){
-    state.filename = data.filename || "ru.lang";
+    state.filename = data.filename || "";
     state.referenceFilename = data.referenceFilename || "";
     state.eol = data.eol || "\r\n";
     state.savedAt = data.savedAt || 0;
@@ -1377,7 +1377,7 @@ function targetFromName(name){
   // Push spellcheck settings onto already-rendered textareas — never rebuild the list.
   function applySpellcheckToVisible(){
     const on = !!state.spellcheck;
-    const lang = state.targetLang || "ru";
+    const lang = state.targetLang || "";
     document.querySelectorAll(".tawrap > textarea").forEach(ta => {
       ta.lang = lang;
       // Browsers only re-check after spellcheck is toggled off→on with the new lang.
@@ -1398,7 +1398,7 @@ function targetFromName(name){
     scheduleSave();
   });
   function commitMtTarget(raw){
-    let v = String(raw || "").trim().replace(/_/g, "-") || "ru";
+    let v = String(raw || "").trim().replace(/_/g, "-");
     // Surface the common typo fix in the field itself so the UI matches what Google gets.
     if (/^pr(-br)?$/i.test(v)) v = "pt" + v.slice(2);
     if (v === state.targetLang && $("mtTarget").value === v) return;
