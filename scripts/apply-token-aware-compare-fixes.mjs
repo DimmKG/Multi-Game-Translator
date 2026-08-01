@@ -15,9 +15,9 @@ app = replaceOnce(
 );
 app = replaceOnce(
   app,
-  '    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);\n',
-  '    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);\n    syncDiffModeControls();\n',
-  "Compare mode synchronization"
+  '    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);\n    updateReferenceUi();\n',
+  '    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);\n    syncDiffModeControls();\n    updateReferenceUi();\n',
+  "Compare mode synchronization in openWorkspace"
 );
 fs.writeFileSync("src/scripts/app.js", app);
 
