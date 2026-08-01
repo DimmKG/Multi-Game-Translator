@@ -26,18 +26,18 @@ jobs:
         with:
           node-version: 22
 
-      - name: Apply Issue 36 implementation
-        if: github.ref_name == 'agent/new-translation-from-reference' && github.actor != 'github-actions[bot]'
-        run: node scripts/apply-issue-36.mjs
+      - name: Finalize Issue 36 integration
+        if: github.head_ref == 'agent/new-translation-from-reference' || github.ref_name == 'agent/new-translation-from-reference'
+        run: node scripts/finalize-issue-36.mjs
 
       - name: Verify standalone build
         run: npm run verify
 
-      - name: Commit Issue 36 implementation
-        if: github.ref_name == 'agent/new-translation-from-reference' && github.actor != 'github-actions[bot]'
+      - name: Commit finalized Issue 36 integration
+        if: github.head_ref == 'agent/new-translation-from-reference' || github.ref_name == 'agent/new-translation-from-reference'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src scripts test dist
-          git commit -m "Implement new translation from reference [skip ci]"
+          git add -A
+          git commit -m "Finalize new translation from reference workflow [skip ci]"
           git push origin HEAD:agent/new-translation-from-reference
