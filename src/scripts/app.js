@@ -45,7 +45,7 @@
     $("uiLang").value = code;
     applyI18n();
     if (state.items.length){
-      updateEnBtn(); refreshMeter(); renderSectionJumps();
+      updateReferenceBtn(); refreshMeter(); renderSectionJumps();
       $("diffName").textContent = state.diffOther ? t("diff.fileInfo", {name: state.diffOther.name, n: state.diffOther.lines.length}) : "";
       setView(state.view);
     }
@@ -78,7 +78,7 @@
     reviewFilter: "all",
     reviewQuery: "",
     acEnabled: true,
-    enFilename: "",
+    referenceFilename: "",
     diffOther: null,   // {name, lines[]}
     diffOnly: true,    // collapse equal runs
   };
@@ -103,8 +103,8 @@
       const eq = body.indexOf("=");
       if (eq < 0) return classifyLine(line);
       const key = body.slice(0, eq);
-      const english = body.slice(eq+1);       // original value (English for missing)
-      // working value: for missing -> prefill with english so tokens are preserved; else the existing value
+      const english = body.slice(eq+1);       // inline source value for missing entries
+      // working value: prefill missing entries with their inline source so tokens are preserved
       return {
         type:"entry", id:idx, key, english,
         value: english,                        // current translation text
@@ -140,7 +140,7 @@
   }
   // tokens present in english but missing from translation (multiset-aware)
   function missingTokens(e){
-    const src = tokensOf(baseEN(e));
+    const src = tokensOf(sourceText(e));
     if (!src.length) return [];
     const have = tokensOf(e.value);
     const pool = have.slice();
@@ -186,7 +186,7 @@
   }
   // Flags whitespace in the translation that the English source doesn't have.
   function wsScan(e){
-    const v = e.value, en = sourceEN(e);
+    const v = e.value, en = referenceSource(e);
     const lead  = RE_LEAD.test(v)  && !(en != null && RE_LEAD.test(en));
     const trail = RE_TRAIL.test(v) && !(en != null && RE_TRAIL.test(en));
     const core  = v.replace(RE_LEAD,"").replace(RE_TRAIL,"");
@@ -207,7 +207,7 @@
   }
   // normalize: strip stray edges, collapse doubles, keep the English source's own edges
   function wsFix(e){
-    const en = sourceEN(e);
+    const en = referenceSource(e);
     let v = e.value.replace(/\t/g," ").replace(/\u00A0/g," ")
                    .replace(RE_LEAD,"").replace(RE_TRAIL,"")
                    .replace(/ {2,}/g," ");
@@ -237,12 +237,12 @@
     return wsMark(lead) + out + wsMark(trail);
   }
 
-  // English source for an entry: en.lang reference if loaded, else the English
-  // that shipped inline for MISSING entries. null when no English is available.
-  function sourceEN(e){ return (e.ref != null) ? e.ref : (e.wasMissing ? e.english : null); }
-  function baseEN(e){ const s = sourceEN(e); return s != null ? s : e.english; }
+  // Source text for an entry: the loaded reference value when available, otherwise
+  // the inline value carried by a MISSING_TRANSLATION entry. null when unavailable.
+  function referenceSource(e){ return (e.ref != null) ? e.ref : (e.wasMissing ? e.english : null); }
+  function sourceText(e){ const s = referenceSource(e); return s != null ? s : e.english; }
 
-  function parseEnLang(text){
+  function parseReferenceLang(text){
     const map = new Map();
     for (const raw of text.split(/\r\n|\n/)){
       const t = raw.trim();
@@ -255,7 +255,7 @@
     }
     return map;
   }
-  function applyEnRef(map){
+  function applyReference(map){
     let matched = 0;
     for (const e of state.items){
       if (e.type !== "entry") continue;
@@ -264,13 +264,13 @@
     }
     return matched;
   }
-  function updateEnBtn(){
+  function updateReferenceBtn(){
     const b = $("btnEnRef"); if (!b) return;
-    if (state.enFilename){
+    if (state.referenceFilename){
       const n = state.items.filter(e => e.type==="entry" && e.ref != null).length;
-      b.textContent = t("btn.enRefLoaded", {n});
+      b.textContent = t("btn.enRefLoaded", {file: state.referenceFilename, n});
       b.classList.add("okbtn");
-      b.title = t("btn.enRefLoadedTitle", {file: state.enFilename, n});
+      b.title = t("btn.enRefLoadedTitle", {file: state.referenceFilename, n});
     } else {
       b.textContent = t("btn.enRef");
       b.title = t("btn.enRefTitle");
@@ -390,10 +390,10 @@
     card.appendChild(r1);
 
     // original (English reference from en.lang, or inline English for missing entries)
-    const en = sourceEN(e);
+    const en = referenceSource(e);
     if (en != null){
       const orig = document.createElement("div"); orig.className = "orig";
-      orig.innerHTML = `<span class="olabel">${esc(t("card.enOriginal"))}</span>${highlight(en)}`;
+      orig.innerHTML = `<span class="olabel">${esc(t("card.referenceText"))}</span>${highlight(en)}`;
       card.appendChild(orig);
     }
 
@@ -424,7 +424,7 @@
 
   function renderTokens(r3, e, ta, card){
     r3.innerHTML = "";
-    const toks = [...new Set(tokensOf(baseEN(e)))];
+    const toks = [...new Set(tokensOf(sourceText(e)))];
     const miss = new Set(missingTokens(e));
     if (toks.length){
       const lead = document.createElement("span"); lead.className="toklead"; lead.textContent=t("tokens.label");
@@ -531,7 +531,7 @@
 
   // ---------- review view ----------
   function extraTokens(e){
-    const src = tokensOf(baseEN(e)), have = tokensOf(e.value);
+    const src = tokensOf(sourceText(e)), have = tokensOf(e.value);
     const pool = src.slice(), extra = [];
     for (const tk of have){ const i = pool.indexOf(tk); if (i===-1) extra.push(tk); else pool.splice(i,1); }
     return [...new Set(extra)];
@@ -540,7 +540,7 @@
     const s = statusOf(e);
     const miss = missingTokens(e);
     const extra = extraTokens(e);
-    const enRef = sourceEN(e);
+    const enRef = referenceSource(e);
     const sameEng = (s==="done" && e.value.trim()!=="" && e.value === (enRef != null ? enRef : e.english));
     const empty = (s==="missing");            // touched but not actually translated (cleared / MT echoed english)
     const mt = !!e.mtDraft && s==="done";
@@ -584,7 +584,7 @@
     if (c.mt){ const b=document.createElement("span"); b.className="rflag mt"; b.textContent=t("badge.mt"); nodes.push(b); }
     if (c.miss.length){ const b=document.createElement("span"); b.className="rflag miss"; b.textContent=t("rflag.token",{list:c.miss.join(" ")}); nodes.push(b); }
     if (c.extra.length){ const b=document.createElement("span"); b.className="rflag miss"; b.textContent=t("rflag.extra",{list:c.extra.join(" ")}); nodes.push(b); }
-    if (c.sameEng){ const b=document.createElement("span"); b.className="rflag same"; b.textContent=t("rflag.sameEng"); nodes.push(b); }
+    if (c.sameEng){ const b=document.createElement("span"); b.className="rflag same"; b.textContent=t("rflag.sameRef"); nodes.push(b); }
     if (c.ws && c.ws.any){ const b=document.createElement("span"); b.className="rflag ws"; b.textContent=t("rflag.ws",{list:wsLabel(c.ws)}); nodes.push(b); }
     return nodes;
   }
@@ -605,8 +605,8 @@
 
     // english
     const en = document.createElement("div"); en.className="rcol";
-    const enSrc = sourceEN(e);
-    en.innerHTML = `<span class="rlabel">${esc(t("review.enLabel"))}</span>` + (enSrc != null
+    const enSrc = referenceSource(e);
+    en.innerHTML = `<span class="rlabel">${esc(t("review.referenceLabel"))}</span>` + (enSrc != null
       ? `<div class="ren">${highlight(enSrc)}</div>`
       : `<div class="ren empty-ref">${esc(t("review.noRef"))}</div>`);
 
@@ -982,8 +982,8 @@ function targetFromName(name){
     if (btn.classList.contains("loading") || mtBusy) return;   // one request at a time
     // Must translate the English original (en.lang ref / missing inline), never the
     // already-translated e.english/e.value — that produced Russian→Russian with sl=en.
-    const src = sourceEN(e);
-    if (src == null){ toast(t("mt.needEnRef")); return; }
+    const src = referenceSource(e);
+    if (src == null){ toast(t("mt.needReference")); return; }
     if (!String(src).trim()){ toast(t("mt.emptySrc")); return; }
     mtBusy = true;
     btn.classList.add("loading"); btn.disabled = true;
@@ -1054,7 +1054,7 @@ function targetFromName(name){
       return row;
     });
     return {
-      v:2, f:state.filename, e:(state.eol === "\r\n" ? 1 : 0), s:Date.now(), n:state.enFilename || "",
+      v:2, f:state.filename, e:(state.eol === "\r\n" ? 1 : 0), s:Date.now(), n:state.referenceFilename || "",
       m:{p:state.mtProvider, t:state.targetLang, s:state.spellcheck?1:0, a:state.acEnabled?1:0},
       i
     };
@@ -1068,7 +1068,7 @@ function targetFromName(name){
 
   function deserializeV2(d){
     state.filename = d.f || "ru.lang";
-    state.enFilename = d.n || "";
+    state.referenceFilename = d.n || "";
     state.eol = d.e ? "\r\n" : "\n";
     state.savedAt = d.s || 0;
     const m = d.m || {};
@@ -1091,7 +1091,7 @@ function targetFromName(name){
   // legacy verbose format
   function deserializeV1(data){
     state.filename = data.filename || "ru.lang";
-    state.enFilename = data.enFilename || "";
+    state.referenceFilename = data.referenceFilename || "";
     state.eol = data.eol || "\r\n";
     state.savedAt = data.savedAt || 0;
     if (data.mt){
@@ -1175,7 +1175,7 @@ function targetFromName(name){
     $("diffName").textContent = state.diffOther ? t("diff.fileInfo", {name: state.diffOther.name, n: state.diffOther.lines.length}) : "";
     $("diffOnlyToggle").classList.toggle("on", state.diffOnly);
     document.querySelectorAll(".rchip").forEach(x => x.classList.toggle("on", x.dataset.r==="all"));
-    indexItems(); buildDict(); updateEnBtn();
+    indexItems(); buildDict(); updateReferenceBtn();
     refreshMeter(); renderSectionJumps(); setView("editor"); saveLS();
   }
   function loadText(text, filename){
@@ -1256,13 +1256,13 @@ function targetFromName(name){
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
     r.onload = () => {
-      const map = parseEnLang(r.result);
-      const n = applyEnRef(map);
-      state.enFilename = f.name;
-      updateEnBtn();
+      const map = parseReferenceLang(r.result);
+      const n = applyReference(map);
+      state.referenceFilename = f.name;
+      updateReferenceBtn();
       (state.view === "review" ? renderReview : renderList)();
       refreshMeter(); saveLS();
-      toast(t("toast.enMatched", {n}));
+      toast(t("toast.referenceMatched", {file: f.name, n}));
     };
     r.readAsText(f, "UTF-8"); e.target.value = "";
   };

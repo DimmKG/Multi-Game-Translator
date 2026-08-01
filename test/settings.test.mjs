@@ -36,7 +36,7 @@ test("reference observer cannot react to its own reminder attributes", () => {
 
 test("settings messages are stored in the English locale", () => {
   assert.equal(englishLocale.messages["settings.button"], "Settings");
-  assert.equal(englishLocale.messages["settings.referenceReminder"], "Highlight missing en.lang reference");
+  assert.equal(englishLocale.messages["settings.referenceReminder"], "Highlight missing reference file");
   assert.equal(englishLocale.messages["settings.close"], "Close");
 });
 

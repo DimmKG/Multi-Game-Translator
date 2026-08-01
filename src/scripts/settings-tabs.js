@@ -136,7 +136,7 @@
     ui.tablist = document.createElement("div");
     ui.tablist.className = "settings-tablist";
     ui.tablist.setAttribute("role", "tablist");
-    ui.tablist.setAttribute("aria-label", "Settings sections");
+    ui.tablist.setAttribute("aria-label", globalThis.NecesseI18n?.t("settings.tabsLabel") || "Settings sections");
     ui.panels = list;
     ui.panels.classList.add("settings-tab-panels");
     list.replaceWith(ui.shell);
