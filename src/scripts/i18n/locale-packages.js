@@ -3,7 +3,7 @@
 const LOCALE_FORMAT = "necesse-interface-locale";
 const LOCALE_VERSION = 1;
 const STORAGE_KEY = "necesse-translator.interface-locales.v1";
-const BUILTIN_CODES = new Set(["en", "bg", "ru"]);
+const isBuiltInCode = code => Boolean(globalThis.NecesseLocales?.isBuiltIn(code));
 const CODE_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 const t = (key, vars) => globalThis.NecesseI18n?.t(`interfaceLocales.${key}`, vars) || key;
 
@@ -15,7 +15,7 @@ export function normalizeInterfaceLocale(input) {
   assertObject(input, "Interface locale");
   if (input.format !== LOCALE_FORMAT || input.version !== LOCALE_VERSION) throw new TypeError("Unsupported interface locale format or version.");
   if (typeof input.code !== "string" || !CODE_PATTERN.test(input.code)) throw new TypeError("Interface locale code is invalid.");
-  if (BUILTIN_CODES.has(input.code)) throw new TypeError(`Built-in locale “${input.code}” cannot be replaced.`);
+  if (isBuiltInCode(input.code)) throw new TypeError(`Built-in locale “${input.code}” cannot be replaced.`);
   if (typeof input.name !== "string" || !input.name.trim()) throw new TypeError("Interface locale name is required.");
   if (typeof input.nativeName !== "string" || !input.nativeName.trim()) throw new TypeError("Interface locale nativeName is required.");
   assertObject(input.messages, "Interface locale messages");

@@ -10,7 +10,8 @@ const requireText = (text, label) => {
 
 requireText("<!DOCTYPE html>", "HTML document declaration");
 requireText("<style>", "embedded application styles");
-requireText("const I18N = {", "embedded interface locales");
+requireText("NecesseLocales.register", "embedded generated interface locales");
+requireText("GENERATED FILE — DO NOT EDIT", "generated locale bundle marker");
 requireText("necesse-translator.interface-locales.v1", "interface locale package storage");
 requireText("function normalizeInterfaceLocale", "interface locale package validator");
 requireText("restoreInstalledInterfaceLocales", "interface locale startup restoration");
