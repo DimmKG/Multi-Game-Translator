@@ -19,7 +19,7 @@
     "btn.saveProgressTitle": "Сохранить рабочую копию как сжатый файл прогресса — резервная копия",
     "btn.loadProgress": "Загрузить прогресс",
     "btn.loadProgressTitle": "Загрузить файл прогресса (.json.gz или .json, включая старый формат)",
-    "btn.newFile": "Новый файл",
+    "btn.newFile": "Открыть другой файл",
     "btn.export": "Скачать .lang",
     "fname.label": "файл:",
     "fname.title": "Имя файла при экспорте. Necesse ждёт код языка: ru.lang, pt-BR.lang, es-419.lang",
@@ -225,6 +225,12 @@
     "settings.secretVaultContinue": "Продолжить",
     "settings.secretVaultExportError": "Не удалось экспортировать зашифрованные секреты.",
     "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты.",
-    "reference.notLoaded": "Референтный файл не загружен"
+    "reference.notLoaded": "Референтный файл не загружен",
+    "btn.newFileTitle": "Открыть другой существующий файл перевода",
+    "btn.newTranslation": "Новый перевод",
+    "btn.newTranslationTitle": "Создать новый перевод из выбранного референсного файла .lang",
+    "toast.newTranslationCreated": "Новый перевод создан из {file} · строк: {n}",
+    "err.newTranslationNoEntries": "Выбранный референсный файл не содержит строк для перевода",
+    "err.targetFilenameRequired": "Введите имя целевого файла .lang перед скачиванием"
   }
 }

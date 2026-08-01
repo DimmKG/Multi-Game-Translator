@@ -19,7 +19,7 @@
     "btn.saveProgressTitle": "Save the working copy as a compressed progress file — a backup",
     "btn.loadProgress": "Load progress",
     "btn.loadProgressTitle": "Load a progress file (.json.gz or .json, including the old format)",
-    "btn.newFile": "New file",
+    "btn.newFile": "Open another file",
     "btn.export": "Download .lang",
     "fname.label": "file:",
     "fname.title": "Export file name. Necesse expects a language code: ru.lang, pt-BR.lang, es-419.lang",
@@ -225,6 +225,12 @@
     "settings.secretVaultContinue": "Continue",
     "settings.secretVaultExportError": "Could not export encrypted secrets.",
     "settings.secretVaultImportError": "Could not import encrypted secrets.",
-    "reference.notLoaded": "No reference file loaded"
+    "reference.notLoaded": "No reference file loaded",
+    "btn.newFileTitle": "Open another existing translation file",
+    "btn.newTranslation": "New translation",
+    "btn.newTranslationTitle": "Create a new translation from a selected reference .lang file",
+    "toast.newTranslationCreated": "New translation created from {file} · {n} strings",
+    "err.newTranslationNoEntries": "The selected reference file contains no translation entries",
+    "err.targetFilenameRequired": "Enter the target .lang filename before downloading"
   }
 }

@@ -27,7 +27,7 @@ globalThis.NecesseLocales.register({
     "btn.saveProgressTitle": "Save the working copy as a compressed progress file — a backup",
     "btn.loadProgress": "Load progress",
     "btn.loadProgressTitle": "Load a progress file (.json.gz or .json, including the old format)",
-    "btn.newFile": "New file",
+    "btn.newFile": "Open another file",
     "btn.export": "Download .lang",
     "fname.label": "file:",
     "fname.title": "Export file name. Necesse expects a language code: ru.lang, pt-BR.lang, es-419.lang",
@@ -233,7 +233,13 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultContinue": "Continue",
     "settings.secretVaultExportError": "Could not export encrypted secrets.",
     "settings.secretVaultImportError": "Could not import encrypted secrets.",
-    "reference.notLoaded": "No reference file loaded"
+    "reference.notLoaded": "No reference file loaded",
+    "btn.newFileTitle": "Open another existing translation file",
+    "btn.newTranslation": "New translation",
+    "btn.newTranslationTitle": "Create a new translation from a selected reference .lang file",
+    "toast.newTranslationCreated": "New translation created from {file} · {n} strings",
+    "err.newTranslationNoEntries": "The selected reference file contains no translation entries",
+    "err.targetFilenameRequired": "Enter the target .lang filename before downloading"
   }
 });
 
@@ -386,7 +392,7 @@ globalThis.NecesseLocales.register({
     "btn.saveProgressTitle": "Запазете работното копие като компресиран файл — резервно копие",
     "btn.loadProgress": "Зареди прогрес",
     "btn.loadProgressTitle": "Заредете файл с прогрес (.json.gz или .json)",
-    "btn.newFile": "Нов файл",
+    "btn.newFile": "Отвори друг файл",
     "btn.export": "Изтегли .lang",
     "fname.label": "файл:",
     "fname.title": "Име на файла за експортиране. Necesse очаква езиков код: ru.lang, bg.lang и т.н.",
@@ -592,7 +598,13 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultContinue": "Продължи",
     "settings.secretVaultExportError": "Криптираните данни не можаха да бъдат експортирани.",
     "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани.",
-    "reference.notLoaded": "Не е зареден референтен файл"
+    "reference.notLoaded": "Не е зареден референтен файл",
+    "btn.newFileTitle": "Отваря друг съществуващ файл с превод",
+    "btn.newTranslation": "Нов превод",
+    "btn.newTranslationTitle": "Създава нов превод от избран референтен .lang файл",
+    "toast.newTranslationCreated": "Създаден е нов превод от {file} · {n} низа",
+    "err.newTranslationNoEntries": "Избраният референтен файл не съдържа низове за превод",
+    "err.targetFilenameRequired": "Въведете името на целевия .lang файл преди изтегляне"
   }
 });
 
@@ -2921,7 +2933,7 @@ globalThis.NecesseLocales.register({
     "btn.saveProgressTitle": "Сохранить рабочую копию как сжатый файл прогресса — резервная копия",
     "btn.loadProgress": "Загрузить прогресс",
     "btn.loadProgressTitle": "Загрузить файл прогресса (.json.gz или .json, включая старый формат)",
-    "btn.newFile": "Новый файл",
+    "btn.newFile": "Открыть другой файл",
     "btn.export": "Скачать .lang",
     "fname.label": "файл:",
     "fname.title": "Имя файла при экспорте. Necesse ждёт код языка: ru.lang, pt-BR.lang, es-419.lang",
@@ -3127,7 +3139,13 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultContinue": "Продолжить",
     "settings.secretVaultExportError": "Не удалось экспортировать зашифрованные секреты.",
     "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты.",
-    "reference.notLoaded": "Референтный файл не загружен"
+    "reference.notLoaded": "Референтный файл не загружен",
+    "btn.newFileTitle": "Открыть другой существующий файл перевода",
+    "btn.newTranslation": "Новый перевод",
+    "btn.newTranslationTitle": "Создать новый перевод из выбранного референсного файла .lang",
+    "toast.newTranslationCreated": "Новый перевод создан из {file} · строк: {n}",
+    "err.newTranslationNoEntries": "Выбранный референсный файл не содержит строк для перевода",
+    "err.targetFilenameRequired": "Введите имя целевого файла .lang перед скачиванием"
   }
 });
 

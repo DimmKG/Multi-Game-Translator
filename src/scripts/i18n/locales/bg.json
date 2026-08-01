@@ -19,7 +19,7 @@
     "btn.saveProgressTitle": "Запазете работното копие като компресиран файл — резервно копие",
     "btn.loadProgress": "Зареди прогрес",
     "btn.loadProgressTitle": "Заредете файл с прогрес (.json.gz или .json)",
-    "btn.newFile": "Нов файл",
+    "btn.newFile": "Отвори друг файл",
     "btn.export": "Изтегли .lang",
     "fname.label": "файл:",
     "fname.title": "Име на файла за експортиране. Necesse очаква езиков код: ru.lang, bg.lang и т.н.",
@@ -225,6 +225,12 @@
     "settings.secretVaultContinue": "Продължи",
     "settings.secretVaultExportError": "Криптираните данни не можаха да бъдат експортирани.",
     "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани.",
-    "reference.notLoaded": "Не е зареден референтен файл"
+    "reference.notLoaded": "Не е зареден референтен файл",
+    "btn.newFileTitle": "Отваря друг съществуващ файл с превод",
+    "btn.newTranslation": "Нов превод",
+    "btn.newTranslationTitle": "Създава нов превод от избран референтен .lang файл",
+    "toast.newTranslationCreated": "Създаден е нов превод от {file} · {n} низа",
+    "err.newTranslationNoEntries": "Избраният референтен файл не съдържа низове за превод",
+    "err.targetFilenameRequired": "Въведете името на целевия .lang файл преди изтегляне"
   }
 }

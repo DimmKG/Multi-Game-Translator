@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(root, "src");
-const [html, css, locales, builtInLocales, localeBootstrap, localePackages, providerSettings, secretVault, providers, app, settings, fontSettings, providerSettingsUi, secretVaultUi, settingsTabs, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
+const [html, css, locales, builtInLocales, localeBootstrap, localePackages, providerSettings, secretVault, providers, app, newTranslation, settings, fontSettings, providerSettingsUi, secretVaultUi, settingsTabs, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
   readFile(resolve(source, "index.html"), "utf8"),
   readFile(resolve(source, "styles/app.css"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locales.js"), "utf8"),

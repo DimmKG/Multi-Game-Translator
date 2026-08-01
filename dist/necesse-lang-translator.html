@@ -703,7 +703,7 @@ globalThis.NecesseLocales.register({
     "btn.saveProgressTitle": "Save the working copy as a compressed progress file — a backup",
     "btn.loadProgress": "Load progress",
     "btn.loadProgressTitle": "Load a progress file (.json.gz or .json, including the old format)",
-    "btn.newFile": "New file",
+    "btn.newFile": "Open another file",
     "btn.export": "Download .lang",
     "fname.label": "file:",
     "fname.title": "Export file name. Necesse expects a language code: ru.lang, pt-BR.lang, es-419.lang",
@@ -909,7 +909,13 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultContinue": "Continue",
     "settings.secretVaultExportError": "Could not export encrypted secrets.",
     "settings.secretVaultImportError": "Could not import encrypted secrets.",
-    "reference.notLoaded": "No reference file loaded"
+    "reference.notLoaded": "No reference file loaded",
+    "btn.newFileTitle": "Open another existing translation file",
+    "btn.newTranslation": "New translation",
+    "btn.newTranslationTitle": "Create a new translation from a selected reference .lang file",
+    "toast.newTranslationCreated": "New translation created from {file} · {n} strings",
+    "err.newTranslationNoEntries": "The selected reference file contains no translation entries",
+    "err.targetFilenameRequired": "Enter the target .lang filename before downloading"
   }
 });
 
@@ -1062,7 +1068,7 @@ globalThis.NecesseLocales.register({
     "btn.saveProgressTitle": "Запазете работното копие като компресиран файл — резервно копие",
     "btn.loadProgress": "Зареди прогрес",
     "btn.loadProgressTitle": "Заредете файл с прогрес (.json.gz или .json)",
-    "btn.newFile": "Нов файл",
+    "btn.newFile": "Отвори друг файл",
     "btn.export": "Изтегли .lang",
     "fname.label": "файл:",
     "fname.title": "Име на файла за експортиране. Necesse очаква езиков код: ru.lang, bg.lang и т.н.",
@@ -1268,7 +1274,13 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultContinue": "Продължи",
     "settings.secretVaultExportError": "Криптираните данни не можаха да бъдат експортирани.",
     "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани.",
-    "reference.notLoaded": "Не е зареден референтен файл"
+    "reference.notLoaded": "Не е зареден референтен файл",
+    "btn.newFileTitle": "Отваря друг съществуващ файл с превод",
+    "btn.newTranslation": "Нов превод",
+    "btn.newTranslationTitle": "Създава нов превод от избран референтен .lang файл",
+    "toast.newTranslationCreated": "Създаден е нов превод от {file} · {n} низа",
+    "err.newTranslationNoEntries": "Избраният референтен файл не съдържа низове за превод",
+    "err.targetFilenameRequired": "Въведете името на целевия .lang файл преди изтегляне"
   }
 });
 
@@ -3597,7 +3609,7 @@ globalThis.NecesseLocales.register({
     "btn.saveProgressTitle": "Сохранить рабочую копию как сжатый файл прогресса — резервная копия",
     "btn.loadProgress": "Загрузить прогресс",
     "btn.loadProgressTitle": "Загрузить файл прогресса (.json.gz или .json, включая старый формат)",
-    "btn.newFile": "Новый файл",
+    "btn.newFile": "Открыть другой файл",
     "btn.export": "Скачать .lang",
     "fname.label": "файл:",
     "fname.title": "Имя файла при экспорте. Necesse ждёт код языка: ru.lang, pt-BR.lang, es-419.lang",
@@ -3803,7 +3815,13 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultContinue": "Продолжить",
     "settings.secretVaultExportError": "Не удалось экспортировать зашифрованные секреты.",
     "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты.",
-    "reference.notLoaded": "Референтный файл не загружен"
+    "reference.notLoaded": "Референтный файл не загружен",
+    "btn.newFileTitle": "Открыть другой существующий файл перевода",
+    "btn.newTranslation": "Новый перевод",
+    "btn.newTranslationTitle": "Создать новый перевод из выбранного референсного файла .lang",
+    "toast.newTranslationCreated": "Новый перевод создан из {file} · строк: {n}",
+    "err.newTranslationNoEntries": "Выбранный референсный файл не содержит строк для перевода",
+    "err.targetFilenameRequired": "Введите имя целевого файла .lang перед скачиванием"
   }
 });
 
@@ -6826,313 +6844,193 @@ function targetFromName(name){
 
 "use strict";
 
-(function initializeMtTargetLanguage() {
-  const LANGUAGE_OPTIONS = Object.freeze([
-    ["ar", "العربية"], ["bg", "Български"], ["ca", "Català"], ["cs", "Čeština"],
-    ["da", "Dansk"], ["de", "Deutsch"], ["en", "English"], ["es", "Español"],
-    ["fi", "Suomi"], ["fr", "Français"], ["hr", "Hrvatski"], ["hu", "Magyar"],
-    ["id", "Bahasa Indonesia"], ["it", "Italiano"], ["ja", "日本語"], ["ko", "한국어"],
-    ["lt", "Lietuvių"], ["nl", "Nederlands"], ["no", "Norsk"], ["pl", "Polski"],
-    ["pt-BR", "Português (Brasil)"], ["pt-PT", "Português (Portugal)"], ["ru", "Русский"],
-    ["se", "Svenska"], ["th", "ไทย"], ["tr", "Türkçe"], ["uk", "Українська"],
-    ["vi", "Tiếng Việt"], ["zh-CN", "中文（简体）"], ["zh-TW", "中文（繁體）"]
-  ]);
+const GLOSSARY_FORMAT = "necesse-glossary";
+const CATALOG_FORMAT = "necesse-glossary-catalog";
+const FORMAT_VERSION = 1;
+const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
+const LANGUAGE_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
+const ENTRY_STATUSES = new Set(["approved", "draft", "deprecated", "context-dependent"]);
 
-  const RECOGNIZED = new Map(LANGUAGE_OPTIONS.map(([code]) => [code.toLowerCase(), code]));
-  const LEGACY_ALIASES = new Map([
-    ["pr", "pt-BR"], ["pr-br", "pt-BR"], ["pt", "pt-BR"],
-    ["zh-hk", "zh-TW"], ["nb-no", "no"], ["nn-no", "no"]
-  ]);
+function assertObject(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} must be an object.`);
+}
 
-  function t(key) {
-    return globalThis.NecesseI18n?.t(key) || key;
+function assertString(value, label) {
+  if (typeof value !== "string" || value.length === 0) throw new TypeError(`${label} must be a non-empty string.`);
+}
+
+function assertLanguage(value, label) {
+  assertString(value, label);
+  if (!LANGUAGE_PATTERN.test(value)) throw new TypeError(`${label} is not a supported language tag.`);
+}
+
+function assertStringArray(value, label) {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || value.some(item => typeof item !== "string" || item.length === 0)) {
+    throw new TypeError(`${label} must be an array of non-empty strings.`);
   }
+  if (new Set(value).size !== value.length) throw new TypeError(`${label} must not contain duplicates.`);
+}
 
-  function normalizeProjectCode(value) {
-    const raw = String(value || "").trim().replace(/_/g, "-");
-    if (!raw) return "";
-    const lower = raw.toLowerCase();
-    return LEGACY_ALIASES.get(lower) || RECOGNIZED.get(lower) || "";
-  }
+function normalizeEntry(entry, index) {
+  assertObject(entry, `entries[${index}]`);
+  assertString(entry.source, `entries[${index}].source`);
+  assertString(entry.target, `entries[${index}].target`);
+  assertStringArray(entry.forms, `entries[${index}].forms`);
+  assertStringArray(entry.alternatives, `entries[${index}].alternatives`);
+  assertStringArray(entry.forbidden, `entries[${index}].forbidden`);
 
-  function codeFromFilename(filename) {
-    const name = String(filename || "").trim().replace(/^.*[\\/]/, "");
-    if (!/\.lang$/i.test(name)) return "";
-    const base = name.replace(/\.lang$/i, "")
-      .replace(/\s*\(\d+\)\s*$/, "")
-      .replace(/_\d+_?$/g, "");
-    return normalizeProjectCode(base);
-  }
+  const status = entry.status ?? "approved";
+  if (!ENTRY_STATUSES.has(status)) throw new TypeError(`entries[${index}].status is not supported.`);
 
-  function injectStyles() {
-    const style = document.createElement("style");
-    style.textContent = `#mtTarget[hidden]{display:none!important}#mtTargetSelect{width:auto;min-width:180px;max-width:240px}.mtbtn[data-mt-target-missing="true"]{opacity:.45;cursor:not-allowed}`;
-    document.head.append(style);
-  }
-
-  function buildSelector(input) {
-    const select = document.createElement("select");
-    select.id = "mtTargetSelect";
-    select.className = input.className;
-    select.title = input.title || t("mt.langTitle");
-    select.setAttribute("aria-label", select.title);
-
-    const empty = document.createElement("option");
-    empty.value = "";
-    empty.textContent = "—";
-    empty.disabled = true;
-    select.append(empty);
-
-    for (const [code, label] of LANGUAGE_OPTIONS) {
-      const option = document.createElement("option");
-      option.value = code;
-      option.textContent = `${label} (${code})`;
-      select.append(option);
-    }
-
-    input.hidden = true;
-    input.tabIndex = -1;
-    input.insertAdjacentElement("afterend", select);
-    return select;
-  }
-
-  function commitSelection(input, select, code) {
-    if (!code) {
-      select.value = "";
-      return;
-    }
-    input.value = code;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    select.value = code;
-  }
-
-  function applyAvailability(select) {
-    const disabled = !select.value;
-    for (const button of document.querySelectorAll(".mtbtn")) {
-      button.disabled = disabled || button.classList.contains("loading");
-      button.dataset.mtTargetMissing = disabled ? "true" : "false";
-    }
-  }
-
-  function filename() {
-    return document.getElementById("outName")?.value || "";
-  }
-
-  function syncFromWorkspace(input, select) {
-    const current = normalizeProjectCode(input.value);
-    const inferred = codeFromFilename(filename());
-    const chosen = current || inferred;
-
-    select.value = chosen;
-    if (chosen && input.value !== chosen) commitSelection(input, select, chosen);
-    if (!chosen) input.value = "";
-    applyAvailability(select);
-  }
-
-  function initialize() {
-    const input = document.getElementById("mtTarget");
-    if (!input || document.getElementById("mtTargetSelect")) return;
-
-    injectStyles();
-    const select = buildSelector(input);
-
-    select.addEventListener("change", () => {
-      if (!select.value) return;
-      commitSelection(input, select, select.value);
-      applyAvailability(select);
-    });
-
-    const workspaceObserver = new MutationObserver(() => syncFromWorkspace(input, select));
-    const actions = document.getElementById("topActions");
-    const list = document.getElementById("list");
-    if (actions) workspaceObserver.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
-    if (list) workspaceObserver.observe(list, { childList: true });
-
-    document.getElementById("outName")?.addEventListener("change", () => syncFromWorkspace(input, select));
-    document.getElementById("outName")?.addEventListener("blur", () => syncFromWorkspace(input, select));
-    document.getElementById("uiLang")?.addEventListener("change", () => {
-      select.title = t("mt.langTitle");
-      select.setAttribute("aria-label", select.title);
-    });
-
-    document.addEventListener("click", event => {
-      const button = event.target.closest?.(".mtbtn");
-      if (!button || select.value) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      select.focus();
-    }, true);
-
-    syncFromWorkspace(input, select);
-
-    globalThis.NecesseMtTarget = Object.freeze({
-      languages: LANGUAGE_OPTIONS.map(([code, name]) => ({ code, name })),
-      normalizeProjectCode,
-      codeFromFilename,
-      get: () => select.value,
-      set(code) {
-        const normalized = normalizeProjectCode(code);
-        commitSelection(input, select, normalized);
-        applyAvailability(select);
-      }
-    });
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
-  else initialize();
-})();</script>
-<script>"use strict";
-
-(function initializeSettings() {
-  const STORAGE_KEY = "necesse-translator.settings.v1";
-  const defaults = Object.freeze({ referenceReminder: true });
-  const state = { ...defaults, ...restore() };
-  const ui = {};
-  let observer = null;
-
-  const t = key => globalThis.NecesseI18n?.t(`settings.${key}`) || `settings.${key}`;
-
-  function restore() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-      return saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
-    } catch {
-      return {};
-    }
-  }
-
-  function persist() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    applyReferenceReminder();
-  }
-
-  function translationFileOpen() {
-    const actions = document.getElementById("topActions");
-    return Boolean(actions && getComputedStyle(actions).display !== "none");
-  }
-
-  function englishReferenceLoaded() {
-    const button = document.getElementById("btnEnRef");
-    return Boolean(button?.textContent?.includes("✓"));
-  }
-
-  function applyReferenceReminder() {
-    const button = document.getElementById("btnEnRef");
-    if (!button) return;
-    const needed = Boolean(state.referenceReminder && translationFileOpen() && !englishReferenceLoaded());
-    button.classList.toggle("settings-reference-needed", needed);
-    const nextValue = needed ? "true" : "false";
-    if (button.dataset.referenceReminder !== nextValue) button.dataset.referenceReminder = nextValue;
-  }
-
-  function render() {
-    if (!ui.dialog) return;
-    ui.open.title = t("button");
-    ui.open.setAttribute("aria-label", t("button"));
-    ui.title.textContent = t("title");
-    ui.intro.textContent = t("intro");
-    ui.referenceLabel.textContent = t("referenceReminder");
-    ui.referenceHint.textContent = t("referenceReminderHint");
-    ui.reference.checked = Boolean(state.referenceReminder);
-    ui.close.textContent = t("close");
-  }
-
-  function injectStyles() {
-    const style = document.createElement("style");
-    style.textContent = `.settings-open{width:38px;height:38px;padding:0;font-size:18px;line-height:1}.settings-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:1100;padding:24px}.settings-backdrop.open{display:flex}.settings-dialog{width:min(560px,100%);background:var(--panel,#171a20);border:1px solid var(--line,#343944);border-radius:14px;padding:20px;box-shadow:0 22px 70px rgba(0,0,0,.45)}.settings-head{display:flex;gap:16px;align-items:flex-start}.settings-head h2{margin:0 0 6px}.settings-head p{margin:0;color:var(--muted,#9aa3b2)}.settings-grow{flex:1}.settings-close{font-size:18px;line-height:1;padding:6px 9px}.settings-list{display:grid;gap:10px;margin-top:20px}.settings-row{display:flex;gap:14px;align-items:flex-start;padding:14px;border:1px solid var(--line,#343944);border-radius:10px}.settings-row input{margin-top:3px;accent-color:var(--accent,#7aa2f7)}.settings-copy{display:grid;gap:4px}.settings-copy strong{font-size:14px}.settings-copy span{font-size:12px;color:var(--muted,#9aa3b2);line-height:1.45}.settings-reference-needed{animation:settings-reference-pulse 1.8s ease-in-out infinite;border-color:color-mix(in srgb,var(--warn,#d9a441) 72%,var(--line,#343944))!important}@keyframes settings-reference-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--warn,#d9a441) 0%,transparent)}50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--warn,#d9a441) 24%,transparent)}}@media(prefers-reduced-motion:reduce){.settings-reference-needed{animation:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--warn,#d9a441) 22%,transparent)}}`;
-    document.head.append(style);
-  }
-
-  function buildUi() {
-    injectStyles();
-
-    ui.open = document.createElement("button");
-    ui.open.type = "button";
-    ui.open.className = "btn ghost settings-open";
-    ui.open.textContent = "⚙";
-    document.getElementById("uiLang")?.insertAdjacentElement("afterend", ui.open);
-
-    ui.backdrop = document.createElement("div");
-    ui.backdrop.className = "settings-backdrop";
-    ui.dialog = document.createElement("section");
-    ui.dialog.className = "settings-dialog";
-    ui.dialog.setAttribute("role", "dialog");
-    ui.dialog.setAttribute("aria-modal", "true");
-
-    const head = document.createElement("div");
-    head.className = "settings-head";
-    const heading = document.createElement("div");
-    ui.title = document.createElement("h2");
-    ui.intro = document.createElement("p");
-    heading.append(ui.title, ui.intro);
-    const grow = document.createElement("div");
-    grow.className = "settings-grow";
-    ui.close = document.createElement("button");
-    ui.close.type = "button";
-    ui.close.className = "settings-close";
-    head.append(heading, grow, ui.close);
-
-    const list = document.createElement("div");
-    list.className = "settings-list";
-    const row = document.createElement("label");
-    row.className = "settings-row";
-    ui.reference = document.createElement("input");
-    ui.reference.type = "checkbox";
-    const copy = document.createElement("span");
-    copy.className = "settings-copy";
-    ui.referenceLabel = document.createElement("strong");
-    ui.referenceHint = document.createElement("span");
-    copy.append(ui.referenceLabel, ui.referenceHint);
-    row.append(ui.reference, copy);
-    list.append(row);
-
-    ui.dialog.append(head, list);
-    ui.backdrop.append(ui.dialog);
-    document.body.append(ui.backdrop);
-
-    ui.open.addEventListener("click", () => {
-      render();
-      ui.backdrop.classList.add("open");
-      ui.reference.focus();
-    });
-    ui.close.addEventListener("click", () => ui.backdrop.classList.remove("open"));
-    ui.backdrop.addEventListener("click", event => {
-      if (event.target === ui.backdrop) ui.backdrop.classList.remove("open");
-    });
-    document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && ui.backdrop.classList.contains("open")) ui.backdrop.classList.remove("open");
-    });
-    ui.reference.addEventListener("change", () => {
-      state.referenceReminder = ui.reference.checked;
-      persist();
-    });
-    document.getElementById("uiLang")?.addEventListener("change", render);
-
-    const actions = document.getElementById("topActions");
-    const referenceButton = document.getElementById("btnEnRef");
-    observer = new MutationObserver(applyReferenceReminder);
-    if (actions) observer.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
-    if (referenceButton) observer.observe(referenceButton, { childList: true, subtree: true, characterData: true });
-
-    render();
-    applyReferenceReminder();
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", buildUi);
-  else buildUi();
-
-  globalThis.NecesseSettings = Object.freeze({
-    get: () => ({ ...state }),
-    set(name, value) {
-      if (!(name in defaults)) throw new TypeError(`Unknown setting: ${name}`);
-      state[name] = Boolean(value);
-      persist();
-      render();
-    }
+  return Object.freeze({
+    source: entry.source,
+    target: entry.target,
+    forms: Object.freeze([...(entry.forms ?? [])]),
+    alternatives: Object.freeze([...(entry.alternatives ?? [])]),
+    forbidden: Object.freeze([...(entry.forbidden ?? [])]),
+    caseSensitive: entry.caseSensitive ?? false,
+    wholeWord: entry.wholeWord ?? true,
+    status,
+    category: entry.category ?? "",
+    context: entry.context ?? "",
+    note: entry.note ?? ""
   });
-})();
-</script>
+}
+
+export function parseJsonDocument(text, label = "JSON document") {
+  if (typeof text !== "string") throw new TypeError(`${label} must be text.`);
+  try { return JSON.parse(text.replace(/^\uFEFF/, "")); }
+  catch (error) { throw new SyntaxError(`${label} is not valid JSON: ${error.message}`); }
+}
+
+export function normalizeGlossary(input) {
+  assertObject(input, "Glossary");
+  if (input.format !== GLOSSARY_FORMAT || input.version !== FORMAT_VERSION) throw new TypeError("Unsupported glossary format or version.");
+  assertString(input.id, "Glossary id");
+  if (!ID_PATTERN.test(input.id)) throw new TypeError("Glossary id is invalid.");
+  assertString(input.name, "Glossary name");
+  assertLanguage(input.sourceLanguage, "Glossary sourceLanguage");
+  assertLanguage(input.targetLanguage, "Glossary targetLanguage");
+  if (!Array.isArray(input.entries)) throw new TypeError("Glossary entries must be an array.");
+
+  return Object.freeze({
+    format: GLOSSARY_FORMAT,
+    version: FORMAT_VERSION,
+    id: input.id,
+    name: input.name,
+    sourceLanguage: input.sourceLanguage,
+    targetLanguage: input.targetLanguage,
+    game: input.game ?? "",
+    authors: Object.freeze([...(input.authors ?? [])]),
+    updatedAt: input.updatedAt ?? "",
+    entries: Object.freeze(input.entries.map(normalizeEntry))
+  });
+}
+
+export function normalizeCatalog(input, baseUrl) {
+  assertObject(input, "Glossary catalog");
+  if (input.format !== CATALOG_FORMAT || input.version !== FORMAT_VERSION) throw new TypeError("Unsupported glossary catalog format or version.");
+  if (!Array.isArray(input.glossaries)) throw new TypeError("Catalog glossaries must be an array.");
+
+  const ids = new Set();
+  const glossaries = input.glossaries.map((item, index) => {
+    assertObject(item, `glossaries[${index}]`);
+    assertString(item.id, `glossaries[${index}].id`);
+    if (!ID_PATTERN.test(item.id)) throw new TypeError(`glossaries[${index}].id is invalid.`);
+    if (ids.has(item.id)) throw new TypeError(`Duplicate glossary id: ${item.id}`);
+    ids.add(item.id);
+    assertString(item.name, `glossaries[${index}].name`);
+    assertLanguage(item.sourceLanguage, `glossaries[${index}].sourceLanguage`);
+    assertLanguage(item.targetLanguage, `glossaries[${index}].targetLanguage`);
+    assertString(item.url, `glossaries[${index}].url`);
+    return Object.freeze({
+      id: item.id,
+      name: item.name,
+      sourceLanguage: item.sourceLanguage,
+      targetLanguage: item.targetLanguage,
+      url: baseUrl ? new URL(item.url, baseUrl).href : item.url,
+      enabled: item.enabled ?? true
+    });
+  });
+  return Object.freeze({ format: CATALOG_FORMAT, version: FORMAT_VERSION, glossaries: Object.freeze(glossaries) });
+}
+
+export async function readJsonFile(file, kind = "document") {
+  if (!file || typeof file.text !== "function") throw new TypeError(`A readable ${kind} file is required.`);
+  return parseJsonDocument(await file.text(), file.name || kind);
+}
+
+export async function loadLocalGlossary(file) { return normalizeGlossary(await readJsonFile(file, "glossary")); }
+
+export async function fetchCatalog(url, fetchImpl = globalThis.fetch) {
+  if (typeof fetchImpl !== "function") throw new TypeError("Fetch is not available in this environment.");
+  const response = await fetchImpl(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Catalog request failed with HTTP ${response.status}.`);
+  return normalizeCatalog(await response.json(), response.url || url);
+}
+
+export async function fetchGlossary(url, fetchImpl = globalThis.fetch) {
+  if (typeof fetchImpl !== "function") throw new TypeError("Fetch is not available in this environment.");
+  const response = await fetchImpl(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Glossary request failed with HTTP ${response.status}.`);
+  return normalizeGlossary(await response.json());
+}
+
+export const glossaryFormat = Object.freeze({ glossary: GLOSSARY_FORMAT, catalog: CATALOG_FORMAT, version: FORMAT_VERSION });
+
+const GLOSSARY_FEEDBACK_TEXT = {
+  en: { enable: "Enable", disable: "Disable", enabled: name => `Glossary “${name}” is enabled.`, disabled: name => `Glossary “${name}” is disabled.` },
+  ru: { enable: "Включить", disable: "Выключить", enabled: name => `Глоссарий «${name}» включён.`, disabled: name => `Глоссарий «${name}» выключен.` },
+  bg: { enable: "Включи", disable: "Изключи", enabled: name => `Речникът „${name}“ е включен.`, disabled: name => `Речникът „${name}“ е изключен.` }
+};
+
+function installGlossaryToggleFeedback() {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return;
+  const language = () => document.getElementById("uiLang")?.value || "en";
+  const text = () => GLOSSARY_FEEDBACK_TEXT[language()] || GLOSSARY_FEEDBACK_TEXT.en;
+  function updateToggleLabels(root = document) {
+    const messages = text();
+    root.querySelectorAll?.(".gm-toggle").forEach(button => {
+      const enabled = button.classList.contains("on");
+      button.textContent = enabled ? messages.disable : messages.enable;
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+      button.title = enabled ? messages.disable : messages.enable;
+    });
+  }
+  let toastTimer = 0;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add("show");
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+  }
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.(".gm-toggle");
+    if (!button) return;
+    const name = button.closest(".gm-card")?.querySelector(".gm-info strong")?.textContent?.trim() || "";
+    const willBeEnabled = !button.classList.contains("on");
+    const messages = text();
+    queueMicrotask(() => {
+      updateToggleLabels();
+      showToast(willBeEnabled ? messages.enabled(name) : messages.disabled(name));
+    });
+  }, true);
+  document.getElementById("uiLang")?.addEventListener("change", () => updateToggleLabels());
+  new MutationObserver(mutations => {
+    for (const mutation of mutations) for (const node of mutation.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) updateToggleLabels(node);
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+  updateToggleLabels();
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installGlossaryToggleFeedback);
+  else installGlossaryToggleFeedback();
+}</script>
 <script>"use strict";
 
 (function initializeFontSettings() {
@@ -7811,6 +7709,165 @@ function targetFromName(name){
   globalThis.NecesseSettingsTabs = Object.freeze({ register, activate, get active() { return state.active; } });
 })();
 </script>
+<script>"use strict";
+
+(function initializeMtTargetLanguage() {
+  const LANGUAGE_OPTIONS = Object.freeze([
+    ["ar", "العربية"], ["bg", "Български"], ["ca", "Català"], ["cs", "Čeština"],
+    ["da", "Dansk"], ["de", "Deutsch"], ["en", "English"], ["es", "Español"],
+    ["fi", "Suomi"], ["fr", "Français"], ["hr", "Hrvatski"], ["hu", "Magyar"],
+    ["id", "Bahasa Indonesia"], ["it", "Italiano"], ["ja", "日本語"], ["ko", "한국어"],
+    ["lt", "Lietuvių"], ["nl", "Nederlands"], ["no", "Norsk"], ["pl", "Polski"],
+    ["pt-BR", "Português (Brasil)"], ["pt-PT", "Português (Portugal)"], ["ru", "Русский"],
+    ["se", "Svenska"], ["th", "ไทย"], ["tr", "Türkçe"], ["uk", "Українська"],
+    ["vi", "Tiếng Việt"], ["zh-CN", "中文（简体）"], ["zh-TW", "中文（繁體）"]
+  ]);
+
+  const RECOGNIZED = new Map(LANGUAGE_OPTIONS.map(([code]) => [code.toLowerCase(), code]));
+  const LEGACY_ALIASES = new Map([
+    ["pr", "pt-BR"], ["pr-br", "pt-BR"], ["pt", "pt-BR"],
+    ["zh-hk", "zh-TW"], ["nb-no", "no"], ["nn-no", "no"]
+  ]);
+
+  function t(key) {
+    return globalThis.NecesseI18n?.t(key) || key;
+  }
+
+  function normalizeProjectCode(value) {
+    const raw = String(value || "").trim().replace(/_/g, "-");
+    if (!raw) return "";
+    const lower = raw.toLowerCase();
+    return LEGACY_ALIASES.get(lower) || RECOGNIZED.get(lower) || "";
+  }
+
+  function codeFromFilename(filename) {
+    const name = String(filename || "").trim().replace(/^.*[\\/]/, "");
+    if (!/\.lang$/i.test(name)) return "";
+    const base = name.replace(/\.lang$/i, "")
+      .replace(/\s*\(\d+\)\s*$/, "")
+      .replace(/_\d+_?$/g, "");
+    return normalizeProjectCode(base);
+  }
+
+  function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = `#mtTarget[hidden]{display:none!important}#mtTargetSelect{width:auto;min-width:180px;max-width:240px}.mtbtn[data-mt-target-missing="true"]{opacity:.45;cursor:not-allowed}`;
+    document.head.append(style);
+  }
+
+  function buildSelector(input) {
+    const select = document.createElement("select");
+    select.id = "mtTargetSelect";
+    select.className = input.className;
+    select.title = input.title || t("mt.langTitle");
+    select.setAttribute("aria-label", select.title);
+
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "—";
+    empty.disabled = true;
+    select.append(empty);
+
+    for (const [code, label] of LANGUAGE_OPTIONS) {
+      const option = document.createElement("option");
+      option.value = code;
+      option.textContent = `${label} (${code})`;
+      select.append(option);
+    }
+
+    input.hidden = true;
+    input.tabIndex = -1;
+    input.insertAdjacentElement("afterend", select);
+    return select;
+  }
+
+  function commitSelection(input, select, code) {
+    if (!code) {
+      select.value = "";
+      return;
+    }
+    input.value = code;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    select.value = code;
+  }
+
+  function applyAvailability(select) {
+    const disabled = !select.value;
+    for (const button of document.querySelectorAll(".mtbtn")) {
+      button.disabled = disabled || button.classList.contains("loading");
+      button.dataset.mtTargetMissing = disabled ? "true" : "false";
+    }
+  }
+
+  function filename() {
+    return document.getElementById("outName")?.value || "";
+  }
+
+  function syncFromWorkspace(input, select) {
+    const current = normalizeProjectCode(input.value);
+    const inferred = codeFromFilename(filename());
+    const chosen = current || inferred;
+
+    select.value = chosen;
+    if (chosen && input.value !== chosen) commitSelection(input, select, chosen);
+    if (!chosen) input.value = "";
+    applyAvailability(select);
+  }
+
+  function initialize() {
+    const input = document.getElementById("mtTarget");
+    if (!input || document.getElementById("mtTargetSelect")) return;
+
+    injectStyles();
+    const select = buildSelector(input);
+
+    select.addEventListener("change", () => {
+      if (!select.value) return;
+      commitSelection(input, select, select.value);
+      applyAvailability(select);
+    });
+
+    const workspaceObserver = new MutationObserver(() => syncFromWorkspace(input, select));
+    const actions = document.getElementById("topActions");
+    const list = document.getElementById("list");
+    if (actions) workspaceObserver.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    if (list) workspaceObserver.observe(list, { childList: true });
+
+    document.getElementById("outName")?.addEventListener("change", () => syncFromWorkspace(input, select));
+    document.getElementById("outName")?.addEventListener("blur", () => syncFromWorkspace(input, select));
+    document.getElementById("uiLang")?.addEventListener("change", () => {
+      select.title = t("mt.langTitle");
+      select.setAttribute("aria-label", select.title);
+    });
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest?.(".mtbtn");
+      if (!button || select.value) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      select.focus();
+    }, true);
+
+    syncFromWorkspace(input, select);
+
+    globalThis.NecesseMtTarget = Object.freeze({
+      languages: LANGUAGE_OPTIONS.map(([code, name]) => ({ code, name })),
+      normalizeProjectCode,
+      codeFromFilename,
+      get: () => select.value,
+      set(code) {
+        const normalized = normalizeProjectCode(code);
+        commitSelection(input, select, normalized);
+        applyAvailability(select);
+      }
+    });
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
+})();
+</script>
 <script type="module">{
 "use strict";
 
@@ -7989,196 +8046,6 @@ else { styles(); build(); }
 
 }</script>
 <script type="module">{
-"use strict";
-
-const GLOSSARY_FORMAT = "necesse-glossary";
-const CATALOG_FORMAT = "necesse-glossary-catalog";
-const FORMAT_VERSION = 1;
-const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
-const LANGUAGE_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-const ENTRY_STATUSES = new Set(["approved", "draft", "deprecated", "context-dependent"]);
-
-function assertObject(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} must be an object.`);
-}
-
-function assertString(value, label) {
-  if (typeof value !== "string" || value.length === 0) throw new TypeError(`${label} must be a non-empty string.`);
-}
-
-function assertLanguage(value, label) {
-  assertString(value, label);
-  if (!LANGUAGE_PATTERN.test(value)) throw new TypeError(`${label} is not a supported language tag.`);
-}
-
-function assertStringArray(value, label) {
-  if (value === undefined) return;
-  if (!Array.isArray(value) || value.some(item => typeof item !== "string" || item.length === 0)) {
-    throw new TypeError(`${label} must be an array of non-empty strings.`);
-  }
-  if (new Set(value).size !== value.length) throw new TypeError(`${label} must not contain duplicates.`);
-}
-
-function normalizeEntry(entry, index) {
-  assertObject(entry, `entries[${index}]`);
-  assertString(entry.source, `entries[${index}].source`);
-  assertString(entry.target, `entries[${index}].target`);
-  assertStringArray(entry.forms, `entries[${index}].forms`);
-  assertStringArray(entry.alternatives, `entries[${index}].alternatives`);
-  assertStringArray(entry.forbidden, `entries[${index}].forbidden`);
-
-  const status = entry.status ?? "approved";
-  if (!ENTRY_STATUSES.has(status)) throw new TypeError(`entries[${index}].status is not supported.`);
-
-  return Object.freeze({
-    source: entry.source,
-    target: entry.target,
-    forms: Object.freeze([...(entry.forms ?? [])]),
-    alternatives: Object.freeze([...(entry.alternatives ?? [])]),
-    forbidden: Object.freeze([...(entry.forbidden ?? [])]),
-    caseSensitive: entry.caseSensitive ?? false,
-    wholeWord: entry.wholeWord ?? true,
-    status,
-    category: entry.category ?? "",
-    context: entry.context ?? "",
-    note: entry.note ?? ""
-  });
-}
-
-function parseJsonDocument(text, label = "JSON document") {
-  if (typeof text !== "string") throw new TypeError(`${label} must be text.`);
-  try { return JSON.parse(text.replace(/^\uFEFF/, "")); }
-  catch (error) { throw new SyntaxError(`${label} is not valid JSON: ${error.message}`); }
-}
-
-function normalizeGlossary(input) {
-  assertObject(input, "Glossary");
-  if (input.format !== GLOSSARY_FORMAT || input.version !== FORMAT_VERSION) throw new TypeError("Unsupported glossary format or version.");
-  assertString(input.id, "Glossary id");
-  if (!ID_PATTERN.test(input.id)) throw new TypeError("Glossary id is invalid.");
-  assertString(input.name, "Glossary name");
-  assertLanguage(input.sourceLanguage, "Glossary sourceLanguage");
-  assertLanguage(input.targetLanguage, "Glossary targetLanguage");
-  if (!Array.isArray(input.entries)) throw new TypeError("Glossary entries must be an array.");
-
-  return Object.freeze({
-    format: GLOSSARY_FORMAT,
-    version: FORMAT_VERSION,
-    id: input.id,
-    name: input.name,
-    sourceLanguage: input.sourceLanguage,
-    targetLanguage: input.targetLanguage,
-    game: input.game ?? "",
-    authors: Object.freeze([...(input.authors ?? [])]),
-    updatedAt: input.updatedAt ?? "",
-    entries: Object.freeze(input.entries.map(normalizeEntry))
-  });
-}
-
-function normalizeCatalog(input, baseUrl) {
-  assertObject(input, "Glossary catalog");
-  if (input.format !== CATALOG_FORMAT || input.version !== FORMAT_VERSION) throw new TypeError("Unsupported glossary catalog format or version.");
-  if (!Array.isArray(input.glossaries)) throw new TypeError("Catalog glossaries must be an array.");
-
-  const ids = new Set();
-  const glossaries = input.glossaries.map((item, index) => {
-    assertObject(item, `glossaries[${index}]`);
-    assertString(item.id, `glossaries[${index}].id`);
-    if (!ID_PATTERN.test(item.id)) throw new TypeError(`glossaries[${index}].id is invalid.`);
-    if (ids.has(item.id)) throw new TypeError(`Duplicate glossary id: ${item.id}`);
-    ids.add(item.id);
-    assertString(item.name, `glossaries[${index}].name`);
-    assertLanguage(item.sourceLanguage, `glossaries[${index}].sourceLanguage`);
-    assertLanguage(item.targetLanguage, `glossaries[${index}].targetLanguage`);
-    assertString(item.url, `glossaries[${index}].url`);
-    return Object.freeze({
-      id: item.id,
-      name: item.name,
-      sourceLanguage: item.sourceLanguage,
-      targetLanguage: item.targetLanguage,
-      url: baseUrl ? new URL(item.url, baseUrl).href : item.url,
-      enabled: item.enabled ?? true
-    });
-  });
-  return Object.freeze({ format: CATALOG_FORMAT, version: FORMAT_VERSION, glossaries: Object.freeze(glossaries) });
-}
-
-async function readJsonFile(file, kind = "document") {
-  if (!file || typeof file.text !== "function") throw new TypeError(`A readable ${kind} file is required.`);
-  return parseJsonDocument(await file.text(), file.name || kind);
-}
-
-async function loadLocalGlossary(file) { return normalizeGlossary(await readJsonFile(file, "glossary")); }
-
-async function fetchCatalog(url, fetchImpl = globalThis.fetch) {
-  if (typeof fetchImpl !== "function") throw new TypeError("Fetch is not available in this environment.");
-  const response = await fetchImpl(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Catalog request failed with HTTP ${response.status}.`);
-  return normalizeCatalog(await response.json(), response.url || url);
-}
-
-async function fetchGlossary(url, fetchImpl = globalThis.fetch) {
-  if (typeof fetchImpl !== "function") throw new TypeError("Fetch is not available in this environment.");
-  const response = await fetchImpl(url, { cache: "no-store" });
-  if (!response.ok) throw new Error(`Glossary request failed with HTTP ${response.status}.`);
-  return normalizeGlossary(await response.json());
-}
-
-const glossaryFormat = Object.freeze({ glossary: GLOSSARY_FORMAT, catalog: CATALOG_FORMAT, version: FORMAT_VERSION });
-
-const GLOSSARY_FEEDBACK_TEXT = {
-  en: { enable: "Enable", disable: "Disable", enabled: name => `Glossary “${name}” is enabled.`, disabled: name => `Glossary “${name}” is disabled.` },
-  ru: { enable: "Включить", disable: "Выключить", enabled: name => `Глоссарий «${name}» включён.`, disabled: name => `Глоссарий «${name}» выключен.` },
-  bg: { enable: "Включи", disable: "Изключи", enabled: name => `Речникът „${name}“ е включен.`, disabled: name => `Речникът „${name}“ е изключен.` }
-};
-
-function installGlossaryToggleFeedback() {
-  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return;
-  const language = () => document.getElementById("uiLang")?.value || "en";
-  const text = () => GLOSSARY_FEEDBACK_TEXT[language()] || GLOSSARY_FEEDBACK_TEXT.en;
-  function updateToggleLabels(root = document) {
-    const messages = text();
-    root.querySelectorAll?.(".gm-toggle").forEach(button => {
-      const enabled = button.classList.contains("on");
-      button.textContent = enabled ? messages.disable : messages.enable;
-      button.setAttribute("aria-pressed", enabled ? "true" : "false");
-      button.title = enabled ? messages.disable : messages.enable;
-    });
-  }
-  let toastTimer = 0;
-  function showToast(message) {
-    const toast = document.getElementById("toast");
-    if (!toast) return;
-    clearTimeout(toastTimer);
-    toast.textContent = message;
-    toast.classList.add("show");
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
-  }
-  document.addEventListener("click", event => {
-    const button = event.target.closest?.(".gm-toggle");
-    if (!button) return;
-    const name = button.closest(".gm-card")?.querySelector(".gm-info strong")?.textContent?.trim() || "";
-    const willBeEnabled = !button.classList.contains("on");
-    const messages = text();
-    queueMicrotask(() => {
-      updateToggleLabels();
-      showToast(willBeEnabled ? messages.enabled(name) : messages.disabled(name));
-    });
-  }, true);
-  document.getElementById("uiLang")?.addEventListener("change", () => updateToggleLabels());
-  new MutationObserver(mutations => {
-    for (const mutation of mutations) for (const node of mutation.addedNodes) {
-      if (node.nodeType === Node.ELEMENT_NODE) updateToggleLabels(node);
-    }
-  }).observe(document.body, { childList: true, subtree: true });
-  updateToggleLabels();
-}
-
-if (typeof document !== "undefined") {
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installGlossaryToggleFeedback);
-  else installGlossaryToggleFeedback();
-}
-
 
 const STORAGE_KEY = "necesse-translator.glossaries.v1";
 const DEFAULT_CATALOG = "./glossaries/catalog.json";
@@ -8410,8 +8277,6 @@ globalThis.NecesseGlossaries = Object.freeze({
   subscribe(listener) { if (typeof listener !== "function") throw new TypeError("Listener must be a function."); state.listeners.add(listener); return () => state.listeners.delete(listener); }
 });
 
-}
-{
 "use strict";
 
 const PROTECTED_TOKEN_RE = /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|[0-9A-Za-z])|\\n/g;
@@ -8495,6 +8360,8 @@ function inspectTerminology(sourceText, targetText, glossaries = []) {
   return Object.freeze(issues);
 }
 
+}
+{
 
 const t = (key, vars) => globalThis.NecesseI18n?.t(key, vars) || key;
 const plural = (base, count, vars) => globalThis.NecesseI18n?.plural(base, count, vars) || String(count);
@@ -8599,8 +8466,6 @@ function start() {
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 else start();
 
-}
-{
 
 const reviewT = (key, vars) => globalThis.NecesseI18n?.t(key, vars) || key;
 const reviewPlural = (base, count, vars) => globalThis.NecesseI18n?.plural(base, count, vars) || String(count);
@@ -8720,167 +8585,6 @@ function start() {
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
 else start();
-
-}
-{
-"use strict";
-
-(function initializeMtTargetLanguage() {
-  const LANGUAGE_OPTIONS = Object.freeze([
-    ["ar", "العربية"], ["bg", "Български"], ["ca", "Català"], ["cs", "Čeština"],
-    ["da", "Dansk"], ["de", "Deutsch"], ["en", "English"], ["es", "Español"],
-    ["fi", "Suomi"], ["fr", "Français"], ["hr", "Hrvatski"], ["hu", "Magyar"],
-    ["id", "Bahasa Indonesia"], ["it", "Italiano"], ["ja", "日本語"], ["ko", "한국어"],
-    ["lt", "Lietuvių"], ["nl", "Nederlands"], ["no", "Norsk"], ["pl", "Polski"],
-    ["pt-BR", "Português (Brasil)"], ["pt-PT", "Português (Portugal)"], ["ru", "Русский"],
-    ["se", "Svenska"], ["th", "ไทย"], ["tr", "Türkçe"], ["uk", "Українська"],
-    ["vi", "Tiếng Việt"], ["zh-CN", "中文（简体）"], ["zh-TW", "中文（繁體）"]
-  ]);
-
-  const RECOGNIZED = new Map(LANGUAGE_OPTIONS.map(([code]) => [code.toLowerCase(), code]));
-  const LEGACY_ALIASES = new Map([
-    ["pr", "pt-BR"], ["pr-br", "pt-BR"], ["pt", "pt-BR"],
-    ["zh-hk", "zh-TW"], ["nb-no", "no"], ["nn-no", "no"]
-  ]);
-
-  function t(key) {
-    return globalThis.NecesseI18n?.t(key) || key;
-  }
-
-  function normalizeProjectCode(value) {
-    const raw = String(value || "").trim().replace(/_/g, "-");
-    if (!raw) return "";
-    const lower = raw.toLowerCase();
-    return LEGACY_ALIASES.get(lower) || RECOGNIZED.get(lower) || "";
-  }
-
-  function codeFromFilename(filename) {
-    const name = String(filename || "").trim().replace(/^.*[\\/]/, "");
-    if (!/\.lang$/i.test(name)) return "";
-    const base = name.replace(/\.lang$/i, "")
-      .replace(/\s*\(\d+\)\s*$/, "")
-      .replace(/_\d+_?$/g, "");
-    return normalizeProjectCode(base);
-  }
-
-  function injectStyles() {
-    const style = document.createElement("style");
-    style.textContent = `#mtTarget[hidden]{display:none!important}#mtTargetSelect{width:auto;min-width:180px;max-width:240px}.mtbtn[data-mt-target-missing="true"]{opacity:.45;cursor:not-allowed}`;
-    document.head.append(style);
-  }
-
-  function buildSelector(input) {
-    const select = document.createElement("select");
-    select.id = "mtTargetSelect";
-    select.className = input.className;
-    select.title = input.title || t("mt.langTitle");
-    select.setAttribute("aria-label", select.title);
-
-    const empty = document.createElement("option");
-    empty.value = "";
-    empty.textContent = "—";
-    empty.disabled = true;
-    select.append(empty);
-
-    for (const [code, label] of LANGUAGE_OPTIONS) {
-      const option = document.createElement("option");
-      option.value = code;
-      option.textContent = `${label} (${code})`;
-      select.append(option);
-    }
-
-    input.hidden = true;
-    input.tabIndex = -1;
-    input.insertAdjacentElement("afterend", select);
-    return select;
-  }
-
-  function commitSelection(input, select, code) {
-    if (!code) {
-      select.value = "";
-      return;
-    }
-    input.value = code;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-    select.value = code;
-  }
-
-  function applyAvailability(select) {
-    const disabled = !select.value;
-    for (const button of document.querySelectorAll(".mtbtn")) {
-      button.disabled = disabled || button.classList.contains("loading");
-      button.dataset.mtTargetMissing = disabled ? "true" : "false";
-    }
-  }
-
-  function filename() {
-    return document.getElementById("outName")?.value || "";
-  }
-
-  function syncFromWorkspace(input, select) {
-    const current = normalizeProjectCode(input.value);
-    const inferred = codeFromFilename(filename());
-    const chosen = current || inferred;
-
-    select.value = chosen;
-    if (chosen && input.value !== chosen) commitSelection(input, select, chosen);
-    if (!chosen) input.value = "";
-    applyAvailability(select);
-  }
-
-  function initialize() {
-    const input = document.getElementById("mtTarget");
-    if (!input || document.getElementById("mtTargetSelect")) return;
-
-    injectStyles();
-    const select = buildSelector(input);
-
-    select.addEventListener("change", () => {
-      if (!select.value) return;
-      commitSelection(input, select, select.value);
-      applyAvailability(select);
-    });
-
-    const workspaceObserver = new MutationObserver(() => syncFromWorkspace(input, select));
-    const actions = document.getElementById("topActions");
-    const list = document.getElementById("list");
-    if (actions) workspaceObserver.observe(actions, { attributes: true, attributeFilter: ["style", "class", "hidden"] });
-    if (list) workspaceObserver.observe(list, { childList: true });
-
-    document.getElementById("outName")?.addEventListener("change", () => syncFromWorkspace(input, select));
-    document.getElementById("outName")?.addEventListener("blur", () => syncFromWorkspace(input, select));
-    document.getElementById("uiLang")?.addEventListener("change", () => {
-      select.title = t("mt.langTitle");
-      select.setAttribute("aria-label", select.title);
-    });
-
-    document.addEventListener("click", event => {
-      const button = event.target.closest?.(".mtbtn");
-      if (!button || select.value) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      select.focus();
-    }, true);
-
-    syncFromWorkspace(input, select);
-
-    globalThis.NecesseMtTarget = Object.freeze({
-      languages: LANGUAGE_OPTIONS.map(([code, name]) => ({ code, name })),
-      normalizeProjectCode,
-      codeFromFilename,
-      get: () => select.value,
-      set(code) {
-        const normalized = normalizeProjectCode(code);
-        commitSelection(input, select, normalized);
-        applyAvailability(select);
-      }
-    });
-  }
-
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
-  else initialize();
-})();
 
 }
 {
@@ -9048,6 +8752,201 @@ function startTerminologyNavigation() {
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startTerminologyNavigation);
 else startTerminologyNavigation();
 
+}
+{
+"use strict";
+
+const GLOSSARY_FORMAT = "necesse-glossary";
+const CATALOG_FORMAT = "necesse-glossary-catalog";
+const FORMAT_VERSION = 1;
+const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
+const LANGUAGE_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
+const ENTRY_STATUSES = new Set(["approved", "draft", "deprecated", "context-dependent"]);
+
+function assertObject(value, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError(`${label} must be an object.`);
+}
+
+function assertString(value, label) {
+  if (typeof value !== "string" || value.length === 0) throw new TypeError(`${label} must be a non-empty string.`);
+}
+
+function assertLanguage(value, label) {
+  assertString(value, label);
+  if (!LANGUAGE_PATTERN.test(value)) throw new TypeError(`${label} is not a supported language tag.`);
+}
+
+function assertStringArray(value, label) {
+  if (value === undefined) return;
+  if (!Array.isArray(value) || value.some(item => typeof item !== "string" || item.length === 0)) {
+    throw new TypeError(`${label} must be an array of non-empty strings.`);
+  }
+  if (new Set(value).size !== value.length) throw new TypeError(`${label} must not contain duplicates.`);
+}
+
+function normalizeEntry(entry, index) {
+  assertObject(entry, `entries[${index}]`);
+  assertString(entry.source, `entries[${index}].source`);
+  assertString(entry.target, `entries[${index}].target`);
+  assertStringArray(entry.forms, `entries[${index}].forms`);
+  assertStringArray(entry.alternatives, `entries[${index}].alternatives`);
+  assertStringArray(entry.forbidden, `entries[${index}].forbidden`);
+
+  const status = entry.status ?? "approved";
+  if (!ENTRY_STATUSES.has(status)) throw new TypeError(`entries[${index}].status is not supported.`);
+
+  return Object.freeze({
+    source: entry.source,
+    target: entry.target,
+    forms: Object.freeze([...(entry.forms ?? [])]),
+    alternatives: Object.freeze([...(entry.alternatives ?? [])]),
+    forbidden: Object.freeze([...(entry.forbidden ?? [])]),
+    caseSensitive: entry.caseSensitive ?? false,
+    wholeWord: entry.wholeWord ?? true,
+    status,
+    category: entry.category ?? "",
+    context: entry.context ?? "",
+    note: entry.note ?? ""
+  });
+}
+
+export function parseJsonDocument(text, label = "JSON document") {
+  if (typeof text !== "string") throw new TypeError(`${label} must be text.`);
+  try { return JSON.parse(text.replace(/^\uFEFF/, "")); }
+  catch (error) { throw new SyntaxError(`${label} is not valid JSON: ${error.message}`); }
+}
+
+export function normalizeGlossary(input) {
+  assertObject(input, "Glossary");
+  if (input.format !== GLOSSARY_FORMAT || input.version !== FORMAT_VERSION) throw new TypeError("Unsupported glossary format or version.");
+  assertString(input.id, "Glossary id");
+  if (!ID_PATTERN.test(input.id)) throw new TypeError("Glossary id is invalid.");
+  assertString(input.name, "Glossary name");
+  assertLanguage(input.sourceLanguage, "Glossary sourceLanguage");
+  assertLanguage(input.targetLanguage, "Glossary targetLanguage");
+  if (!Array.isArray(input.entries)) throw new TypeError("Glossary entries must be an array.");
+
+  return Object.freeze({
+    format: GLOSSARY_FORMAT,
+    version: FORMAT_VERSION,
+    id: input.id,
+    name: input.name,
+    sourceLanguage: input.sourceLanguage,
+    targetLanguage: input.targetLanguage,
+    game: input.game ?? "",
+    authors: Object.freeze([...(input.authors ?? [])]),
+    updatedAt: input.updatedAt ?? "",
+    entries: Object.freeze(input.entries.map(normalizeEntry))
+  });
+}
+
+export function normalizeCatalog(input, baseUrl) {
+  assertObject(input, "Glossary catalog");
+  if (input.format !== CATALOG_FORMAT || input.version !== FORMAT_VERSION) throw new TypeError("Unsupported glossary catalog format or version.");
+  if (!Array.isArray(input.glossaries)) throw new TypeError("Catalog glossaries must be an array.");
+
+  const ids = new Set();
+  const glossaries = input.glossaries.map((item, index) => {
+    assertObject(item, `glossaries[${index}]`);
+    assertString(item.id, `glossaries[${index}].id`);
+    if (!ID_PATTERN.test(item.id)) throw new TypeError(`glossaries[${index}].id is invalid.`);
+    if (ids.has(item.id)) throw new TypeError(`Duplicate glossary id: ${item.id}`);
+    ids.add(item.id);
+    assertString(item.name, `glossaries[${index}].name`);
+    assertLanguage(item.sourceLanguage, `glossaries[${index}].sourceLanguage`);
+    assertLanguage(item.targetLanguage, `glossaries[${index}].targetLanguage`);
+    assertString(item.url, `glossaries[${index}].url`);
+    return Object.freeze({
+      id: item.id,
+      name: item.name,
+      sourceLanguage: item.sourceLanguage,
+      targetLanguage: item.targetLanguage,
+      url: baseUrl ? new URL(item.url, baseUrl).href : item.url,
+      enabled: item.enabled ?? true
+    });
+  });
+  return Object.freeze({ format: CATALOG_FORMAT, version: FORMAT_VERSION, glossaries: Object.freeze(glossaries) });
+}
+
+export async function readJsonFile(file, kind = "document") {
+  if (!file || typeof file.text !== "function") throw new TypeError(`A readable ${kind} file is required.`);
+  return parseJsonDocument(await file.text(), file.name || kind);
+}
+
+export async function loadLocalGlossary(file) { return normalizeGlossary(await readJsonFile(file, "glossary")); }
+
+export async function fetchCatalog(url, fetchImpl = globalThis.fetch) {
+  if (typeof fetchImpl !== "function") throw new TypeError("Fetch is not available in this environment.");
+  const response = await fetchImpl(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Catalog request failed with HTTP ${response.status}.`);
+  return normalizeCatalog(await response.json(), response.url || url);
+}
+
+export async function fetchGlossary(url, fetchImpl = globalThis.fetch) {
+  if (typeof fetchImpl !== "function") throw new TypeError("Fetch is not available in this environment.");
+  const response = await fetchImpl(url, { cache: "no-store" });
+  if (!response.ok) throw new Error(`Glossary request failed with HTTP ${response.status}.`);
+  return normalizeGlossary(await response.json());
+}
+
+export const glossaryFormat = Object.freeze({ glossary: GLOSSARY_FORMAT, catalog: CATALOG_FORMAT, version: FORMAT_VERSION });
+
+const GLOSSARY_FEEDBACK_TEXT = {
+  en: { enable: "Enable", disable: "Disable", enabled: name => `Glossary “${name}” is enabled.`, disabled: name => `Glossary “${name}” is disabled.` },
+  ru: { enable: "Включить", disable: "Выключить", enabled: name => `Глоссарий «${name}» включён.`, disabled: name => `Глоссарий «${name}» выключен.` },
+  bg: { enable: "Включи", disable: "Изключи", enabled: name => `Речникът „${name}“ е включен.`, disabled: name => `Речникът „${name}“ е изключен.` }
+};
+
+function installGlossaryToggleFeedback() {
+  if (typeof document === "undefined" || typeof MutationObserver === "undefined") return;
+  const language = () => document.getElementById("uiLang")?.value || "en";
+  const text = () => GLOSSARY_FEEDBACK_TEXT[language()] || GLOSSARY_FEEDBACK_TEXT.en;
+  function updateToggleLabels(root = document) {
+    const messages = text();
+    root.querySelectorAll?.(".gm-toggle").forEach(button => {
+      const enabled = button.classList.contains("on");
+      button.textContent = enabled ? messages.disable : messages.enable;
+      button.setAttribute("aria-pressed", enabled ? "true" : "false");
+      button.title = enabled ? messages.disable : messages.enable;
+    });
+  }
+  let toastTimer = 0;
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+    clearTimeout(toastTimer);
+    toast.textContent = message;
+    toast.classList.add("show");
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2400);
+  }
+  document.addEventListener("click", event => {
+    const button = event.target.closest?.(".gm-toggle");
+    if (!button) return;
+    const name = button.closest(".gm-card")?.querySelector(".gm-info strong")?.textContent?.trim() || "";
+    const willBeEnabled = !button.classList.contains("on");
+    const messages = text();
+    queueMicrotask(() => {
+      updateToggleLabels();
+      showToast(willBeEnabled ? messages.enabled(name) : messages.disabled(name));
+    });
+  }, true);
+  document.getElementById("uiLang")?.addEventListener("change", () => updateToggleLabels());
+  new MutationObserver(mutations => {
+    for (const mutation of mutations) for (const node of mutation.addedNodes) {
+      if (node.nodeType === Node.ELEMENT_NODE) updateToggleLabels(node);
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+  updateToggleLabels();
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", installGlossaryToggleFeedback);
+  else installGlossaryToggleFeedback();
+}
+
+}
+{
+undefined
 }</script>
 </body>
 </html>
