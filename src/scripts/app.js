@@ -1228,17 +1228,26 @@ function targetFromName(name){
     indexItems(); buildDict(); updateReferenceBtn();
     refreshMeter(); renderSectionJumps(); setView("editor"); saveLS();
   }
-  function loadText(text, filename){
-    const {eol, items} = parse(text);
-    state.eol = eol; state.items = items; state.filename = cleanName(filename);
+  function loadWorkspaceFromText(text, options = {}){
+    const config = typeof options === "string" ? {filename: options} : (options || {});
+    const {eol, items} = parse(String(text ?? ""));
+    state.eol = eol;
+    state.items = items;
+    state.filename = config.filename ? cleanName(config.filename) : "";
     state.referenceFilename = "";
+    if (config.referenceFilename) state.referenceFilename = String(config.referenceFilename);
+    state.diffOther = null;
     state.mtProvider = preferredProvider();
-    state.targetLang = targetFromName(state.filename);
-    state.filter = "missing"; state.query = "";
+    state.targetLang = Object.hasOwn(config, "targetLang")
+      ? String(config.targetLang || "")
+      : targetFromName(state.filename);
+    state.filter = "missing";
+    state.query = "";
     $("search").value = "";
     setFilter("missing", true);
     openWorkspace();
   }
+  globalThis.NecesseLangTranslator = Object.freeze({loadWorkspaceFromText});
   function setFilter(f, silent){
     state.filter = f;
     document.querySelectorAll(".filt").forEach(b => b.classList.toggle("on", b.dataset.f===f));
@@ -1255,20 +1264,25 @@ function targetFromName(name){
   $("fileInput").onchange = e => {
     const f = e.target.files[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { loadText(r.result, f.name); toast(t("toast.fileLoaded")); };
+    r.onload = () => { loadWorkspaceFromText(r.result, {filename: f.name}); toast(t("toast.fileLoaded")); };
     r.readAsText(f, "UTF-8");
     e.target.value = "";
   };
   $("btnNew").onclick = () => $("fileInput").click();
   $("btnExport").onclick = () => {
-    let name = ($("outName").value || "").trim() || state.filename || "ru.lang";
+    let name = ($("outName").value || "").trim() || state.filename;
+    if (!name){
+      toast(t("err.targetFilenameRequired"));
+      $("outName").focus();
+      return;
+    }
     if (!/\.lang$/i.test(name)) name += ".lang";
     state.filename = name; $("outName").value = name;
     download(name, buildLang(), "text/plain;charset=utf-8");
     toast(t("toast.exported", {name}));
   };
   $("btnSaveJson").onclick = async () => {
-    const base = (state.filename||"ru.lang").replace(/\.lang$/i,"");
+    const base = (state.filename || "translation.lang").replace(/\.lang$/i,"");
     const text = JSON.stringify(serialize());
     if (canGzip){
       try{
@@ -1438,7 +1452,7 @@ function targetFromName(name){
   ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e=>{e.preventDefault();drop.classList.remove("over");}));
   drop.addEventListener("drop", e => {
     const f = e.dataTransfer.files[0]; if (!f) return;
-    const r = new FileReader(); r.onload = () => { loadText(r.result, f.name); toast(t("toast.fileLoaded")); };
+    const r = new FileReader(); r.onload = () => { loadWorkspaceFromText(r.result, {filename: f.name}); toast(t("toast.fileLoaded")); };
     r.readAsText(f, "UTF-8");
   });
 

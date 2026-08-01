@@ -23,5 +23,5 @@ jobs:
         with:
           node-version: 22
 
-      - name: Verify standalone build
+      - name: Verify project and standalone build
         run: npm run verify
