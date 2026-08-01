@@ -121,7 +121,6 @@ const replacements = [
   ["// English source for an entry: en.lang reference if loaded, else the English\n  // that shipped inline for MISSING entries. null when no English is available.", "// Source text for an entry: the loaded reference value when available, otherwise\n  // the inline value carried by a MISSING_TRANSLATION entry. null when unavailable."],
   ["const english = body.slice(eq+1);       // original value (English for missing)", "const english = body.slice(eq+1);       // inline source value for missing entries"],
   ["// working value: for missing -> prefill with english so tokens are preserved; else the existing value", "// working value: prefill missing entries with their inline source so tokens are preserved"],
-  ['ui.tablist.setAttribute("aria-label", "Settings sections");', 'ui.tablist.setAttribute("aria-label", globalThis.NecesseI18n?.t("settings.tabsLabel") || "Settings sections");']
 ];
 for (const [from, to] of replacements) {
   if (!app.includes(from) && !from.startsWith("updateEnBtn") && !from.startsWith("parseEnLang") && !from.startsWith("applyEnRef") && !from.startsWith("enFilename") && !from.startsWith("sourceEN") && !from.startsWith("baseEN")) {
