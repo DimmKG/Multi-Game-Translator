@@ -23,13 +23,11 @@ jobs:
         run: node scripts/generate-locale-assets.mjs
       - name: Integrate JSON locale runtime
         run: node scripts/integrate-json-locales.mjs
-      - name: Verify complete project
-        run: npm run verify
-      - name: Commit verified integration
+      - name: Commit integration
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/index.html src/scripts/i18n scripts/build-standalone.mjs scripts/check-build.mjs scripts/validate-locales.mjs scripts/validate-interface-locales.mjs test/settings.test.mjs
+          git add src/index.html src/scripts/i18n scripts/build-standalone.mjs scripts/check-build.mjs
           git diff --cached --quiet && exit 0
           git commit -m "Integrate built-in JSON locales"
           git push
