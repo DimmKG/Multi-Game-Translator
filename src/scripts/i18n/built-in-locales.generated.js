@@ -232,7 +232,8 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultCancel": "Cancel",
     "settings.secretVaultContinue": "Continue",
     "settings.secretVaultExportError": "Could not export encrypted secrets.",
-    "settings.secretVaultImportError": "Could not import encrypted secrets."
+    "settings.secretVaultImportError": "Could not import encrypted secrets.",
+    "reference.notLoaded": "No reference file loaded"
   }
 });
 
@@ -590,7 +591,8 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultCancel": "Отказ",
     "settings.secretVaultContinue": "Продължи",
     "settings.secretVaultExportError": "Криптираните данни не можаха да бъдат експортирани.",
-    "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани."
+    "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани.",
+    "reference.notLoaded": "Не е зареден референтен файл"
   }
 });
 
@@ -3124,7 +3126,8 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultCancel": "Отмена",
     "settings.secretVaultContinue": "Продолжить",
     "settings.secretVaultExportError": "Не удалось экспортировать зашифрованные секреты.",
-    "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты."
+    "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты.",
+    "reference.notLoaded": "Референтный файл не загружен"
   }
 });
 

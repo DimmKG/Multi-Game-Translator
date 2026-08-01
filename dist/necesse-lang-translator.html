@@ -908,7 +908,8 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultCancel": "Cancel",
     "settings.secretVaultContinue": "Continue",
     "settings.secretVaultExportError": "Could not export encrypted secrets.",
-    "settings.secretVaultImportError": "Could not import encrypted secrets."
+    "settings.secretVaultImportError": "Could not import encrypted secrets.",
+    "reference.notLoaded": "No reference file loaded"
   }
 });
 
@@ -1266,7 +1267,8 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultCancel": "Отказ",
     "settings.secretVaultContinue": "Продължи",
     "settings.secretVaultExportError": "Криптираните данни не можаха да бъдат експортирани.",
-    "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани."
+    "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани.",
+    "reference.notLoaded": "Не е зареден референтен файл"
   }
 });
 
@@ -3800,7 +3802,8 @@ globalThis.NecesseLocales.register({
     "settings.secretVaultCancel": "Отмена",
     "settings.secretVaultContinue": "Продолжить",
     "settings.secretVaultExportError": "Не удалось экспортировать зашифрованные секреты.",
-    "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты."
+    "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты.",
+    "reference.notLoaded": "Референтный файл не загружен"
   }
 });
 
@@ -5307,7 +5310,9 @@ globalThis.NecesseLocales.register({
 
   // derived status: "missing" | "done" | "same"
   function statusOf(e){
-    if (e.markedSame) return "same";
+    // SAME_TRANSLATION is a file-format marker, but it is only a verifiable UI
+    // status when this entry has a value from a loaded reference file.
+    if (e.markedSame && e.ref != null) return "same";
     if (e.wasMissing){
       if (e.value.trim() === "" || e.value === e.english) return "missing";
       return "done";
@@ -5448,6 +5453,8 @@ globalThis.NecesseLocales.register({
     let matched = 0;
     for (const e of state.items){
       if (e.type !== "entry") continue;
+      // Loading a different reference must not retain matches from the old one.
+      delete e.ref;
       const r = map.get(e.key);
       if (r != null){ e.ref = r; matched++; }
     }
@@ -5467,6 +5474,46 @@ globalThis.NecesseLocales.register({
     }
   }
 
+  function hasUsableReference(){
+    return !!state.referenceFilename && state.items.some(e => e.type === "entry" && e.ref != null);
+  }
+  function syncReferenceDependentUi(){
+    const available = hasUsableReference();
+    const sameFilter = document.querySelector('.filt[data-f="same"]');
+    if (sameFilter){
+      const label = sameFilter.querySelector('[data-i18n="filter.same"]');
+      const count = sameFilter.querySelector('.cnt');
+      sameFilter.hidden = false;
+      sameFilter.disabled = !available;
+      sameFilter.classList.toggle("unavailable", !available);
+      sameFilter.setAttribute("aria-disabled", available ? "false" : "true");
+      sameFilter.title = available ? "" : t("reference.notLoaded");
+      if (label) label.textContent = available ? t("filter.same") : t("reference.notLoaded");
+      if (!available && count) count.textContent = "—";
+    }
+    const reviewSame = document.querySelector('.rchip[data-r="same"]');
+    if (reviewSame){
+      const label = reviewSame.querySelector('[data-i18n="review.sameEng"]');
+      const count = reviewSame.querySelector('.n');
+      reviewSame.hidden = false;
+      reviewSame.disabled = !available;
+      reviewSame.classList.toggle("unavailable", !available);
+      reviewSame.setAttribute("aria-disabled", available ? "false" : "true");
+      reviewSame.title = available ? "" : t("reference.notLoaded");
+      if (label) label.textContent = available ? t("review.sameEng") : t("reference.notLoaded");
+      if (!available && count) count.textContent = "—";
+    }
+    if (!available && state.filter === "same"){
+      state.filter = "missing";
+      document.querySelectorAll(".filt").forEach(x => x.classList.toggle("on", x.dataset.f === "missing"));
+    }
+    if (!available && state.reviewFilter === "same"){
+      state.reviewFilter = "all";
+      document.querySelectorAll(".rchip").forEach(x => x.classList.toggle("on", x.dataset.r === "all"));
+    }
+    return available;
+  }
+
   // ---------- counts + progress ----------
   function counts(){
     let missing=0, done=0, same=0, total=0, missBase=0, missDone=0, touched=0;
@@ -5481,6 +5528,7 @@ globalThis.NecesseLocales.register({
     return {missing, done, same, total, missBase, missDone, touched};
   }
   function refreshMeter(){
+    syncReferenceDependentUi();
     const c = counts();
     $("c-missing").textContent = c.missing;
     $("c-done").textContent = c.done;
@@ -5648,17 +5696,20 @@ globalThis.NecesseLocales.register({
       };
       r3.appendChild(fix);
     }
-    // same-as-english toggle
-    const sb = document.createElement("button");
-    sb.className = "samebtn" + (e.markedSame ? " on" : "");
-    sb.textContent = e.markedSame ? t("same.on") : t("same.off");
-    sb.title = t("same.title");
-    sb.onclick = () => {
-      e.markedSame = !e.markedSame; e.touched = true;
-      if (e.markedSame && e.value.trim()===""){ e.value = e.english; ta.value = e.english; autosize(ta); syncWs(ta); }
-      updateCard(card, e); refreshMeter(); scheduleSave();
-    };
-    r3.appendChild(sb);
+    // SAME_TRANSLATION controls are meaningful only for entries matched to a
+    // loaded reference file. The underlying marker is still preserved in state.
+    if (e.ref != null){
+      const sb = document.createElement("button");
+      sb.className = "samebtn" + (e.markedSame ? " on" : "");
+      sb.textContent = e.markedSame ? t("same.on") : t("same.off");
+      sb.title = t("same.title");
+      sb.onclick = () => {
+        e.markedSame = !e.markedSame; e.touched = true;
+        if (e.markedSame && e.value.trim()===""){ e.value = e.ref; ta.value = e.ref; autosize(ta); syncWs(ta); }
+        updateCard(card, e); refreshMeter(); scheduleSave();
+      };
+      r3.appendChild(sb);
+    }
   }
 
   function updateCard(card, e){
@@ -5730,7 +5781,7 @@ globalThis.NecesseLocales.register({
     const miss = missingTokens(e);
     const extra = extraTokens(e);
     const enRef = referenceSource(e);
-    const sameEng = (s==="done" && e.value.trim()!=="" && e.value === (enRef != null ? enRef : e.english));
+    const sameEng = (e.ref != null && s==="done" && e.value.trim()!=="" && e.value === enRef);
     const empty = (s==="missing");            // touched but not actually translated (cleared / MT echoed english)
     const mt = !!e.mtDraft && s==="done";
     const ws = wsScan(e);
@@ -6190,8 +6241,10 @@ function targetFromName(name){
     for (const it of state.items){
       if (it.type !== "entry"){ out.push(it.raw); continue; }
       const s = statusOf(it);
-      if (s === "missing") out.push(MISS + it.key + "=" + it.value);
-      else if (s === "same") out.push(SAME + it.key + "=" + it.value);
+      // Preserve an explicit SAME_TRANSLATION file marker even when no external
+      // reference is loaded; reference availability only gates the UI status.
+      if (it.markedSame) out.push(SAME + it.key + "=" + it.value);
+      else if (s === "missing") out.push(MISS + it.key + "=" + it.value);
       else out.push(it.key + "=" + it.value);
     }
     return out.join(state.eol);
@@ -6370,6 +6423,7 @@ function targetFromName(name){
   function loadText(text, filename){
     const {eol, items} = parse(text);
     state.eol = eol; state.items = items; state.filename = cleanName(filename);
+    state.referenceFilename = "";
     state.mtProvider = preferredProvider();
     state.targetLang = targetFromName(state.filename);
     state.filter = "missing"; state.query = "";

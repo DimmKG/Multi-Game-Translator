@@ -224,6 +224,7 @@
     "settings.secretVaultCancel": "Отмена",
     "settings.secretVaultContinue": "Продолжить",
     "settings.secretVaultExportError": "Не удалось экспортировать зашифрованные секреты.",
-    "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты."
+    "settings.secretVaultImportError": "Не удалось импортировать зашифрованные секреты.",
+    "reference.notLoaded": "Референтный файл не загружен"
   }
 }
