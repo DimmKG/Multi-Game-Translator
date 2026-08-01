@@ -224,6 +224,7 @@
     "settings.secretVaultCancel": "Отказ",
     "settings.secretVaultContinue": "Продължи",
     "settings.secretVaultExportError": "Криптираните данни не можаха да бъдат експортирани.",
-    "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани."
+    "settings.secretVaultImportError": "Криптираните данни не можаха да бъдат импортирани.",
+    "reference.notLoaded": "Не е зареден референтен файл"
   }
 }

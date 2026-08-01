@@ -289,15 +289,27 @@
     const available = hasUsableReference();
     const sameFilter = document.querySelector('.filt[data-f="same"]');
     if (sameFilter){
-      sameFilter.hidden = !available;
+      const label = sameFilter.querySelector('[data-i18n="filter.same"]');
+      const count = sameFilter.querySelector('.cnt');
+      sameFilter.hidden = false;
       sameFilter.disabled = !available;
-      sameFilter.setAttribute("aria-hidden", available ? "false" : "true");
+      sameFilter.classList.toggle("unavailable", !available);
+      sameFilter.setAttribute("aria-disabled", available ? "false" : "true");
+      sameFilter.title = available ? "" : t("reference.notLoaded");
+      if (label) label.textContent = available ? t("filter.same") : t("reference.notLoaded");
+      if (!available && count) count.textContent = "—";
     }
     const reviewSame = document.querySelector('.rchip[data-r="same"]');
     if (reviewSame){
-      reviewSame.hidden = !available;
+      const label = reviewSame.querySelector('[data-i18n="review.sameEng"]');
+      const count = reviewSame.querySelector('.n');
+      reviewSame.hidden = false;
       reviewSame.disabled = !available;
-      reviewSame.setAttribute("aria-hidden", available ? "false" : "true");
+      reviewSame.classList.toggle("unavailable", !available);
+      reviewSame.setAttribute("aria-disabled", available ? "false" : "true");
+      reviewSame.title = available ? "" : t("reference.notLoaded");
+      if (label) label.textContent = available ? t("review.sameEng") : t("reference.notLoaded");
+      if (!available && count) count.textContent = "—";
     }
     if (!available && state.filter === "same"){
       state.filter = "missing";

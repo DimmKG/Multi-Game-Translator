@@ -8,8 +8,16 @@ const html = await readFile(new URL("../src/index.html", import.meta.url), "utf8
 test("same status requires a matched loaded reference", () => {
   assert.match(app, /e\.markedSame && e\.ref != null/);
   assert.match(app, /function hasUsableReference\(\)/);
-  assert.match(app, /sameFilter\.hidden = !available/);
-  assert.match(app, /reviewSame\.hidden = !available/);
+  assert.match(app, /sameFilter\.hidden = false/);
+  assert.match(app, /sameFilter\.disabled = !available/);
+  assert.match(app, /t\("reference\.notLoaded"\)/);
+  assert.match(app, /reviewSame\.hidden = false/);
+  assert.match(app, /reviewSame\.disabled = !available/);
+});
+
+test("unavailable reference status stays visible but disabled", () => {
+  assert.match(app, /label\.textContent = available \? t\("filter\.same"\) : t\("reference\.notLoaded"\)/);
+  assert.match(app, /count\.textContent = "—"/);
 });
 
 test("same controls only render for matched reference entries", () => {
