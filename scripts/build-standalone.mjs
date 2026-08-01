@@ -4,13 +4,14 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const source = resolve(root, "src");
-const [html, css, locales, builtInLocales, localeBootstrap, localePackages, app, settings, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
+const [html, css, locales, builtInLocales, localeBootstrap, localePackages, providers, app, settings, targetLanguage, glossaryLoader, glossaryManager, glossaryMatcher, glossaryQa, glossaryReview, glossaryNavigation] = await Promise.all([
   readFile(resolve(source, "index.html"), "utf8"),
   readFile(resolve(source, "styles/app.css"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locales.js"), "utf8"),
   readFile(resolve(source, "scripts/i18n/built-in-locales.generated.js"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locale-bootstrap.js"), "utf8"),
   readFile(resolve(source, "scripts/i18n/locale-packages.js"), "utf8"),
+  readFile(resolve(source, "scripts/mt/providers.js"), "utf8"),
   readFile(resolve(source, "scripts/app.js"), "utf8"),
   readFile(resolve(source, "scripts/settings.js"), "utf8"),
   readFile(resolve(source, "scripts/mt/target-language.js"), "utf8"),
@@ -31,8 +32,8 @@ const originalHeader = `/* =====================================================
 const standaloneLocales = locales.replace(/\/\* ={76}\n[\s\S]*?={74} \*\//, originalHeader);
 const combinedApp = app.replace(
   "/* Interface locale data is loaded from ./i18n/locales.js. */",
-  `${standaloneLocales.trimEnd()}\n${builtInLocales.trimEnd()}\n${localeBootstrap.trimEnd()}`
-);
+  `${standaloneLocales.trimEnd()}\n${builtInLocales.trimEnd()}\n${localeBootstrap.trimEnd()}\n${providers.trimEnd()}`
+) + `\n${targetLanguage.trimEnd()}`;
 
 const stripModuleSyntax = sourceText => sourceText
   .replace(/^import[^\n]+\n/gm, "")
@@ -55,7 +56,9 @@ let standalone = html
   .replace('<script src="./scripts/i18n/locales.js"></script>\n', "")
   .replace('<script src="./scripts/i18n/built-in-locales.generated.js"></script>\n', "")
   .replace('<script src="./scripts/i18n/locale-bootstrap.js"></script>\n', "")
+  .replace('<script src="./scripts/mt/providers.js"></script>\n', "")
   .replace('<script src="./scripts/app.js"></script>', `<script>${combinedApp}</script>`)
+  .replace('<script src="./scripts/mt/target-language.js"></script>\n', "")
   .replace('<script src="./scripts/settings.js"></script>', `<script>${settings}</script>`)
   .replace(localePackageTag, `<script type="module">${bundledLocalePackages}</script>`)
   .replace(managerTag, `<script type="module">${bundledGlossary}</script>`)

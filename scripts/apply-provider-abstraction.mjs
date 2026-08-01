@@ -28,10 +28,10 @@ const providers = `"use strict";
       throw new TypeError("A machine-translation provider id is required.");
     }
     if (typeof definition.translate !== "function") {
-      throw new TypeError(`Provider ${definition.id} must define translate().`);
+      throw new TypeError("Provider " + definition.id + " must define translate().");
     }
     const id = definition.id.trim();
-    if (providers.has(id)) throw new TypeError(`Duplicate machine-translation provider: ${id}`);
+    if (providers.has(id)) throw new TypeError("Duplicate machine-translation provider: " + id);
     const provider = Object.freeze({
       id,
       name: definition.name || id,
@@ -83,10 +83,10 @@ const providers = `"use strict";
       return aliases[value.toLowerCase()] || value;
     },
     async translate({ text, sourceLanguage, targetLanguage, signal }) {
-      const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLanguage)}&tl=${encodeURIComponent(targetLanguage)}&dt=t&q=${encodeURIComponent(text)}`;
+      const url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=" + encodeURIComponent(sourceLanguage) + "&tl=" + encodeURIComponent(targetLanguage) + "&dt=t&q=" + encodeURIComponent(text);
       const response = await fetch(url, { signal });
       if (!response.ok) {
-        throw new MtProviderError("http-error", `Google ${response.status}`, {
+        throw new MtProviderError("http-error", "Google " + response.status, {
           provider: "google",
           status: response.status
         });

@@ -159,20 +159,5 @@ function startTerminologyNavigation() {
   updateControls();
 }
 
-function loadMtTargetLanguageControls() {
-  if (globalThis.NecesseMtTarget || document.querySelector('script[data-necesse-mt-target]')) return;
-  const script = document.createElement("script");
-  script.src = "./scripts/mt/target-language.js";
-  script.dataset.necesseMtTarget = "true";
-  document.head.append(script);
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
-    startTerminologyNavigation();
-    loadMtTargetLanguageControls();
-  });
-} else {
-  startTerminologyNavigation();
-  loadMtTargetLanguageControls();
-}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startTerminologyNavigation);
+else startTerminologyNavigation();
