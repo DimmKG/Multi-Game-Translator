@@ -8,7 +8,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -17,29 +17,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: agent/metadata-guidance
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Fix integration helper
-        run: node scripts/fix-metadata-guidance-helper-v4.mjs
-
-      - name: Apply metadata guidance integration
-        run: node scripts/apply-metadata-guidance-integration.mjs
-
       - name: Verify project and standalone build
         run: npm run verify
-
-      - name: Commit metadata guidance integration
-        run: |
-          git restore --source=HEAD -- .github/workflows/validate.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Integrate contextual metadata guidance"
-          git push origin HEAD:agent/metadata-guidance
