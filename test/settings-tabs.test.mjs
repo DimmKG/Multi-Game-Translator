@@ -46,3 +46,8 @@ test("hosted and standalone builds load Settings tabs", () => {
   assert.match(html, /settings-tabs\.js/);
   assert.match(build, /settingsTabs/);
 });
+
+
+test("tab strip hides accidental vertical overflow", () => {
+  assert.match(source, /overflow-x:auto;overflow-y:hidden/);
+});
