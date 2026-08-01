@@ -1,0 +1,52 @@
+name: Apply reference wording locale pass
+
+on:
+  push:
+    branches:
+      - agent/reference-wording-locale-pass
+
+permissions:
+  contents: write
+
+concurrency:
+  group: reference-wording-locale-pass
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/reference-wording-locale-pass
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Remove misplaced app replacement
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const path = "scripts/apply-reference-wording.mjs";
+          let text = await readFile(path, "utf8");
+          text = text.replace('  [\'ui.tablist.setAttribute("aria-label", "Settings sections");\', \'ui.tablist.setAttribute("aria-label", globalThis.NecesseI18n?.t("settings.tabsLabel") || "Settings sections");\']\n', '');
+          await writeFile(path, text, "utf8");
+          NODE
+
+      - name: Apply wording and locale changes
+        run: node scripts/apply-reference-wording.mjs
+
+      - name: Verify and rebuild
+        run: npm run verify
+
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src test dist scripts/apply-reference-wording.mjs
+          git diff --cached --quiet && exit 0
+          git commit -m "Generalize reference-file wording"
+          git push origin HEAD:agent/reference-wording-locale-pass
