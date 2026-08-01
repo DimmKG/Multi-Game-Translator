@@ -24,7 +24,8 @@ const newLoader = `  function loadWorkspaceFromText(text, options = {}){
     state.eol = eol;
     state.items = items;
     state.filename = config.filename ? cleanName(config.filename) : "";
-    state.referenceFilename = String(config.referenceFilename || "");
+    state.referenceFilename = "";
+    if (config.referenceFilename) state.referenceFilename = String(config.referenceFilename);
     state.diffOther = null;
     state.mtProvider = preferredProvider();
     state.targetLang = Object.hasOwn(config, "targetLang")
@@ -113,6 +114,22 @@ if (guardIndex >= 0) {
 await writeFile(uiPath, ui, "utf8");
 
 let test = await readFile(testPath, "utf8");
+const oldFilenameTest = `test("new translation UI requires an explicit target filename", async () => {
+  const app = await readFile(new URL("../src/scripts/new-translation.js", import.meta.url), "utf8");
+  assert.match(app, /err\\.targetFilenameRequired/);
+  assert.match(app, /outputName\\?\\.value\\.trim\\(\\)/);
+  assert.doesNotMatch(app, /ru\\.lang/);
+});
+`;
+const newFilenameTest = `test("new translation UI requires an explicit target filename", async () => {
+  const app = await readFile(new URL("../src/scripts/app.js", import.meta.url), "utf8");
+  assert.match(app, /err\\.targetFilenameRequired/);
+  assert.match(app, /\\(\\$\\("outName"\\)\\.value \\|\\| ""\\)\\.trim\\(\\) \\|\\| state\\.filename/);
+  assert.match(app, /if \\(!name\\)\\{/);
+});
+`;
+if (!test.includes(oldFilenameTest)) throw new Error("Expected target filename test was not found.");
+test = test.replace(oldFilenameTest, newFilenameTest);
 if (!test.includes("NecesseLangTranslator")) {
   test += `\n\ntest("new translation uses the shared workspace loader instead of a synthetic file event", async () => {\n  const app = await readFile(new URL("../src/scripts/app.js", import.meta.url), "utf8");\n  const ui = await readFile(new URL("../src/scripts/new-translation.js", import.meta.url), "utf8");\n  assert.match(app, /NecesseLangTranslator = Object\\.freeze\\(\\{loadWorkspaceFromText\\}\\)/);\n  assert.match(ui, /NecesseLangTranslator\\?\\.loadWorkspaceFromText/);\n  assert.doesNotMatch(ui, /new File\\(\\[result\\.text\\]/);\n  assert.doesNotMatch(ui, /existingInput\\.onchange/);\n});\n`;
 }
