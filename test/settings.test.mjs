@@ -47,6 +47,16 @@ test("interface direction switches for Arabic and resets for other languages", (
   assert.match(localeBootstrap, /event\.target\?\.id\s*===\s*"uiLang"/);
 });
 
+test("RTL layouts isolate technical values without forcing translation text to LTR", () => {
+  assert.match(index, /html\[dir="rtl"\] \.key/);
+  assert.match(index, /html\[dir="rtl"\] \.sec-jump/);
+  assert.match(index, /html\[dir="rtl"\] \.diffname/);
+  assert.match(index, /direction:\s*ltr/);
+  assert.match(index, /unicode-bidi:\s*isolate/);
+  assert.match(index, /html\[dir="rtl"\] textarea/);
+  assert.match(index, /unicode-bidi:\s*plaintext/);
+});
+
 test("standalone build embeds settings and generated locales", () => {
   assert.match(build, /built-in-locales\.generated\.js/);
   assert.match(build, /scripts\/settings\.js/);
