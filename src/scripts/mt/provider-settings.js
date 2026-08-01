@@ -75,6 +75,10 @@
     return secrets.get(id) || null;
   }
 
+  function notifySecretsChanged() {
+    globalThis.dispatchEvent?.(new CustomEvent("necesse:mt-secrets-changed"));
+  }
+
   function setSecret(providerId, fieldId, value) {
     const provider = String(providerId || "");
     const field = fieldDefinition(provider, fieldId);
@@ -83,6 +87,7 @@
     const text = String(value ?? "");
     if (text) bucket.set(field.id, text);
     else bucket.delete(field.id);
+    notifySecretsChanged();
   }
 
   function getSecret(providerId, fieldId) {
@@ -92,6 +97,41 @@
   function clearSecrets(providerId) {
     if (providerId === undefined) secrets.clear();
     else secrets.delete(String(providerId || ""));
+    notifySecretsChanged();
+  }
+
+  function exportSecrets() {
+    const result = {};
+    for (const [providerId, bucket] of secrets) {
+      const fields = {};
+      for (const [fieldId, value] of bucket) if (value) fields[fieldId] = value;
+      if (Object.keys(fields).length) result[providerId] = fields;
+    }
+    return result;
+  }
+
+  function importSecrets(snapshot, options = {}) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+      throw new TypeError("Provider secret snapshot must be an object.");
+    }
+    if (options.replace !== false) secrets.clear();
+    for (const [providerId, fields] of Object.entries(snapshot)) {
+      if (!fields || typeof fields !== "object" || Array.isArray(fields)) continue;
+      for (const [fieldId, value] of Object.entries(fields)) {
+        const field = fieldDefinition(providerId, fieldId);
+        if (!field || field.type !== "secret") continue;
+        const text = String(value ?? "");
+        if (text) secretBucket(providerId, true).set(field.id, text);
+      }
+    }
+    notifySecretsChanged();
+    return exportSecrets();
+  }
+
+  function secretCount() {
+    let count = 0;
+    for (const bucket of secrets.values()) count += bucket.size;
+    return count;
   }
 
   function resolve(providerId) {
@@ -118,6 +158,9 @@
     setSecret,
     getSecret,
     clearSecrets,
+    exportSecrets,
+    importSecrets,
+    secretCount,
     resolve,
     exportPublic,
     secretPersistence: "memory-only"

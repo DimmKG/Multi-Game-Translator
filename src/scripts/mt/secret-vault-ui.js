@@ -2,7 +2,28 @@
 
 (function initializeMtSecretVaultUi() {
   const ui = {};
-  const t = key => globalThis.NecesseI18n?.t(key) || key;
+  const fallback = Object.freeze({
+    "settings.secretVaultTitle": "Encrypted provider secrets",
+    "settings.secretVaultHint": "Secrets stay in memory unless you export this password-protected file. The password is never saved.",
+    "settings.secretVaultEmpty": "No provider secrets are currently unlocked.",
+    "settings.secretVaultUnlocked": "{n} provider secret(s) are currently unlocked.",
+    "settings.secretVaultExport": "Export encrypted secrets",
+    "settings.secretVaultImport": "Import encrypted secrets",
+    "settings.secretVaultClear": "Lock and clear secrets",
+    "settings.secretVaultCreatePassword": "Create a password for the encrypted file",
+    "settings.secretVaultEnterPassword": "Enter the encrypted file password",
+    "settings.secretVaultPassword": "Password",
+    "settings.secretVaultConfirmPassword": "Confirm password",
+    "settings.secretVaultPasswordMismatch": "The passwords do not match.",
+    "settings.secretVaultCancel": "Cancel",
+    "settings.secretVaultContinue": "Continue",
+    "settings.secretVaultExportError": "Could not export encrypted secrets.",
+    "settings.secretVaultImportError": "Could not import encrypted secrets."
+  });
+  const t = key => {
+    const translated = globalThis.NecesseI18n?.t(key);
+    return translated && translated !== key ? translated : (fallback[key] || key);
+  };
 
   function secretCount() {
     return globalThis.NecesseMtProviderSettings?.secretCount?.() || 0;

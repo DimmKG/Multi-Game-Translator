@@ -48,3 +48,19 @@ test("hosted and standalone builds load provider settings", () => {
   assert.match(build, /providerSettings/);
   assert.match(build, /providerSettingsUi/);
 });
+
+const vaultUi = await readFile(new URL("../src/scripts/mt/secret-vault-ui.js", import.meta.url), "utf8");
+
+test("provider secret snapshots stay separate from public persistence", () => {
+  assert.match(source, /function exportSecrets\(\)/);
+  assert.match(source, /function importSecrets\(snapshot/);
+  assert.match(source, /function secretCount\(\)/);
+  assert.doesNotMatch(source, /JSON\.stringify\(exportSecrets\(\)\)/);
+});
+
+test("encrypted vault controls use the vault API and never persist passwords", () => {
+  assert.match(vaultUi, /vault\.encrypt\(store\.exportSecrets\(\), passphrase\)/);
+  assert.match(vaultUi, /vault\.decrypt\(await file\.text\(\), passphrase\)/);
+  assert.match(vaultUi, /store\.importSecrets\(secrets, \{ replace: true \}\)/);
+  assert.doesNotMatch(vaultUi, /localStorage|document\.cookie|sessionStorage/);
+});
