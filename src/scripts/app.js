@@ -118,7 +118,9 @@
 
   // derived status: "missing" | "done" | "same"
   function statusOf(e){
-    if (e.markedSame) return "same";
+    // SAME_TRANSLATION is a file-format marker, but it is only a verifiable UI
+    // status when this entry has a value from a loaded reference file.
+    if (e.markedSame && e.ref != null) return "same";
     if (e.wasMissing){
       if (e.value.trim() === "" || e.value === e.english) return "missing";
       return "done";
@@ -259,6 +261,8 @@
     let matched = 0;
     for (const e of state.items){
       if (e.type !== "entry") continue;
+      // Loading a different reference must not retain matches from the old one.
+      delete e.ref;
       const r = map.get(e.key);
       if (r != null){ e.ref = r; matched++; }
     }
@@ -278,6 +282,34 @@
     }
   }
 
+  function hasUsableReference(){
+    return !!state.referenceFilename && state.items.some(e => e.type === "entry" && e.ref != null);
+  }
+  function syncReferenceDependentUi(){
+    const available = hasUsableReference();
+    const sameFilter = document.querySelector('.filt[data-f="same"]');
+    if (sameFilter){
+      sameFilter.hidden = !available;
+      sameFilter.disabled = !available;
+      sameFilter.setAttribute("aria-hidden", available ? "false" : "true");
+    }
+    const reviewSame = document.querySelector('.rchip[data-r="same"]');
+    if (reviewSame){
+      reviewSame.hidden = !available;
+      reviewSame.disabled = !available;
+      reviewSame.setAttribute("aria-hidden", available ? "false" : "true");
+    }
+    if (!available && state.filter === "same"){
+      state.filter = "missing";
+      document.querySelectorAll(".filt").forEach(x => x.classList.toggle("on", x.dataset.f === "missing"));
+    }
+    if (!available && state.reviewFilter === "same"){
+      state.reviewFilter = "all";
+      document.querySelectorAll(".rchip").forEach(x => x.classList.toggle("on", x.dataset.r === "all"));
+    }
+    return available;
+  }
+
   // ---------- counts + progress ----------
   function counts(){
     let missing=0, done=0, same=0, total=0, missBase=0, missDone=0, touched=0;
@@ -292,6 +324,7 @@
     return {missing, done, same, total, missBase, missDone, touched};
   }
   function refreshMeter(){
+    syncReferenceDependentUi();
     const c = counts();
     $("c-missing").textContent = c.missing;
     $("c-done").textContent = c.done;
@@ -459,17 +492,20 @@
       };
       r3.appendChild(fix);
     }
-    // same-as-english toggle
-    const sb = document.createElement("button");
-    sb.className = "samebtn" + (e.markedSame ? " on" : "");
-    sb.textContent = e.markedSame ? t("same.on") : t("same.off");
-    sb.title = t("same.title");
-    sb.onclick = () => {
-      e.markedSame = !e.markedSame; e.touched = true;
-      if (e.markedSame && e.value.trim()===""){ e.value = e.english; ta.value = e.english; autosize(ta); syncWs(ta); }
-      updateCard(card, e); refreshMeter(); scheduleSave();
-    };
-    r3.appendChild(sb);
+    // SAME_TRANSLATION controls are meaningful only for entries matched to a
+    // loaded reference file. The underlying marker is still preserved in state.
+    if (e.ref != null){
+      const sb = document.createElement("button");
+      sb.className = "samebtn" + (e.markedSame ? " on" : "");
+      sb.textContent = e.markedSame ? t("same.on") : t("same.off");
+      sb.title = t("same.title");
+      sb.onclick = () => {
+        e.markedSame = !e.markedSame; e.touched = true;
+        if (e.markedSame && e.value.trim()===""){ e.value = e.ref; ta.value = e.ref; autosize(ta); syncWs(ta); }
+        updateCard(card, e); refreshMeter(); scheduleSave();
+      };
+      r3.appendChild(sb);
+    }
   }
 
   function updateCard(card, e){
@@ -541,7 +577,7 @@
     const miss = missingTokens(e);
     const extra = extraTokens(e);
     const enRef = referenceSource(e);
-    const sameEng = (s==="done" && e.value.trim()!=="" && e.value === (enRef != null ? enRef : e.english));
+    const sameEng = (e.ref != null && s==="done" && e.value.trim()!=="" && e.value === enRef);
     const empty = (s==="missing");            // touched but not actually translated (cleared / MT echoed english)
     const mt = !!e.mtDraft && s==="done";
     const ws = wsScan(e);
@@ -1001,8 +1037,10 @@ function targetFromName(name){
     for (const it of state.items){
       if (it.type !== "entry"){ out.push(it.raw); continue; }
       const s = statusOf(it);
-      if (s === "missing") out.push(MISS + it.key + "=" + it.value);
-      else if (s === "same") out.push(SAME + it.key + "=" + it.value);
+      // Preserve an explicit SAME_TRANSLATION file marker even when no external
+      // reference is loaded; reference availability only gates the UI status.
+      if (it.markedSame) out.push(SAME + it.key + "=" + it.value);
+      else if (s === "missing") out.push(MISS + it.key + "=" + it.value);
       else out.push(it.key + "=" + it.value);
     }
     return out.join(state.eol);
@@ -1181,6 +1219,7 @@ function targetFromName(name){
   function loadText(text, filename){
     const {eol, items} = parse(text);
     state.eol = eol; state.items = items; state.filename = cleanName(filename);
+    state.referenceFilename = "";
     state.mtProvider = preferredProvider();
     state.targetLang = targetFromName(state.filename);
     state.filter = "missing"; state.query = "";
