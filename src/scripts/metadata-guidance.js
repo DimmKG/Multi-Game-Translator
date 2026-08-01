@@ -1,0 +1,28 @@
+const GUIDANCE_RULES = Object.freeze([
+  Object.freeze({ key: "localname", messageKey: "metadata.localname" }),
+  Object.freeze({ key: "engname", messageKey: "metadata.engname" }),
+  Object.freeze({ key: "extrasymbols", messageKey: "metadata.extrasymbols" }),
+  Object.freeze({ section: "lang", key: "credits", messageKey: "metadata.langCredits" })
+]);
+
+function normalizePart(value) {
+  return String(value || "").trim().replace(/^\[|\]$/g, "").toLowerCase();
+}
+
+export function metadataGuidanceFor(entry) {
+  const key = normalizePart(entry?.key);
+  const section = normalizePart(entry?.section);
+  return GUIDANCE_RULES.find(rule => {
+    if (normalizePart(rule.key) !== key) return false;
+    return rule.section == null || normalizePart(rule.section) === section;
+  }) || null;
+}
+
+export function metadataGuidanceRules() {
+  return GUIDANCE_RULES;
+}
+
+globalThis.NecesseMetadataGuidance = Object.freeze({
+  metadataGuidanceFor,
+  metadataGuidanceRules
+});
