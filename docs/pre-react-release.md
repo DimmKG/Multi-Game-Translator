@@ -13,7 +13,7 @@ This document describes how to freeze, verify and publish the stable HTML/JavaSc
 
 The final tag must point to the merge commit of the release-preparation PR after all automated and manual checks pass.
 
-Final tagged commit SHA: **to be recorded after merge**.
+Final tagged commit SHA: `d4bf92ba0cfb462ac791da5cd755d506cca5015f`.
 
 ## Freeze rules
 

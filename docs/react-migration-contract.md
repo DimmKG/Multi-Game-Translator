@@ -16,7 +16,7 @@ Before React work begins:
 - record the final tagged commit SHA in this document, the release notes and Issue #51;
 - avoid unrelated feature additions during the parity phase.
 
-Final tagged baseline commit: **to be recorded after the release-preparation PR is merged**.
+Final tagged baseline commit: `d4bf92ba0cfb462ac791da5cd755d506cca5015f`.
 
 ## Core rule
 
