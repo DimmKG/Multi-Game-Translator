@@ -62,7 +62,7 @@ const app = fs.readFileSync("src/scripts/app.js", "utf8");
 test("opening any workspace invalidates the startup recovery offer", () => {
   assert.ok(app.includes("let pendingRecovery = null"));
   assert.ok(app.includes("function dismissPendingRecovery"));
-  assert.match(app, /function openWorkspace\(\)\{\s*\/\/ Any workspace[\s\S]*?dismissPendingRecovery\(\);/);
+  assert.ok(app.includes("function openWorkspace(){\\n    // Any workspace that becomes active supersedes the startup recovery offer.\\n    dismissPendingRecovery();"));
 });
 
 test("Continue cannot restore a recovery offer after it was dismissed", () => {
