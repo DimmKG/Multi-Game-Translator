@@ -1,6 +1,14 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { CircleCheck, PanelLeftClose, PanelLeftOpen, Search, TriangleAlert } from "lucide-react";
+import {
+  CircleCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Search,
+  SlidersHorizontal,
+  TriangleAlert,
+} from "lucide-react";
 
+import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
 import {
   calibrateCardMetrics,
@@ -12,7 +20,6 @@ import {
 import type { FilterMode } from "@/core/lang/markers";
 import { statusOf, type TranslationEntry } from "@/core/lang/status";
 import { metadataGuidanceFor } from "@/core/metadata/guidance";
-import { LANGUAGE_OPTIONS } from "@/core/mt/target-language";
 import { missingTokens, tokenKind, tokensOf } from "@/core/tokens/protected";
 import { fixWhitespace, scanWhitespace } from "@/core/tokens/whitespace";
 import { useI18n } from "@/features/i18n/I18nProvider";
@@ -188,7 +195,13 @@ const EntryCard = memo(function EntryCard({ entry }: { entry: TranslationEntry }
 const SIDEBAR_STORAGE_KEY = "necesse-translator.sidebar-collapsed.v1";
 
 /** Filter rail + section jump list. Rendered beside the tab strip, editor view only. */
-export function EditorSidebar() {
+export function EditorSidebar({
+  mobileOpen = false,
+  onMobileOpenChange,
+}: {
+  mobileOpen?: boolean;
+  onMobileOpenChange?: (open: boolean) => void;
+} = {}) {
   const { t } = useI18n();
   const workspace = useWorkspace();
   const [collapsed, setCollapsed] = useState(() => {
@@ -276,80 +289,97 @@ export function EditorSidebar() {
   }, [workspace.items]);
 
   return (
-    <aside className={cn("side app-chrome", collapsed && "collapsed")}>
-      <div className="side-toggle">
-        <button
-          type="button"
-          aria-expanded={!collapsed}
-          aria-label={t(collapsed ? "side.expand" : "side.collapse")}
-          title={t(collapsed ? "side.expand" : "side.collapse")}
-          onClick={() => setCollapsed(!collapsed)}
-        >
-          {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-          {!collapsed && <span>{t("side.collapse")}</span>}
-        </button>
-      </div>
-
-      <div className="filters">
-        {filters.map((filter) => (
+    <>
+      {/* Narrow screens have no room for a 236px rail, so it becomes a drawer. */}
+      <div
+        className={cn("side-backdrop", mobileOpen && "on")}
+        onClick={() => onMobileOpenChange?.(false)}
+        aria-hidden="true"
+      />
+      <aside
+        className={cn("side app-chrome", collapsed && "collapsed", mobileOpen && "mobile-open")}
+      >
+        <div className="side-toggle">
           <button
             type="button"
-            key={filter.id}
-            className={cn(
-              "filt",
-              workspace.filter === filter.id && !workspace.terminologyFilterActive && "on",
-              filter.warn && "warn",
-            )}
-            disabled={filter.disabled}
-            title={collapsed ? `${filter.label} · ${filter.count}` : filter.title}
+            aria-expanded={!collapsed}
+            aria-label={t(collapsed ? "side.expand" : "side.collapse")}
+            title={t(collapsed ? "side.expand" : "side.collapse")}
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+            {!collapsed && <span>{t("side.collapse")}</span>}
+          </button>
+        </div>
+
+        <div className="filters">
+          {filters.map((filter) => (
+            <button
+              type="button"
+              key={filter.id}
+              className={cn(
+                "filt",
+                workspace.filter === filter.id && !workspace.terminologyFilterActive && "on",
+                filter.warn && "warn",
+              )}
+              disabled={filter.disabled}
+              title={collapsed ? `${filter.label} · ${filter.count}` : filter.title}
+              onClick={() => {
+                workspace.setTerminologyFilterActive(false);
+                workspace.setFilter(filter.id);
+                onMobileOpenChange?.(false);
+              }}
+            >
+              <span className="l">
+                <i className={cn("dot", filter.dot)} />
+                <span>{filter.label}</span>
+              </span>
+              <span className="cnt">{filter.count}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className={cn("filt warn", workspace.terminologyFilterActive && "on")}
+            title={t("terminology.filterTitle")}
             onClick={() => {
-              workspace.setTerminologyFilterActive(false);
-              workspace.setFilter(filter.id);
+              workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive);
+              onMobileOpenChange?.(false);
             }}
           >
             <span className="l">
-              <i className={cn("dot", filter.dot)} />
-              <span>{filter.label}</span>
+              <i className="dot dot-ws" />
+              <span>{t("terminology.filter")}</span>
             </span>
-            <span className="cnt">{filter.count}</span>
+            <span className="cnt">{terminologyCount}</span>
           </button>
-        ))}
-        <button
-          type="button"
-          className={cn("filt warn", workspace.terminologyFilterActive && "on")}
-          title={t("terminology.filterTitle")}
-          onClick={() => workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive)}
-        >
-          <span className="l">
-            <i className="dot dot-ws" />
-            <span>{t("terminology.filter")}</span>
-          </span>
-          <span className="cnt">{terminologyCount}</span>
-        </button>
-      </div>
+        </div>
 
-      <div className="block">
-        <div className="lbl">{t("side.sections")}</div>
-      </div>
+        <div className="block">
+          <div className="lbl">{t("side.sections")}</div>
+        </div>
 
-      <div className="sections">
-        {sections.map((section) => (
-          <button
-            type="button"
-            key={section.name}
-            className="sec-jump"
-            onClick={() => requestEditorScroll({ type: "section", name: section.name })}
-          >
-            <span className="sn ltr-isolate">{sectionLabel(section.name)}</span>
-            <span className="sc">{section.count}</span>
-          </button>
-        ))}
-      </div>
-    </aside>
+        <div className="sections">
+          {sections.map((section) => (
+            <button
+              type="button"
+              key={section.name}
+              className="sec-jump"
+              onClick={() => {
+                onMobileOpenChange?.(false);
+                requestEditorScroll({ type: "section", name: section.name });
+              }}
+            >
+              <span className="sn ltr-isolate">{sectionLabel(section.name)}</span>
+              <span className="sc">{section.count}</span>
+            </button>
+          ))}
+        </div>
+      </aside>
+    </>
   );
 }
 
-export function EditorView() {
+export function EditorView({ onOpenFilters }: { onOpenFilters?: () => void } = {}) {
   const { t } = useI18n();
   const workspace = useWorkspace();
 
@@ -458,6 +488,15 @@ export function EditorView() {
   return (
     <>
       <div className="toolbar">
+        <button
+          type="button"
+          className="qbtn filters-trigger"
+          aria-label={t("menu.filters")}
+          title={t("menu.filters")}
+          onClick={onOpenFilters}
+        >
+          <SlidersHorizontal size={14} aria-hidden="true" />
+        </button>
         <div className="search">
           <Search className="ic" size={14} aria-hidden="true" />
           <input
@@ -469,113 +508,55 @@ export function EditorView() {
             onChange={(event) => workspace.setQuery(event.target.value)}
           />
         </div>
-        <button
-          type="button"
-          className="qbtn"
-          title={t("btn.findDblTitle")}
-          onClick={() => workspace.setQuery("  ")}
-        >
-          {t("btn.findDbl")}
-        </button>
-        <button
-          type="button"
-          className="qbtn"
-          title={t("btn.findTabTitle")}
-          onClick={() => workspace.setQuery("\t")}
-        >
-          {t("btn.findTab")}
-        </button>
-        {workspace.query.trim() && (
-          <span className="qhint">
-            {t("query.hint", { q: workspace.query, n: workspace.filteredEntries.length })}
-          </span>
-        )}
-        <button
-          type="button"
-          className={cn(
-            "termpill",
-            terminologyCount === 0 && "clean",
-            workspace.terminologyFilterActive && "on",
+        <BarOptions>
+          <button
+            type="button"
+            className="qbtn"
+            title={t("btn.findDblTitle")}
+            onClick={() => workspace.setQuery("  ")}
+          >
+            {t("btn.findDbl")}
+          </button>
+          <button
+            type="button"
+            className="qbtn"
+            title={t("btn.findTabTitle")}
+            onClick={() => workspace.setQuery("\t")}
+          >
+            {t("btn.findTab")}
+          </button>
+          {workspace.query.trim() && (
+            <span className="qhint">
+              {t("query.hint", { q: workspace.query, n: workspace.filteredEntries.length })}
+            </span>
           )}
-          title={t("terminology.filterTitle")}
-          disabled={terminologyCount === 0}
-          onClick={() => workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive)}
-        >
-          {terminologyCount === 0 ? (
-            <CircleCheck size={13} aria-hidden="true" />
-          ) : (
-            <TriangleAlert size={13} aria-hidden="true" />
-          )}
-          <span>
-            {t(terminologyCount === 1 ? "terminology.count.one" : "terminology.count.other", {
-              n: terminologyCount,
-            })}
-          </span>
-        </button>
+          <button
+            type="button"
+            className={cn(
+              "termpill",
+              terminologyCount === 0 && "clean",
+              workspace.terminologyFilterActive && "on",
+            )}
+            title={t("terminology.filterTitle")}
+            disabled={terminologyCount === 0}
+            onClick={() => workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive)}
+          >
+            {terminologyCount === 0 ? (
+              <CircleCheck size={13} aria-hidden="true" />
+            ) : (
+              <TriangleAlert size={13} aria-hidden="true" />
+            )}
+            <span>
+              {t(terminologyCount === 1 ? "terminology.count.one" : "terminology.count.other", {
+                n: terminologyCount,
+              })}
+            </span>
+          </button>
+        </BarOptions>
         <span className="sp" />
         <span className="hint">
           <kbd>Ctrl</kbd>+<kbd>↵</kbd> {t("hint.ctrlEnter")}
         </span>
-      </div>
-
-      <div className="mtbar app-chrome">
-        <button
-          type="button"
-          className={cn("toggle", workspace.spellcheck && "on")}
-          title={t("toggle.spellTitle")}
-          aria-pressed={workspace.spellcheck}
-          onClick={() => workspace.setSpellcheck(!workspace.spellcheck)}
-        >
-          <span className="tk" />
-          <span>{t("toggle.spell")}</span>
-        </button>
-        <button
-          type="button"
-          className={cn("toggle", workspace.autocompleteEnabled && "on")}
-          title={t("toggle.acTitle")}
-          aria-pressed={workspace.autocompleteEnabled}
-          onClick={() => workspace.setAutocompleteEnabled(!workspace.autocompleteEnabled)}
-        >
-          <span className="tk" />
-          <span>{t("toggle.ac")}</span>
-        </button>
-
-        <div className="grp">
-          <span>{t("mt.label")}</span>
-          <select
-            className="mtprov"
-            aria-label={t("mt.label")}
-            title={t("mt.providerTitle")}
-            value={workspace.mtProvider}
-            onChange={(event) => workspace.setMtProvider(event.target.value)}
-          >
-            {workspace.providers.map((provider) => (
-              <option key={provider.id} value={provider.id}>
-                {provider.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grp">
-          <span>{t("mt.langLabel")}</span>
-          <select
-            value={workspace.targetLanguage}
-            title={t("mt.langTitle")}
-            aria-label={t("mt.langLabel")}
-            onChange={(event) => workspace.setTargetLanguage(event.target.value)}
-          >
-            <option value="">—</option>
-            {LANGUAGE_OPTIONS.map(([code, label]) => (
-              <option key={code} value={code}>
-                {label} ({code})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="sp" />
-        <span className="mthint">{t("mt.perLineHint")}</span>
       </div>
 
       <VirtualList

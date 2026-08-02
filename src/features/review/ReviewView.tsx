@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import { useCallback, useMemo } from "react";
 
+import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList } from "@/components/layout/VirtualList";
 
 import type { ReviewFilter } from "@/core/lang/markers";
@@ -115,22 +116,24 @@ export function ReviewView() {
             onChange={(event) => workspace.setReviewQuery(event.target.value)}
           />
         </div>
-        <div className="rchips">
-          {chips.map((chip) => (
-            <button
-              type="button"
-              key={chip.id}
-              className={cn("rchip", workspace.reviewFilter === chip.id && "on")}
-              disabled={chip.disabled}
-              onClick={() => workspace.setReviewFilter(chip.id)}
-            >
-              <span>{chip.label}</span>
-              <span className="n">{chip.n}</span>
-            </button>
-          ))}
-        </div>
+        <BarOptions>
+          <div className="rchips">
+            {chips.map((chip) => (
+              <button
+                type="button"
+                key={chip.id}
+                className={cn("rchip", workspace.reviewFilter === chip.id && "on")}
+                disabled={chip.disabled}
+                onClick={() => workspace.setReviewFilter(chip.id)}
+              >
+                <span>{chip.label}</span>
+                <span className="n">{chip.n}</span>
+              </button>
+            ))}
+          </div>
+          <span className="hint">{t("review.scopeHint")}</span>
+        </BarOptions>
         <div className="sp" />
-        <span className="hint">{t("review.scopeHint")}</span>
       </div>
 
       <VirtualList

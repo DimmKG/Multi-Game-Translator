@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { Download, Menu } from "lucide-react";
+import { useRef, useState } from "react";
 
-import { ThemeSwitcher } from "@/components/layout/ThemeSwitcher";
+import { WorkspaceMenu } from "@/components/layout/WorkspaceMenu";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { SettingsDialog } from "@/features/settings/SettingsDialog";
 import { GlossaryDialog } from "@/features/glossary/GlossaryDialog";
@@ -8,6 +9,12 @@ import { useWorkspace } from "@/state/workspace-store";
 import type { ThemeMode } from "@/themes/themes";
 import { cn } from "@/lib/utils";
 
+/**
+ * Deliberately sparse: identity, how far along you are, the one action you came
+ * to perform, and a menu for everything else. Every other control moved into
+ * WorkspaceMenu — a phone has no room for a dozen buttons, and on a desktop
+ * they only crowded the two things that matter.
+ */
 export function AppHeader({
   theme,
   mode,
@@ -19,38 +26,20 @@ export function AppHeader({
   onThemeChange: (theme: string) => void;
   onModeChange: (mode: ThemeMode) => void;
 }) {
-  const { t, language, setLanguage, locales } = useI18n();
+  const { t } = useI18n();
   const workspace = useWorkspace();
   const fileInput = useRef<HTMLInputElement>(null);
   const referenceInput = useRef<HTMLInputElement>(null);
   const progressInput = useRef<HTMLInputElement>(null);
   const newTranslationInput = useRef<HTMLInputElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
-
-  // Typing here must not re-render (and re-persist) the whole entry list on every
-  // keystroke, so the field owns its value and commits to the store on a debounce.
-  const [filenameDraft, setFilenameDraft] = useState(workspace.filename);
-  const filenameFocused = useRef(false);
-  const commitFilename = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (!filenameFocused.current) setFilenameDraft(workspace.filename);
-  }, [workspace.filename]);
-
-  useEffect(() => () => clearTimeout(commitFilename.current ?? undefined), []);
 
   const percent =
     workspace.progress.total === 0
       ? 0
       : Math.round((workspace.progress.done / workspace.progress.total) * 100);
-
-  const referenceNeedsReminder =
-    workspace.settings.referenceReminder && workspace.isOpen && !workspace.referenceAvailable;
-
-  const referenceMatches = workspace.items.filter(
-    (item) => item.type === "entry" && item.ref != null,
-  ).length;
 
   const saveLabel =
     workspace.saveState === "saving"
@@ -74,154 +63,70 @@ export function AppHeader({
         <span className="sub">{t("app.sub")}</span>
       </div>
 
-      <select
-        className="uilang"
-        aria-label="Interface language"
-        value={language}
-        onChange={(event) => setLanguage(event.target.value)}
-      >
-        {locales.map((locale) => (
-          <option key={locale.code} value={locale.code}>
-            {locale.nativeName}
-          </option>
-        ))}
-      </select>
+      {workspace.isOpen && (
+        <>
+          <div className="meter">
+            <div className="bar">
+              <div className="fill" style={{ width: `${percent}%` }} />
+            </div>
+            <div className="pct ltr-isolate">
+              <b>{workspace.progress.done}</b> / {workspace.progress.total} ({percent}%)
+            </div>
+            {/* Save state is status, not an action — a dot next to the progress it
+                describes, with the wording in its tooltip and in the menu. */}
+            <button
+              type="button"
+              className={cn("savedot", workspace.saveState !== "saved" && workspace.saveState)}
+              title={`${saveLabel} — ${t("save.title")}`}
+              aria-label={saveLabel}
+              onClick={() => {
+                workspace.setView("review");
+                workspace.setReviewFilter("all");
+              }}
+            />
+          </div>
+        </>
+      )}
 
-      <ThemeSwitcher
+      {/* Export and menu stay paired at the trailing edge, not adrift mid-bar. */}
+      <div className="header-actions">
+        {workspace.isOpen && (
+          <button
+            type="button"
+            className="btn primary icon"
+            aria-label={t("btn.export")}
+            title={t("btn.export")}
+            onClick={workspace.exportLang}
+          >
+            <Download size={16} />
+          </button>
+        )}
+        <button
+          type="button"
+          className="btn ghost icon menu-trigger"
+          aria-label={t("menu.open")}
+          title={t("menu.open")}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+        >
+          <Menu size={16} />
+        </button>
+      </div>
+
+      <WorkspaceMenu
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
         theme={theme}
         mode={mode}
         onThemeChange={onThemeChange}
         onModeChange={onModeChange}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenGlossaries={() => setGlossaryOpen(true)}
+        onPickLangFile={() => fileInput.current?.click()}
+        onPickReference={() => referenceInput.current?.click()}
+        onPickProgress={() => progressInput.current?.click()}
+        onPickNewTranslation={() => newTranslationInput.current?.click()}
       />
-
-      <button
-        type="button"
-        className="btn ghost"
-        onClick={() => setSettingsOpen(true)}
-        title={t("settings.button")}
-      >
-        {t("settings.button")}
-      </button>
-      <button type="button" className="btn ghost" onClick={() => setGlossaryOpen(true)}>
-        {t("glossary.button")}
-      </button>
-      <button
-        type="button"
-        className="btn ghost"
-        disabled={!workspace.isOpen}
-        aria-pressed={workspace.compactView}
-        title={t(workspace.compactView ? "compact.exitTitle" : "compact.enterTitle")}
-        onClick={() => workspace.setCompactView(!workspace.compactView)}
-      >
-        {t(workspace.compactView ? "compact.exit" : "compact.enter")}
-      </button>
-
-      {workspace.isOpen && (
-        <div className="meter">
-          <div className="bar">
-            <div className="fill" style={{ width: `${percent}%` }} />
-          </div>
-          <div className="pct ltr-isolate">
-            <b>{workspace.progress.done}</b> / {workspace.progress.total} ({percent}%)
-          </div>
-        </div>
-      )}
-
-      {workspace.isOpen && (
-        <div className="filebar">
-          <button
-            type="button"
-            className={cn("savepill", workspace.saveState !== "saved" && workspace.saveState)}
-            title={t("save.title")}
-            onClick={() => {
-              workspace.setView("review");
-              workspace.setReviewFilter("all");
-            }}
-          >
-            <span className="sdot" />
-            <span className="stext">{saveLabel}</span>
-          </button>
-
-          <button
-            type="button"
-            className={cn("btn ghost", referenceNeedsReminder && "warn")}
-            onClick={() => referenceInput.current?.click()}
-            title={
-              workspace.referenceFilename
-                ? t("btn.enRefLoadedTitle", {
-                    file: workspace.referenceFilename,
-                    n: referenceMatches,
-                  })
-                : t("btn.enRefTitle")
-            }
-          >
-            {workspace.referenceFilename
-              ? t("btn.enRefLoaded", { file: workspace.referenceFilename, n: referenceMatches })
-              : t("btn.enRef")}
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            title={t("btn.saveProgressTitle")}
-            onClick={() => void workspace.saveProgressFile()}
-          >
-            {t("btn.saveProgress")}
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            title={t("btn.loadProgressTitle")}
-            onClick={() => progressInput.current?.click()}
-          >
-            {t("btn.loadProgress")}
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            title={t("btn.newTranslationTitle")}
-            onClick={() => newTranslationInput.current?.click()}
-          >
-            {t("btn.newTranslation")}
-          </button>
-          <button
-            type="button"
-            className="btn ghost"
-            title={t("btn.newFileTitle")}
-            onClick={() => fileInput.current?.click()}
-          >
-            {t("btn.newFile")}
-          </button>
-
-          <label className="fname" title={t("fname.title")}>
-            <span>{t("fname.label")}</span>
-            <input
-              type="text"
-              className="ltr-isolate"
-              spellCheck={false}
-              value={filenameDraft}
-              placeholder="*.lang"
-              onFocus={() => {
-                filenameFocused.current = true;
-              }}
-              onChange={(event) => {
-                const next = event.target.value;
-                setFilenameDraft(next);
-                if (commitFilename.current) clearTimeout(commitFilename.current);
-                commitFilename.current = setTimeout(() => workspace.setFilename(next), 400);
-              }}
-              onBlur={() => {
-                filenameFocused.current = false;
-                if (commitFilename.current) clearTimeout(commitFilename.current);
-                if (filenameDraft !== workspace.filename) workspace.setFilename(filenameDraft);
-              }}
-            />
-          </label>
-
-          <button type="button" className="btn primary" onClick={workspace.exportLang}>
-            {t("btn.export")}
-          </button>
-        </div>
-      )}
 
       <input
         ref={fileInput}

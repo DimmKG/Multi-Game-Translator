@@ -1,5 +1,8 @@
 import { useCallback, useMemo, useRef, type ReactNode } from "react";
 
+import { useMediaQuery } from "@/hooks/use-media-query";
+
+import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList } from "@/components/layout/VirtualList";
 
 import { compareEntryPair, diffRows, summarizeRows } from "@/core/compare/token-aware-diff";
@@ -26,6 +29,8 @@ function renderSegments(pair: InlinePair, side: "left" | "right"): ReactNode[] {
 }
 
 const DIFF_ROW_HEIGHT = 20;
+/** Equal lines kept either side of a change, so it is never shown bare. */
+const DIFF_CONTEXT = 3;
 const DIFF_CHARS_PER_LINE = 78; // one diff column at 12.5px monospace
 
 export function CompareView() {
@@ -46,24 +51,44 @@ export function CompareView() {
     [leftLines, rightLines],
   );
 
-  /** Collapse long equal stretches into a single "⋯ n matching lines ⋯" marker. */
+  /**
+   * Collapses long equal stretches, keeping a few lines either side of every
+   * change so you can see what it sits between. Short runs are left alone —
+   * hiding two lines to save two lines helps nobody.
+   */
   const rows = useMemo(() => {
     if (!workspace.diffOnly) return allRows.map((row) => ({ type: "row" as const, row }));
-    const out: Array<{ type: "row"; row: (typeof allRows)[number] } | { type: "gap"; n: number }> =
-      [];
-    let run = 0;
+
+    type Row = (typeof allRows)[number];
+    const out: Array<{ type: "row"; row: Row } | { type: "gap"; n: number }> = [];
+    let run: Row[] = [];
+    let afterChange = false;
+
+    const flushRun = (isTail: boolean) => {
+      if (!run.length) return;
+      const lead = afterChange ? Math.min(DIFF_CONTEXT, run.length) : 0;
+      const trail = isTail ? 0 : Math.min(DIFF_CONTEXT, run.length - lead);
+      if (lead + trail >= run.length) {
+        for (const row of run) out.push({ type: "row", row });
+      } else {
+        for (let i = 0; i < lead; i++) out.push({ type: "row", row: run[i] });
+        out.push({ type: "gap", n: run.length - lead - trail });
+        for (let i = run.length - trail; i < run.length; i++)
+          out.push({ type: "row", row: run[i] });
+      }
+      run = [];
+    };
+
     for (const row of allRows) {
       if (row.kind === "equal") {
-        run += 1;
+        run.push(row);
         continue;
       }
-      if (run > 0) {
-        out.push({ type: "gap", n: run });
-        run = 0;
-      }
+      flushRun(false);
       out.push({ type: "row", row });
+      afterChange = true;
     }
-    if (run > 0) out.push({ type: "gap", n: run });
+    flushRun(true);
     return out;
   }, [allRows, workspace.diffOnly]);
 
@@ -89,66 +114,66 @@ export function CompareView() {
     [allRows, leftLines, rightLines],
   );
 
+  // Worth glancing at while reading the diff, so on a phone it gets its own
+  // strip under the bar rather than hiding behind the options button.
+  const compact = useMediaQuery("(max-width: 860px)");
+  const stats = summary && (
+    <span className="diffstat ltr-isolate">
+      <span className="del">−{summary.deleted}</span>{" "}
+      <span className="chg">~{summary.changed}</span> <span className="add">+{summary.added}</span>{" "}
+      {t("diff.stat", { total: Math.max(leftLines.length, rightLines.length) })}
+      <span className="diff-detail">
+        {" · "}
+        {t("diff.changedKeys", { n: summary.changedKeys })}
+        {" · "}
+        {t("diff.changedValues", { n: summary.changedValues })}
+        {" · "}
+        {t("diff.prefixOnly", { n: summary.prefixOnly })}
+      </span>
+    </span>
+  );
+
   return (
     <>
       <div className="diffbar">
         <button type="button" className="btn" onClick={() => inputRef.current?.click()}>
           {t("diff.loadFile")}
         </button>
-        <span className="diffname ltr-isolate">
-          {workspace.diffOther
-            ? t("diff.fileInfo", {
-                name: workspace.diffOther.name,
-                n: workspace.diffOther.lines.length,
-              })
-            : ""}
-        </span>
-        <button
-          type="button"
-          className={cn("toggle", workspace.diffOnly && "on")}
-          title={t("diff.onlyDiffTitle")}
-          aria-pressed={workspace.diffOnly}
-          onClick={() => workspace.setDiffOnly(!workspace.diffOnly)}
-        >
-          <span className="tk" />
-          <span>{t("diff.onlyDiff")}</span>
-        </button>
-        <div className="diff-mode" role="group" aria-label={t("diff.inlineMode")}>
+        <BarOptions>
           <button
             type="button"
-            className={cn("diff-mode-btn", workspace.diffMode === "word" && "on")}
-            aria-pressed={workspace.diffMode === "word"}
-            onClick={() => workspace.setDiffMode("word")}
+            className={cn("toggle", workspace.diffOnly && "on")}
+            title={t("diff.onlyDiffTitle")}
+            aria-pressed={workspace.diffOnly}
+            onClick={() => workspace.setDiffOnly(!workspace.diffOnly)}
           >
-            {t("diff.modeWords")}
+            <span className="tk" />
+            <span>{t("diff.onlyDiff")}</span>
           </button>
-          <button
-            type="button"
-            className={cn("diff-mode-btn", workspace.diffMode === "character" && "on")}
-            aria-pressed={workspace.diffMode === "character"}
-            onClick={() => workspace.setDiffMode("character")}
-          >
-            {t("diff.modeCharacters")}
-          </button>
-        </div>
+          <div className="diff-mode" role="group" aria-label={t("diff.inlineMode")}>
+            <button
+              type="button"
+              className={cn("diff-mode-btn", workspace.diffMode === "word" && "on")}
+              aria-pressed={workspace.diffMode === "word"}
+              onClick={() => workspace.setDiffMode("word")}
+            >
+              {t("diff.modeWords")}
+            </button>
+            <button
+              type="button"
+              className={cn("diff-mode-btn", workspace.diffMode === "character" && "on")}
+              aria-pressed={workspace.diffMode === "character"}
+              onClick={() => workspace.setDiffMode("character")}
+            >
+              {t("diff.modeCharacters")}
+            </button>
+          </div>
+          {!compact && stats}
+        </BarOptions>
         <div className="sp" />
-        {summary && (
-          <span className="diffstat ltr-isolate">
-            <span className="del">−{summary.deleted}</span>{" "}
-            <span className="chg">~{summary.changed}</span>{" "}
-            <span className="add">+{summary.added}</span>{" "}
-            {t("diff.stat", { total: Math.max(leftLines.length, rightLines.length) })}
-            <span className="diff-detail">
-              {" · "}
-              {t("diff.changedKeys", { n: summary.changedKeys })}
-              {" · "}
-              {t("diff.changedValues", { n: summary.changedValues })}
-              {" · "}
-              {t("diff.prefixOnly", { n: summary.prefixOnly })}
-            </span>
-          </span>
-        )}
       </div>
+
+      {compact && stats && <div className="diffstat-row">{stats}</div>}
 
       {!workspace.diffOther ? (
         <div className="difflist">

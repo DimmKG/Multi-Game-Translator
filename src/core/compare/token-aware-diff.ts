@@ -104,6 +104,132 @@ function lcsPairs(left: string[], right: string[], matrixLimit = DEFAULT_MATRIX_
   return pairs;
 }
 
+/** Longest strictly increasing run by right index, so anchors stay ordered. */
+function longestIncreasingByRight(pairs: Array<[number, number]>): Array<[number, number]> {
+  if (pairs.length < 2) return pairs;
+  const tails: number[] = [];
+  const tailIndex: number[] = [];
+  const previous = new Array<number>(pairs.length).fill(-1);
+
+  for (let i = 0; i < pairs.length; i++) {
+    const value = pairs[i][1];
+    let low = 0;
+    let high = tails.length;
+    while (low < high) {
+      const mid = (low + high) >> 1;
+      if (tails[mid] < value) low = mid + 1;
+      else high = mid;
+    }
+    tails[low] = value;
+    tailIndex[low] = i;
+    previous[i] = low > 0 ? tailIndex[low - 1] : -1;
+  }
+
+  const result: Array<[number, number]> = [];
+  for (let i = tailIndex[tails.length - 1]; i >= 0; i = previous[i]) result.push(pairs[i]);
+  return result.reverse();
+}
+
+/**
+ * Lines occurring exactly once on both sides are near-certain matches, so they
+ * make safe split points (the patience-diff idea). They let a huge region be
+ * cut into small ones that the quadratic LCS can afford.
+ */
+function uniqueAnchors(
+  left: string[],
+  right: string[],
+  leftStart: number,
+  leftEnd: number,
+  rightStart: number,
+  rightEnd: number,
+): Array<[number, number]> {
+  const leftSeen = new Map<string, number>();
+  for (let i = leftStart; i < leftEnd; i++) {
+    const line = left[i];
+    leftSeen.set(line, leftSeen.has(line) ? -1 : i);
+  }
+  const rightSeen = new Map<string, number>();
+  for (let i = rightStart; i < rightEnd; i++) {
+    const line = right[i];
+    rightSeen.set(line, rightSeen.has(line) ? -1 : i);
+  }
+
+  const anchors: Array<[number, number]> = [];
+  for (const [line, leftIndex] of leftSeen) {
+    if (leftIndex < 0) continue;
+    const rightIndex = rightSeen.get(line);
+    if (rightIndex === undefined || rightIndex < 0) continue;
+    anchors.push([leftIndex, rightIndex]);
+  }
+  anchors.sort((a, b) => a[0] - b[0]);
+  return longestIncreasingByRight(anchors);
+}
+
+/**
+ * Aligns a region into ascending index pairs.
+ *
+ * Real .lang files run to thousands of lines, where a full LCS matrix is far
+ * out of reach. Shaving the identical head and tail usually removes almost
+ * everything; whatever is left is split on unique anchor lines until the pieces
+ * are small enough for the exact algorithm.
+ */
+function alignRegion(
+  left: string[],
+  right: string[],
+  leftStart: number,
+  leftEnd: number,
+  rightStart: number,
+  rightEnd: number,
+  matrixLimit: number,
+  out: Array<[number, number]>,
+) {
+  let lo = leftStart;
+  let ro = rightStart;
+  let hi = leftEnd;
+  let rhi = rightEnd;
+
+  while (lo < hi && ro < rhi && left[lo] === right[ro]) out.push([lo++, ro++]);
+
+  const tail: Array<[number, number]> = [];
+  while (hi > lo && rhi > ro && left[hi - 1] === right[rhi - 1]) tail.push([--hi, --rhi]);
+  tail.reverse();
+
+  if (lo < hi && ro < rhi) {
+    const leftSize = hi - lo;
+    const rightSize = rhi - ro;
+    if (leftSize * rightSize <= matrixLimit) {
+      const pairs = lcsPairs(left.slice(lo, hi), right.slice(ro, rhi), matrixLimit);
+      if (pairs) for (const [a, b] of pairs) out.push([a + lo, b + ro]);
+    } else {
+      const anchors = uniqueAnchors(left, right, lo, hi, ro, rhi);
+      if (anchors.length) {
+        let cursorLeft = lo;
+        let cursorRight = ro;
+        for (const [anchorLeft, anchorRight] of anchors) {
+          alignRegion(
+            left,
+            right,
+            cursorLeft,
+            anchorLeft,
+            cursorRight,
+            anchorRight,
+            matrixLimit,
+            out,
+          );
+          out.push([anchorLeft, anchorRight]);
+          cursorLeft = anchorLeft + 1;
+          cursorRight = anchorRight + 1;
+        }
+        alignRegion(left, right, cursorLeft, hi, cursorRight, rhi, matrixLimit, out);
+      }
+      // Without anchors the region shares no landmark; leave it unaligned so the
+      // rows show up as a straight replacement.
+    }
+  }
+
+  for (const pair of tail) out.push(pair);
+}
+
 function pushPlainUnits(units: TokenUnit[], text: string, mode: "word" | "character") {
   if (!text) return;
   if (mode === "character") {
@@ -225,7 +351,17 @@ export function diffRows(
 ): DiffRow[] {
   const leftIdentity = leftLines.map(alignmentIdentity);
   const rightIdentity = rightLines.map(alignmentIdentity);
-  const pairs = lcsPairs(leftIdentity, rightIdentity, matrixLimit) || [];
+  const pairs: Array<[number, number]> = [];
+  alignRegion(
+    leftIdentity,
+    rightIdentity,
+    0,
+    leftIdentity.length,
+    0,
+    rightIdentity.length,
+    matrixLimit,
+    pairs,
+  );
   const rows: DiffRow[] = [];
   let leftIndex = 0;
   let rightIndex = 0;

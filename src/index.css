@@ -231,6 +231,24 @@ body,
   height: 100%;
 }
 
+/* On a phone the keyboard covers the page instead of resizing it, so the shell
+   would keep laying out behind the keys. `--keyboard-inset` is the covered
+   strip, measured from the visual viewport (see use-keyboard-inset). */
+html.keyboard-open #root {
+  height: calc(100% - var(--keyboard-inset, 0px));
+}
+/* Every row counts once the keyboard has taken half the screen, and the
+   footnote is status text nobody reads while typing. */
+html.keyboard-open .footnote {
+  display: none;
+}
+/* On a short phone even that is not enough for a whole card, so the header
+   stands down too — progress is not what you are looking at mid-word, and it
+   comes back the moment the keyboard does. */
+html.keyboard-cramped .app-header {
+  display: none;
+}
+
 body {
   margin: 0;
   background: var(--background);
@@ -531,9 +549,9 @@ html.compact-view .app-chrome {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--foreground);
-  width: 112px;
-  flex: 0 0 112px;
-  text-align: right;
+  width: auto;
+  flex: 0 0 auto;
+  text-align: end;
   white-space: nowrap;
 }
 .meter .pct b {
@@ -541,66 +559,60 @@ html.compact-view .app-chrome {
   font-weight: 600;
 }
 
-/* ---------- save-status pill ---------- */
-/* Fixed box: the label swaps between "saved 13:28", "saving…" and the error
-   text on every edit, and a content-sized pill would shove the toolbar around. */
-.savepill {
+/* ---------- save-status dot ----------
+   Sits with the progress it reports; the wording lives in its tooltip and in
+   the menu, so the header keeps a single row of controls. */
+.savedot {
+  width: 9px;
+  height: 9px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  cursor: pointer;
+  background: var(--success);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--success) 50%, transparent);
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
+}
+.savedot:hover {
+  outline: 2px solid color-mix(in srgb, var(--success) 45%, transparent);
+  outline-offset: 2px;
+}
+.savedot.saving {
+  background: var(--primary);
+  box-shadow: none;
+}
+.savedot.error {
+  background: var(--warn);
+  box-shadow: none;
+}
+
+.menu-status {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 6px 11px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  flex: 0 0 250px;
-  width: 250px;
-  overflow: hidden;
-  background: var(--secondary);
-  font-size: 12px;
-  cursor: pointer;
-  transition:
-    color 0.2s,
-    border-color 0.2s;
-  white-space: nowrap;
+  margin: 0 0 6px;
+  padding: 0 11px;
   font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--foreground);
 }
-.savepill:hover {
-  border-color: var(--success);
-  color: var(--foreground);
-}
-.savepill .sdot {
+.menu-status .sdot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--success);
   flex: 0 0 auto;
-  transition:
-    background-color 0.2s,
-    box-shadow 0.2s;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--success) 50%, transparent);
 }
-.savepill .stext {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-}
-.savepill.saving {
-  color: var(--primary);
-}
-.savepill.saving .sdot {
+.menu-status.saving .sdot {
   background: var(--primary);
-  box-shadow: none;
 }
-.savepill.error {
-  border-color: var(--warn);
-  color: var(--warn);
-}
-.savepill.error .sdot {
+.menu-status.error .sdot {
   background: var(--warn);
-  box-shadow: none;
 }
+
 /* ---------- restore banner ---------- */
 .restore {
   display: flex;
@@ -706,6 +718,13 @@ html.compact-view .app-chrome {
 .side.collapsed .filt {
   justify-content: center;
   padding: 9px 0;
+}
+.filters-trigger,
+.bar-more {
+  display: none;
+}
+.side-backdrop {
+  display: none;
 }
 .side-toggle {
   display: flex;
@@ -917,6 +936,31 @@ html.compact-view .app-chrome {
 }
 
 /* ---------- toolbar ---------- */
+/* Controls in a bar share one height; they are a single row of peers. */
+.toolbar > .btn,
+.toolbar > .qbtn,
+.toolbar > .termpill,
+.toolbar > .search,
+.reviewbar > .btn,
+.reviewbar > .qbtn,
+.reviewbar > .search,
+.reviewbar > .rchips > .rchip,
+.diffbar > .btn,
+.diffbar > .qbtn,
+.diffbar > .toggle,
+.diffbar > .diff-mode,
+.diffbar > .diff-mode > .diff-mode-btn {
+  height: 34px;
+  min-height: 34px;
+  padding-block: 0;
+  display: inline-flex;
+  align-items: center;
+}
+.toolbar > .search,
+.reviewbar > .search {
+  padding-block: 0;
+}
+
 .toolbar,
 .reviewbar,
 .diffbar {
@@ -1626,6 +1670,42 @@ html.compact-view .app-chrome {
 }
 
 /* ---------- diff view ---------- */
+/* On phones the diff summary is a strip under the bar: it is worth reading
+   while scrolling, so it should not sit behind the options button. */
+.diffstat-row {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.diffstat-row::-webkit-scrollbar {
+  display: none;
+}
+.diffstat-row .diff-detail {
+  display: inline;
+}
+
+/* On phones the diff summary is a strip under the bar: it is worth reading
+   while scrolling, so it should not sit behind the options button. */
+.diffstat-row {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+.diffstat-row::-webkit-scrollbar {
+  display: none;
+}
+.diffstat-row .diff-detail {
+  display: inline;
+}
+
 .diffname {
   font-family: var(--font-mono);
   font-size: 12.5px;
@@ -1875,16 +1955,320 @@ html.compact-view .app-chrome {
   background: var(--scrollbar-thumb-hover);
 }
 
-/* ---------- responsive header ---------- */
+/* ---------- workspace menu (one button holds everything else) ---------- */
+.menu-sheet {
+  gap: 0;
+}
+.menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 0 18px 22px;
+  overflow-y: auto;
+}
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.menu-label {
+  margin: 0 0 4px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--foreground-faint);
+  font-weight: 600;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--foreground);
+  font: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  transition: 0.12s;
+}
+.menu-item svg {
+  flex: 0 0 auto;
+  color: var(--muted-foreground);
+}
+.menu-item:hover:not(:disabled) {
+  background: var(--secondary);
+  border-color: var(--border);
+}
+.menu-item:hover:not(:disabled) svg {
+  color: var(--primary);
+}
+.menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.menu-item.warn svg {
+  color: var(--warn);
+}
+.menu-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 11px 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.menu-field > span {
+  flex: 0 0 auto;
+}
+.menu-field input,
+.menu-field select {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 7px 9px;
+  outline: none;
+}
+.menu-field input:focus,
+.menu-field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+/* ---------- per-view options panel (phones) ----------
+   Hangs under its bar with no overlay, so search and the list behind it stay
+   readable and clickable. */
+.bar-options-panel {
+  position: fixed;
+  z-index: 55;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 14px 28px var(--shadow-strong);
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+}
+.options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+.options-body .rchips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.options-body .rchip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.options-body .qbtn,
+.options-body .btn,
+.options-body .toggle,
+.options-body .termpill,
+.options-body .diff-mode {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: start;
+  padding: 11px 12px;
+  font-size: 13px;
+}
+.options-body .diff-mode {
+  padding: 0;
+}
+.options-body .diff-mode-btn {
+  flex: 1 1 0;
+  padding: 11px 12px;
+  text-align: center;
+}
+.options-body .hint,
+.options-body .diffstat,
+.options-body .diffname {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.options-body .diffstat .diff-detail {
+  display: block;
+  white-space: normal;
+  margin-top: 4px;
+}
+
+.menu-note {
+  margin: 2px 11px 0;
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+/* Reuse the prototype's toggle knob inside menu rows. */
+.menu-item .tk {
+  width: 30px;
+  height: 17px;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--muted-foreground) 25%, var(--secondary));
+  border: 1px solid var(--border);
+  position: relative;
+  transition: 0.15s;
+  flex: 0 0 auto;
+}
+.menu-item .tk::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  transition: 0.15s;
+}
+.menu-item .tk.on {
+  background: var(--accent);
+  border-color: var(--primary);
+}
+.menu-item .tk.on::after {
+  inset-inline-start: 15px;
+  background: var(--primary);
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
+/* ---------- responsive ---------- */
 @media (max-width: 900px) {
   .app-header {
     padding: 9px 12px;
   }
-  .app-header > .meter {
-    order: 5;
-    flex: 1 1 100%;
-    max-width: none;
-    margin-inline-start: 0;
+}
+
+/* Below this the filter rail becomes a drawer; it would otherwise eat most of
+   a phone screen and squeeze the toolbar into a column of stacked controls. */
+@media (max-width: 860px) {
+  .side {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 60;
+    flex-basis: auto;
+    width: min(280px, 84vw);
+    transform: translateX(-102%);
+    transition: transform 0.18s ease;
+    box-shadow: 0 0 40px var(--shadow-strong);
+  }
+  html[dir="rtl"] .side {
+    transform: translateX(102%);
+  }
+  .side.mobile-open,
+  html[dir="rtl"] .side.mobile-open {
+    transform: none;
+  }
+  .side.collapsed {
+    width: min(280px, 84vw);
+  }
+  .side.collapsed .filt .l span,
+  .side.collapsed .filt .cnt,
+  .side.collapsed .block,
+  .side.collapsed .sections {
+    display: revert;
+  }
+  .side.collapsed .filt {
+    justify-content: space-between;
+    padding: 8px 10px;
+  }
+  .side-toggle {
+    display: none;
+  }
+  .side-backdrop.on {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 59;
+    background: var(--shadow-strong);
+  }
+  .filters-trigger,
+  .bar-more {
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+  /* Always the trailing control of its bar, whatever precedes it. */
+  .bar-more {
+    margin-inline-start: auto;
+  }
+
+  /* One scrollable row each, instead of towers of wrapped controls. */
+  .tabs,
+  .toolbar,
+  .mtbar,
+  .reviewbar,
+  .diffbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar,
+  .toolbar::-webkit-scrollbar,
+  .mtbar::-webkit-scrollbar,
+  .reviewbar::-webkit-scrollbar,
+  .diffbar::-webkit-scrollbar {
+    display: none;
+  }
+  .toolbar > *,
+  .mtbar > *,
+  .reviewbar > *,
+  .diffbar > * {
+    flex: 0 0 auto;
+  }
+  .search {
+    flex: 1 0 190px;
+  }
+  /* Which file you are comparing against belongs in the bar, not behind a
+     button; the line count is in the summary strip right below. */
+  /* The compare tab's primary action keeps its place but yields width. */
+  .diffbar > .btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+    line-height: 34px;
+  }
+  .toolbar .hint,
+  .mtbar .mthint,
+  .reviewbar .hint {
+    display: none;
+  }
+  .list,
+  .reviewlist {
+    padding: 10px 10px 100px;
+  }
+  .card {
+    padding: 10px 11px;
+  }
+  .footnote {
+    font-size: 11px;
+    padding: 7px 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 @media (max-width: 760px) {
@@ -1899,6 +2283,20 @@ html.compact-view .app-chrome {
     display: none;
   }
 }
+/* Give the meter its own row rather than a sliver: brand + export + menu
+   already fill a phone's width, and a 40px progress bar tells you nothing. */
+@media (max-width: 720px) {
+  .app-header > .meter {
+    order: 5;
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+    margin-inline-start: 0;
+  }
+  .header-actions {
+    order: 3;
+  }
+}
 @media (max-width: 560px) {
   .app-header {
     gap: 7px 8px;
@@ -1907,24 +2305,8 @@ html.compact-view .app-chrome {
   .brand .sub {
     display: none;
   }
-  .uilang {
-    min-width: 104px;
-    max-width: 46vw;
-  }
   .app-header > .btn {
     padding: 6px 9px;
-  }
-  .app-header > .meter {
-    min-width: 0;
-  }
-  .filebar .savepill {
-    flex-basis: 190px;
-    width: 190px;
-  }
-  .filebar .fname {
-    flex-basis: 190px;
-    min-width: 170px;
-    margin-inline-start: 0;
   }
 }
 @media (max-width: 480px) {

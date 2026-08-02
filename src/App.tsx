@@ -11,6 +11,7 @@ import { EditorSidebar, EditorView } from "@/features/editor/EditorView";
 import { I18nProvider, useI18n } from "@/features/i18n/I18nProvider";
 import { ReviewView } from "@/features/review/ReviewView";
 import { Dropzone } from "@/features/workspace/Dropzone";
+import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { WorkspaceProvider, useWorkspace } from "@/state/workspace-store";
 import { statusOf, type TranslationEntry } from "@/core/lang/status";
 import { scanWhitespace } from "@/core/tokens/whitespace";
@@ -50,6 +51,8 @@ function WorkspaceShell({
   const { t } = useI18n();
   const workspace = useWorkspace();
 
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   const reviewCount = workspace.items.filter(
     (item) => item.type === "entry" && item.touched,
   ).length;
@@ -79,7 +82,9 @@ function WorkspaceShell({
           asChild
         >
           <main>
-            {workspace.view === "editor" && <EditorSidebar />}
+            {workspace.view === "editor" && (
+              <EditorSidebar mobileOpen={filtersOpen} onMobileOpenChange={setFiltersOpen} />
+            )}
             <section className="work">
               <TabsPrimitive.List className="tabs">
                 <TabsPrimitive.Trigger className="tab" value="editor">
@@ -95,7 +100,7 @@ function WorkspaceShell({
               </TabsPrimitive.List>
 
               <TabsPrimitive.Content value="editor" className="work" tabIndex={-1}>
-                <EditorView />
+                <EditorView onOpenFilters={() => setFiltersOpen(true)} />
               </TabsPrimitive.Content>
               <TabsPrimitive.Content value="review" className="work" tabIndex={-1}>
                 <ReviewView />
@@ -118,6 +123,8 @@ function WorkspaceShell({
 export default function App() {
   const [theme, setTheme] = useState("dungeon");
   const [mode, setMode] = useState<ThemeMode>("dark");
+
+  useKeyboardInset();
 
   useEffect(() => {
     const storedTheme = loadStoredTheme();

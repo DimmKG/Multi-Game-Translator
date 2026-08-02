@@ -264,6 +264,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     terminologyFilterActive: false,
   }));
 
+  // Read-only mirror for handlers that have to look at the current state to
+  // decide something *and* report it — a state updater is not allowed to do the
+  // reporting, because React may run it more than once.
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   useEffect(() => {
     applyFontCss(state.fonts);
   }, [state.fonts]);
@@ -394,16 +400,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     async (file: File) => {
       const text = await readFileAsText(file);
       const map = parseReferenceLang(text);
-      setState((current) => {
-        const items = current.items.map((item) => ({ ...item }));
-        const matched = applyReferenceMap(items, map);
-        toast.success(t("btn.enRefLoaded", { file: file.name, n: matched }));
-        return {
-          ...current,
-          items,
-          referenceFilename: file.name,
-        };
-      });
+      // Applied outside the updater: how many entries matched is worth telling
+      // the user, and a toast fired from inside would be repeated every time
+      // React re-ran the updater — three times, in practice.
+      const items = stateRef.current.items.map((item) => ({ ...item }));
+      const matched = applyReferenceMap(items, map);
+      setState((current) => ({ ...current, items, referenceFilename: file.name }));
+      toast.success(t("btn.enRefLoaded", { file: file.name, n: matched }));
       scheduleSave();
     },
     [scheduleSave, t],
