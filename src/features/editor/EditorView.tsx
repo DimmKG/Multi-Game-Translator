@@ -528,10 +528,7 @@ export function EditorView() {
   // height is derived from it — so the virtual list knows the full scroll
   // extent up front instead of discovering it mid-fling.
   const [metrics, setMetrics] = useState<CardMetrics | null>(null);
-  const heights = useMemo(
-    () => (metrics ? new CardHeightCache(metrics, t) : null),
-    [metrics, t],
-  );
+  const heights = useMemo(() => (metrics ? new CardHeightCache(metrics, t) : null), [metrics, t]);
 
   useEffect(() => {
     const list = listApi.current?.getScrollElement();

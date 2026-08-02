@@ -135,7 +135,13 @@ export function calibrateCardMetrics(listElement: HTMLElement): CardMetrics | nu
     const guideFont = `${guideStyle.fontStyle} ${guideStyle.fontWeight} ${guideStyle.fontSize} / ${guideStyle.lineHeight} ${guideStyle.fontFamily}`;
     const guideWidth = (guideBlock1 as HTMLElement).clientWidth;
 
-    if (!(origLine > 0) || !(guideLine > 0) || !(chrome > 0) || !(textWidth > 0) || !(guideWidth > 0))
+    if (
+      !(origLine > 0) ||
+      !(guideLine > 0) ||
+      !(chrome > 0) ||
+      !(textWidth > 0) ||
+      !(guideWidth > 0)
+    )
       return null;
 
     return {

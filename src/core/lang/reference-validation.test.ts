@@ -23,10 +23,7 @@ describe("English reference validation", () => {
   });
 
   it("validateEnglishReferenceFile combines both checks", () => {
-    const good = validateEnglishReferenceFile(
-      "en.lang",
-      "[lang]\nengname=English\nhello=Hello\n",
-    );
+    const good = validateEnglishReferenceFile("en.lang", "[lang]\nengname=English\nhello=Hello\n");
     expect(good).toEqual({ ok: true, filename: "en.lang" });
 
     expect(validateEnglishReferenceFile("ru.lang", "engname=English\n").ok).toBe(false);
