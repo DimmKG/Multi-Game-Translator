@@ -15,7 +15,7 @@ test("Compact view exposes an explicit layout toggle and essential workspace bar
   assert.ok(html.includes('id="compactFilename"'));
   assert.ok(html.includes('id="compactProgress"'));
   assert.ok(html.includes('id="compactSaveStatus"'));
-  assert.ok(html.includes('id="compactExit"'));
+  assert.ok(html.includes('id="compactRailExit"'));
 });
 
 test("Compact view is a non-destructive layout state", () => {

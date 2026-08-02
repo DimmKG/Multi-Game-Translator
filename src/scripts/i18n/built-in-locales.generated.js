@@ -255,7 +255,20 @@ globalThis.NecesseLocales.register({
     "compact.exit": "Normal view",
     "compact.exitTitle": "Restore the full workspace controls.",
     "compact.unnamed": "Unnamed translation",
-    "compact.progress": "{done} / {total} translated"
+    "compact.progress": "{done} / {total} translated",
+    "compact.nav": "Compact navigation",
+    "compact.editor": "Editor",
+    "compact.review": "Review",
+    "compact.compare": "Compare",
+    "compact.search": "Search",
+    "compact.filters": "Filters",
+    "compact.sections": "Sections",
+    "compact.settings": "Settings",
+    "compact.more": "More actions",
+    "compact.drawerTitle": "Navigation",
+    "compact.closeDrawer": "Close",
+    "compact.noSections": "No sections available.",
+    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage."
   }
 });
 
@@ -636,7 +649,20 @@ globalThis.NecesseLocales.register({
     "compact.exit": "Нормален изглед",
     "compact.exitTitle": "Връща всички контроли на работното пространство.",
     "compact.unnamed": "Превод без име",
-    "compact.progress": "{done} / {total} преведени"
+    "compact.progress": "{done} / {total} преведени",
+    "compact.nav": "Компактна навигация",
+    "compact.editor": "Редактор",
+    "compact.review": "Преглед",
+    "compact.compare": "Сравнение",
+    "compact.search": "Търсене",
+    "compact.filters": "Филтри",
+    "compact.sections": "Раздели",
+    "compact.settings": "Настройки",
+    "compact.more": "Още действия",
+    "compact.drawerTitle": "Навигация",
+    "compact.closeDrawer": "Затвори",
+    "compact.noSections": "Няма налични раздели.",
+    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед."
   }
 });
 
@@ -3193,7 +3219,20 @@ globalThis.NecesseLocales.register({
     "compact.exit": "Обычный вид",
     "compact.exitTitle": "Возвращает все элементы управления рабочей области.",
     "compact.unnamed": "Перевод без имени",
-    "compact.progress": "{done} / {total} переведено"
+    "compact.progress": "{done} / {total} переведено",
+    "compact.nav": "Компактная навигация",
+    "compact.editor": "Редактор",
+    "compact.review": "Проверка",
+    "compact.compare": "Сравнение",
+    "compact.search": "Поиск",
+    "compact.filters": "Фильтры",
+    "compact.sections": "Разделы",
+    "compact.settings": "Настройки",
+    "compact.more": "Другие действия",
+    "compact.drawerTitle": "Навигация",
+    "compact.closeDrawer": "Закрыть",
+    "compact.noSections": "Нет доступных разделов.",
+    "compact.moreComing": "Действия с файлами и машинным переводом будут перенесены сюда на следующем этапе компактного режима."
   }
 });
 

@@ -247,6 +247,19 @@
     "compact.exit": "Normal view",
     "compact.exitTitle": "Restore the full workspace controls.",
     "compact.unnamed": "Unnamed translation",
-    "compact.progress": "{done} / {total} translated"
+    "compact.progress": "{done} / {total} translated",
+    "compact.nav": "Compact navigation",
+    "compact.editor": "Editor",
+    "compact.review": "Review",
+    "compact.compare": "Compare",
+    "compact.search": "Search",
+    "compact.filters": "Filters",
+    "compact.sections": "Sections",
+    "compact.settings": "Settings",
+    "compact.more": "More actions",
+    "compact.drawerTitle": "Navigation",
+    "compact.closeDrawer": "Close",
+    "compact.noSections": "No sections available.",
+    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage."
   }
 }

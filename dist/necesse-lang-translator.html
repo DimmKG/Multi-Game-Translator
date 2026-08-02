@@ -508,6 +508,49 @@ html[dir="rtl"] .compact-save{direction:ltr;unicode-bidi:isolate;text-align:left
   .compact-progress{display:none}
   .compact-file{max-width:58vw}
 }
+
+
+/* Compact icon rail and temporary navigation drawer */
+.compact-rail{
+  position:fixed; inset-block:0; inset-inline-start:0; z-index:90;
+  width:52px; padding:8px 6px; box-sizing:border-box;
+  flex-direction:column; align-items:center; gap:6px;
+  background:var(--bg2); border-inline-end:1px solid var(--border);
+}
+.compact-rail-btn{
+  width:40px; min-height:40px; border:1px solid transparent; border-radius:10px;
+  background:transparent; color:var(--muted); font:inherit; font-size:18px; cursor:pointer;
+}
+.compact-rail-btn:hover,.compact-rail-btn:focus-visible{background:var(--bg3);color:var(--text);outline:2px solid var(--accent);outline-offset:1px}
+.compact-rail-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+.compact-rail-spacer{flex:1}
+.compact-rail-exit{margin-block-start:auto;color:var(--text)}
+html.compact-view main,html.compact-view #compactBar{margin-inline-start:52px}
+html.compact-view #compactBar{padding-inline:14px;gap:14px;min-height:42px}
+html.compact-view #compactToggle{display:none!important}
+.compact-drawer-backdrop{position:fixed;inset:0;z-index:94;background:rgba(0,0,0,.42)}
+.compact-drawer{
+  position:fixed;z-index:95;inset-block:0;inset-inline-start:52px;width:min(320px,calc(100vw - 52px));
+  display:flex;flex-direction:column;background:var(--bg2);border-inline-end:1px solid var(--border);box-shadow:0 18px 50px rgba(0,0,0,.45)
+}
+.compact-drawer[hidden],.compact-drawer-backdrop[hidden]{display:none!important}
+.compact-drawer-head{display:flex;align-items:center;gap:12px;padding:14px;border-block-end:1px solid var(--border)}
+.compact-drawer-head h2{font-size:16px;margin:0;flex:1}
+.compact-drawer-close{border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);padding:7px 10px;cursor:pointer}
+.compact-drawer-body{padding:10px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.compact-drawer-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--text);font:inherit;text-align:start;cursor:pointer}
+.compact-drawer-item:hover,.compact-drawer-item:focus-visible{background:var(--bg3);outline:2px solid var(--accent);outline-offset:1px}
+.compact-drawer-item.active{background:var(--accent-dim);border-color:var(--accent)}
+.compact-drawer-count{margin-inline-start:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.compact-drawer-empty{color:var(--muted);line-height:1.45;padding:6px 10px}
+html[dir="rtl"] .compact-rail{border-inline-start:0;border-inline-end:1px solid var(--border)}
+@media (max-width:640px){
+  .compact-rail{width:46px;padding-inline:3px}.compact-rail-btn{width:38px}.compact-drawer{inset-inline-start:46px;width:calc(100vw - 46px)}
+  html.compact-view main,html.compact-view #compactBar{margin-inline-start:46px}
+  #compactBar .compact-save{max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+
+#compactRail,#compactDrawer{isolation:isolate}
 </style>
 <style>
   /* Keep machine-readable values stable inside right-to-left interface text. */
@@ -588,9 +631,30 @@ html[dir="rtl"] .compact-save{direction:ltr;unicode-bidi:isolate;text-align:left
   <div class="compact-file" id="compactFilename"></div>
   <div class="compact-progress" id="compactProgress"></div>
   <div class="compact-save" id="compactSaveStatus"></div>
-  <div class="compact-spacer"></div>
-  <button type="button" class="btn ghost compact-exit" id="compactExit" data-i18n="compact.exit" data-i18n-title="compact.exitTitle"></button>
 </div>
+
+<nav class="compact-rail" id="compactRail" style="display:none" data-i18n-aria-label="compact.nav">
+  <button type="button" class="compact-rail-btn" id="compactRailNav" data-compact-drawer="navigation" data-i18n-title="compact.nav"><span aria-hidden="true">☰</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailEditor" data-i18n-title="compact.editor"><span aria-hidden="true">✎</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailReview" data-i18n-title="compact.review"><span aria-hidden="true">✓</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailCompare" data-i18n-title="compact.compare"><span aria-hidden="true">⇄</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSearch" data-i18n-title="compact.search"><span aria-hidden="true">⌕</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailFilters" data-compact-drawer="filters" data-i18n-title="compact.filters"><span aria-hidden="true">◉</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSections" data-compact-drawer="sections" data-i18n-title="compact.sections"><span aria-hidden="true">§</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSettings" data-i18n-title="compact.settings"><span aria-hidden="true">⚙</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailMore" data-compact-drawer="more" data-i18n-title="compact.more"><span aria-hidden="true">⋯</span></button>
+  <div class="compact-rail-spacer"></div>
+  <button type="button" class="compact-rail-btn compact-rail-exit" id="compactRailExit" data-i18n-title="compact.exitTitle"><span aria-hidden="true">↙</span></button>
+</nav>
+
+<div class="compact-drawer-backdrop" id="compactDrawerBackdrop" hidden></div>
+<aside class="compact-drawer" id="compactDrawer" role="dialog" aria-modal="true" aria-labelledby="compactDrawerTitle" hidden>
+  <div class="compact-drawer-head">
+    <h2 id="compactDrawerTitle" data-i18n="compact.drawerTitle"></h2>
+    <button type="button" class="compact-drawer-close" id="compactDrawerClose" data-i18n="compact.closeDrawer"></button>
+  </div>
+  <div class="compact-drawer-body" id="compactDrawerBody"></div>
+</aside>
 
 <main>
   <aside class="side" id="side" style="display:none">
@@ -1262,7 +1326,20 @@ globalThis.NecesseLocales.register({
     "compact.exit": "Normal view",
     "compact.exitTitle": "Restore the full workspace controls.",
     "compact.unnamed": "Unnamed translation",
-    "compact.progress": "{done} / {total} translated"
+    "compact.progress": "{done} / {total} translated",
+    "compact.nav": "Compact navigation",
+    "compact.editor": "Editor",
+    "compact.review": "Review",
+    "compact.compare": "Compare",
+    "compact.search": "Search",
+    "compact.filters": "Filters",
+    "compact.sections": "Sections",
+    "compact.settings": "Settings",
+    "compact.more": "More actions",
+    "compact.drawerTitle": "Navigation",
+    "compact.closeDrawer": "Close",
+    "compact.noSections": "No sections available.",
+    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage."
   }
 });
 
@@ -1643,7 +1720,20 @@ globalThis.NecesseLocales.register({
     "compact.exit": "Нормален изглед",
     "compact.exitTitle": "Връща всички контроли на работното пространство.",
     "compact.unnamed": "Превод без име",
-    "compact.progress": "{done} / {total} преведени"
+    "compact.progress": "{done} / {total} преведени",
+    "compact.nav": "Компактна навигация",
+    "compact.editor": "Редактор",
+    "compact.review": "Преглед",
+    "compact.compare": "Сравнение",
+    "compact.search": "Търсене",
+    "compact.filters": "Филтри",
+    "compact.sections": "Раздели",
+    "compact.settings": "Настройки",
+    "compact.more": "Още действия",
+    "compact.drawerTitle": "Навигация",
+    "compact.closeDrawer": "Затвори",
+    "compact.noSections": "Няма налични раздели.",
+    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед."
   }
 });
 
@@ -4200,7 +4290,20 @@ globalThis.NecesseLocales.register({
     "compact.exit": "Обычный вид",
     "compact.exitTitle": "Возвращает все элементы управления рабочей области.",
     "compact.unnamed": "Перевод без имени",
-    "compact.progress": "{done} / {total} переведено"
+    "compact.progress": "{done} / {total} переведено",
+    "compact.nav": "Компактная навигация",
+    "compact.editor": "Редактор",
+    "compact.review": "Проверка",
+    "compact.compare": "Сравнение",
+    "compact.search": "Поиск",
+    "compact.filters": "Фильтры",
+    "compact.sections": "Разделы",
+    "compact.settings": "Настройки",
+    "compact.more": "Другие действия",
+    "compact.drawerTitle": "Навигация",
+    "compact.closeDrawer": "Закрыть",
+    "compact.noSections": "Нет доступных разделов.",
+    "compact.moreComing": "Действия с файлами и машинным переводом будут перенесены сюда на следующем этапе компактного режима."
   }
 });
 
@@ -5674,6 +5777,7 @@ globalThis.NecesseLocales.register({
     diffOnly: true,    // collapse equal runs
     diffMode: "word",   // inline Compare granularity: word | character
     compactView: false,  // non-destructive layout-only workspace state
+    compactDrawerOpen: false,
   };
 
   // ---------- Compact workspace layout ----------
@@ -5707,7 +5811,115 @@ globalThis.NecesseLocales.register({
     if (toggle) toggle.setAttribute("aria-pressed", state.compactView ? "true" : "false");
     const bar = $("compactBar");
     if (bar) bar.style.display = state.compactView ? "flex" : "none";
+    const rail = $("compactRail");
+    if (rail) rail.style.display = state.compactView ? "flex" : "none";
+    if (!state.compactView) closeCompactDrawer({restoreFocus:false});
     syncCompactBar();
+    syncCompactRail();
+  }
+
+  let compactDrawerInvoker = null;
+
+  function syncCompactRail(){
+    const viewMap = {editor:"compactRailEditor", review:"compactRailReview", diff:"compactRailCompare"};
+    for (const [view, id] of Object.entries(viewMap)){
+      const button = $(id);
+      if (!button) continue;
+      const active = state.view === view;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-current", active ? "page" : "false");
+    }
+    const filterButton = $("compactRailFilters");
+    if (filterButton){
+      filterButton.dataset.activeFilter = state.filter || "all";
+      filterButton.classList.toggle("active", !["all", "missing"].includes(state.filter));
+    }
+  }
+
+  function compactDrawerButton(label, onClick, options = {}){
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "compact-drawer-item" + (options.active ? " active" : "");
+    button.textContent = label;
+    if (options.count != null){
+      const count = document.createElement("span");
+      count.className = "compact-drawer-count";
+      count.textContent = String(options.count);
+      button.append(count);
+    }
+    button.addEventListener("click", () => { onClick(); closeCompactDrawer(); });
+    return button;
+  }
+
+  function renderCompactDrawer(kind){
+    const body = $("compactDrawerBody");
+    const title = $("compactDrawerTitle");
+    if (!body || !title) return;
+    body.replaceChildren();
+    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : kind === "more" ? "compact.more" : "compact.drawerTitle");
+
+    if (kind === "filters"){
+      document.querySelectorAll("#filters .filt").forEach(original => {
+        if (original.hidden) return;
+        const label = original.querySelector(".l")?.textContent?.trim() || original.textContent.trim();
+        const count = original.querySelector(".cnt")?.textContent;
+        body.append(compactDrawerButton(label, () => original.click(), {active:original.classList.contains("on"), count}));
+      });
+      const terminology = document.querySelector('[data-terminology-filter], #terminologyFilter');
+      if (terminology) body.append(compactDrawerButton(terminology.textContent.trim(), () => terminology.click(), {active:terminology.classList.contains("on")}));
+      return;
+    }
+
+    if (kind === "sections"){
+      const sections = [...document.querySelectorAll("#sections button")];
+      if (!sections.length){
+        const empty = document.createElement("p");
+        empty.className = "compact-drawer-empty";
+        empty.textContent = t("compact.noSections");
+        body.append(empty);
+      } else sections.forEach(original => body.append(compactDrawerButton(original.textContent.trim(), () => original.click(), {active:original.classList.contains("on")})));
+      return;
+    }
+
+    if (kind === "more"){
+      body.append(compactDrawerButton(t("compact.settings"), () => document.querySelector('[data-i18n="settings.button"]')?.click()));
+      const note = document.createElement("p");
+      note.className = "compact-drawer-empty";
+      note.textContent = t("compact.moreComing");
+      body.append(note);
+      return;
+    }
+
+    body.append(compactDrawerButton(t("compact.editor"), () => setView("editor"), {active:state.view === "editor"}));
+    body.append(compactDrawerButton(t("compact.review"), () => setView("review"), {active:state.view === "review"}));
+    body.append(compactDrawerButton(t("compact.compare"), () => setView("diff"), {active:state.view === "diff"}));
+    body.append(compactDrawerButton(t("compact.filters"), () => openCompactDrawer("filters", compactDrawerInvoker)));
+    body.append(compactDrawerButton(t("compact.sections"), () => openCompactDrawer("sections", compactDrawerInvoker)));
+  }
+
+  function openCompactDrawer(kind = "navigation", invoker = document.activeElement){
+    if (!state.compactView) return;
+    compactDrawerInvoker = invoker instanceof HTMLElement ? invoker : null;
+    state.compactDrawerOpen = true;
+    renderCompactDrawer(kind);
+    const drawer = $("compactDrawer");
+    const backdrop = $("compactDrawerBackdrop");
+    if (drawer) drawer.hidden = false;
+    if (backdrop) backdrop.hidden = false;
+    document.documentElement.classList.add("compact-drawer-open");
+    requestAnimationFrame(() => $("compactDrawerClose")?.focus());
+  }
+
+  function closeCompactDrawer({restoreFocus = true} = {}){
+    if (!state.compactDrawerOpen && $("compactDrawer")?.hidden !== false) return;
+    state.compactDrawerOpen = false;
+    const drawer = $("compactDrawer");
+    const backdrop = $("compactDrawerBackdrop");
+    if (drawer) drawer.hidden = true;
+    if (backdrop) backdrop.hidden = true;
+    document.documentElement.classList.remove("compact-drawer-open");
+    if (restoreFocus) compactDrawerInvoker?.focus();
+    compactDrawerInvoker = null;
   }
 
   // ---------- parsing ----------
@@ -6390,6 +6602,7 @@ globalThis.NecesseLocales.register({
 
   function setView(v){
     state.view = v;
+    syncCompactRail();
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.v===v));
     const editor = v==="editor", review = v==="review", diff = v==="diff";
     $("side").style.display = editor ? "flex" : "none";
@@ -6858,6 +7071,7 @@ function targetFromName(name){
   globalThis.NecesseLangTranslator = Object.freeze({loadWorkspaceFromText});
   function setFilter(f, silent){
     state.filter = f;
+    syncCompactRail();
     document.querySelectorAll(".filt").forEach(b => b.classList.toggle("on", b.dataset.f===f));
     if (!silent) renderList();
   }
@@ -7072,15 +7286,29 @@ function targetFromName(name){
   });
 
   $("compactToggle")?.addEventListener("click", () => setCompactView(!state.compactView));
-  $("compactExit")?.addEventListener("click", () => setCompactView(false));
+  $("compactRailExit")?.addEventListener("click", () => { closeCompactDrawer({restoreFocus:false}); setCompactView(false); $("compactToggle")?.focus(); });
+  $("compactRailNav")?.addEventListener("click", event => openCompactDrawer("navigation", event.currentTarget));
+  $("compactRailFilters")?.addEventListener("click", event => openCompactDrawer("filters", event.currentTarget));
+  $("compactRailSections")?.addEventListener("click", event => openCompactDrawer("sections", event.currentTarget));
+  $("compactRailMore")?.addEventListener("click", event => openCompactDrawer("more", event.currentTarget));
+  $("compactRailEditor")?.addEventListener("click", () => setView("editor"));
+  $("compactRailReview")?.addEventListener("click", () => setView("review"));
+  $("compactRailCompare")?.addEventListener("click", () => setView("diff"));
+  $("compactRailSearch")?.addEventListener("click", () => {
+    const input = state.view === "review" ? $("reviewSearch") : $("search");
+    input?.focus(); input?.select();
+  });
+  $("compactRailSettings")?.addEventListener("click", () => document.querySelector('[data-i18n="settings.button"]')?.click());
+  $("compactDrawerClose")?.addEventListener("click", () => closeCompactDrawer());
+  $("compactDrawerBackdrop")?.addEventListener("click", () => closeCompactDrawer());
   $("outName")?.addEventListener("input", syncCompactBar);
   if ($("saveText")) new MutationObserver(syncCompactBar).observe($("saveText"), {childList:true, characterData:true, subtree:true});
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && state.compactView){
-      event.preventDefault();
-      setCompactView(false);
-      $("compactToggle")?.focus();
-    }
+    if (event.key !== "Escape" || !state.compactView) return;
+    event.preventDefault();
+    if (state.compactDrawerOpen){ closeCompactDrawer(); return; }
+    setCompactView(false);
+    $("compactToggle")?.focus();
   });
 
   // restore banner
