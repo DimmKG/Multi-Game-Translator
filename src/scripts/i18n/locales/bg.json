@@ -260,6 +260,14 @@
     "compact.drawerTitle": "Навигация",
     "compact.closeDrawer": "Затвори",
     "compact.noSections": "Няма налични раздели.",
-    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед."
+    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед.",
+    "compact.actions": "Действия",
+    "compact.fileActions": "Файлови действия",
+    "compact.translationTools": "Инструменти за превод",
+    "compact.referenceFile": "Зареждане на референтен файл",
+    "compact.saveProgress": "Запазване на напредъка",
+    "compact.loadProgress": "Зареждане на напредъка",
+    "compact.newFile": "Нов файл",
+    "compact.exportFile": "Експортиране на превода"
   }
 }

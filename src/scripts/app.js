@@ -168,7 +168,7 @@
     const title = $("compactDrawerTitle");
     if (!body || !title) return;
     body.replaceChildren();
-    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : "compact.drawerTitle");
+    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : kind === "actions" ? "compact.actions" : "compact.drawerTitle");
 
     if (kind === "filters"){
       document.querySelectorAll("#filters .filt").forEach(original => {
@@ -193,10 +193,129 @@
       return;
     }
 
+    if (kind === "actions"){
+      renderCompactActions(body);
+      return;
+    }
+
     body.append(compactDrawerButton(t("compact.editor"), () => setView("editor"), {active:state.view === "editor"}));
     body.append(compactDrawerButton(t("compact.review"), () => setView("review"), {active:state.view === "review"}));
     body.append(compactDrawerButton(t("compact.compare"), () => setView("diff"), {active:state.view === "diff"}));
     body.append(compactDrawerButton(t("compact.settings"), () => globalThis.NecesseSettings?.open?.()));
+  }
+
+  function compactActionHeading(key){
+    const heading = document.createElement("h3");
+    heading.className = "compact-actions-heading";
+    heading.textContent = t(key);
+    return heading;
+  }
+
+  function compactActionProxy(labelKey, controlId, options = {}){
+    const original = $(controlId);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "compact-drawer-item compact-action-button" + (options.primary ? " primary" : "");
+    button.textContent = t(labelKey);
+    button.disabled = !original || original.disabled;
+    button.addEventListener("click", () => {
+      closeCompactDrawer({restoreFocus:false});
+      original?.click();
+    });
+    return button;
+  }
+
+  function compactToggleProxy(labelKey, controlId){
+    const original = $(controlId);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "compact-drawer-item compact-action-toggle";
+    const sync = () => {
+      const on = original?.classList.contains("on") ?? false;
+      button.classList.toggle("active", on);
+      button.setAttribute("aria-pressed", String(on));
+      button.textContent = t(labelKey);
+    };
+    sync();
+    button.addEventListener("click", () => { original?.click(); sync(); });
+    return button;
+  }
+
+  function compactSelectProxy(labelKey, controlId){
+    const original = $(controlId);
+    const wrap = document.createElement("label");
+    wrap.className = "compact-actions-field";
+    const label = document.createElement("span");
+    label.textContent = t(labelKey);
+    const select = document.createElement("select");
+    select.className = "compact-actions-select";
+    if (original){
+      select.innerHTML = original.innerHTML;
+      select.value = original.value;
+      select.disabled = original.disabled;
+      select.addEventListener("change", () => {
+        original.value = select.value;
+        original.dispatchEvent(new Event("change", {bubbles:true}));
+        select.value = original.value;
+      });
+    } else select.disabled = true;
+    wrap.append(label, select);
+    return wrap;
+  }
+
+  function compactInputProxy(labelKey, controlId){
+    const original = $(controlId);
+    const wrap = document.createElement("label");
+    wrap.className = "compact-actions-field";
+    const label = document.createElement("span");
+    label.textContent = t(labelKey);
+    const input = document.createElement("input");
+    input.className = "compact-actions-input";
+    input.type = "text";
+    input.spellcheck = false;
+    input.value = original?.value || "";
+    input.disabled = !original || original.disabled;
+    const commit = () => {
+      if (!original) return;
+      original.value = input.value;
+      original.dispatchEvent(new Event("input", {bubbles:true}));
+      original.dispatchEvent(new Event("change", {bubbles:true}));
+      input.value = original.value;
+    };
+    input.addEventListener("change", commit);
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter"){ event.preventDefault(); commit(); input.blur(); }
+    });
+    wrap.append(label, input);
+    return wrap;
+  }
+
+  function renderCompactActions(body){
+    const fileGroup = document.createElement("section");
+    fileGroup.className = "compact-actions-group";
+    fileGroup.append(
+      compactActionHeading("compact.fileActions"),
+      compactActionProxy("compact.referenceFile", "btnEnRef"),
+      compactActionProxy("compact.saveProgress", "btnSaveJson"),
+      compactActionProxy("compact.loadProgress", "btnLoadJson"),
+      compactActionProxy("compact.newFile", "btnNew"),
+      compactActionProxy("compact.exportFile", "btnExport", {primary:true})
+    );
+    body.append(fileGroup);
+
+    if (state.view === "editor"){
+      const tools = document.createElement("section");
+      tools.className = "compact-actions-group compact-actions-translation";
+      tools.append(
+        compactActionHeading("compact.translationTools"),
+        compactSelectProxy("mt.label", "mtProvider"),
+        compactInputProxy("mt.langLabel", "mtTarget"),
+        compactToggleProxy("toggle.spell", "spellToggle"),
+        compactToggleProxy("toggle.ac", "acToggle")
+      );
+      body.append(tools);
+    }
   }
 
   function openCompactDrawer(kind = "navigation", invoker = document.activeElement){
@@ -1592,6 +1711,7 @@ function targetFromName(name){
   $("compactRailNav")?.addEventListener("click", event => openCompactDrawer("navigation", event.currentTarget));
   $("compactRailFilters")?.addEventListener("click", event => openCompactDrawer("filters", event.currentTarget));
   $("compactRailSections")?.addEventListener("click", event => openCompactDrawer("sections", event.currentTarget));
+  $("compactRailActions")?.addEventListener("click", event => openCompactDrawer("actions", event.currentTarget));
   $("compactRailEditor")?.addEventListener("click", () => setView("editor"));
   $("compactRailReview")?.addEventListener("click", () => setView("review"));
   $("compactRailCompare")?.addEventListener("click", () => setView("diff"));

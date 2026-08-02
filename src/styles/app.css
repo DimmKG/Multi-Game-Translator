@@ -547,3 +547,16 @@ html[dir="rtl"] .compact-rail{border-inline-start:0;border-inline-end:1px solid 
 #compactRail,#compactDrawer{isolation:isolate}
 
 .compact-rail-btn[hidden]{display:none!important}
+
+
+/* Compact workspace actions */
+.compact-actions-group{display:grid;gap:8px;padding-block:4px 14px}
+.compact-actions-group + .compact-actions-group{border-block-start:1px solid var(--border);padding-block-start:14px}
+.compact-actions-heading{margin:0 4px 2px;font-size:12px;line-height:1.3;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.compact-action-button.primary{border-color:var(--accent);color:var(--accent)}
+.compact-action-toggle{justify-content:flex-start}
+.compact-actions-field{display:grid;gap:6px;padding:7px 4px;color:var(--muted);font-size:12px}
+.compact-actions-select,.compact-actions-input{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);padding:9px 10px;font:inherit}
+.compact-actions-select:focus-visible,.compact-actions-input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+html[dir="rtl"] .compact-actions-heading,html[dir="rtl"] .compact-actions-field{text-align:start}
+@media (max-width:560px){.compact-actions-group{padding-inline:2px}.compact-actions-select,.compact-actions-input{font-size:16px}}

@@ -268,7 +268,15 @@ globalThis.NecesseLocales.register({
     "compact.drawerTitle": "Navigation",
     "compact.closeDrawer": "Close",
     "compact.noSections": "No sections available.",
-    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage."
+    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage.",
+    "compact.actions": "Actions",
+    "compact.fileActions": "File actions",
+    "compact.translationTools": "Translation tools",
+    "compact.referenceFile": "Load reference file",
+    "compact.saveProgress": "Save progress",
+    "compact.loadProgress": "Load progress",
+    "compact.newFile": "New file",
+    "compact.exportFile": "Export translation"
   }
 });
 
@@ -662,7 +670,15 @@ globalThis.NecesseLocales.register({
     "compact.drawerTitle": "Навигация",
     "compact.closeDrawer": "Затвори",
     "compact.noSections": "Няма налични раздели.",
-    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед."
+    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед.",
+    "compact.actions": "Действия",
+    "compact.fileActions": "Файлови действия",
+    "compact.translationTools": "Инструменти за превод",
+    "compact.referenceFile": "Зареждане на референтен файл",
+    "compact.saveProgress": "Запазване на напредъка",
+    "compact.loadProgress": "Зареждане на напредъка",
+    "compact.newFile": "Нов файл",
+    "compact.exportFile": "Експортиране на превода"
   }
 });
 
@@ -3232,7 +3248,15 @@ globalThis.NecesseLocales.register({
     "compact.drawerTitle": "Навигация",
     "compact.closeDrawer": "Закрыть",
     "compact.noSections": "Нет доступных разделов.",
-    "compact.moreComing": "Действия с файлами и машинным переводом будут перенесены сюда на следующем этапе компактного режима."
+    "compact.moreComing": "Действия с файлами и машинным переводом будут перенесены сюда на следующем этапе компактного режима.",
+    "compact.actions": "Действия",
+    "compact.fileActions": "Действия с файлами",
+    "compact.translationTools": "Инструменты перевода",
+    "compact.referenceFile": "Загрузить файл-образец",
+    "compact.saveProgress": "Сохранить прогресс",
+    "compact.loadProgress": "Загрузить прогресс",
+    "compact.newFile": "Новый файл",
+    "compact.exportFile": "Экспортировать перевод"
   }
 });
 
