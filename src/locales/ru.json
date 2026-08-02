@@ -266,6 +266,27 @@
     "compact.exit": "Обычный вид",
     "compact.exitTitle": "Возвращает все элементы управления рабочей области.",
     "compact.unnamed": "Перевод без имени",
-    "compact.progress": "{done} / {total} переведено"
+    "compact.progress": "{done} / {total} переведено",
+    "compact.nav": "Компактная навигация",
+    "compact.editor": "Редактор",
+    "compact.review": "Проверка",
+    "compact.compare": "Сравнение",
+    "compact.search": "Поиск",
+    "compact.filters": "Фильтры",
+    "compact.sections": "Разделы",
+    "compact.settings": "Настройки",
+    "compact.more": "Другие действия",
+    "compact.drawerTitle": "Навигация",
+    "compact.closeDrawer": "Закрыть",
+    "compact.noSections": "Нет доступных разделов.",
+    "compact.moreComing": "Действия с файлами и машинным переводом будут перенесены сюда на следующем этапе компактного режима.",
+    "compact.actions": "Действия",
+    "compact.fileActions": "Действия с файлами",
+    "compact.translationTools": "Инструменты перевода",
+    "compact.referenceFile": "Загрузить файл-образец",
+    "compact.saveProgress": "Сохранить прогресс",
+    "compact.loadProgress": "Загрузить прогресс",
+    "compact.newFile": "Новый файл",
+    "compact.exportFile": "Экспортировать перевод"
   }
 }

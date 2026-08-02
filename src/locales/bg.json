@@ -266,6 +266,27 @@
     "compact.exit": "Нормален изглед",
     "compact.exitTitle": "Връща всички контроли на работното пространство.",
     "compact.unnamed": "Превод без име",
-    "compact.progress": "{done} / {total} преведени"
+    "compact.progress": "{done} / {total} преведени",
+    "compact.nav": "Компактна навигация",
+    "compact.editor": "Редактор",
+    "compact.review": "Преглед",
+    "compact.compare": "Сравнение",
+    "compact.search": "Търсене",
+    "compact.filters": "Филтри",
+    "compact.sections": "Раздели",
+    "compact.settings": "Настройки",
+    "compact.more": "Още действия",
+    "compact.drawerTitle": "Навигация",
+    "compact.closeDrawer": "Затвори",
+    "compact.noSections": "Няма налични раздели.",
+    "compact.moreComing": "Действията за файлове и машинен превод ще бъдат преместени тук в следващия етап на компактния изглед.",
+    "compact.actions": "Действия",
+    "compact.fileActions": "Файлови действия",
+    "compact.translationTools": "Инструменти за превод",
+    "compact.referenceFile": "Зареждане на референтен файл",
+    "compact.saveProgress": "Запазване на напредъка",
+    "compact.loadProgress": "Зареждане на напредъка",
+    "compact.newFile": "Нов файл",
+    "compact.exportFile": "Експортиране на превода"
   }
 }
