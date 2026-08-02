@@ -163,6 +163,10 @@
       <label class="toggle on" id="diffOnlyToggle" data-i18n-title="diff.onlyDiffTitle">
         <span class="tk"></span><span data-i18n="diff.onlyDiff"></span>
       </label>
+      <div class="diff-mode" id="diffInlineMode" role="group" data-i18n-aria-label="diff.inlineMode">
+        <button type="button" class="diff-mode-btn on" data-diff-mode="word" data-i18n="diff.modeWords" aria-pressed="true"></button>
+        <button type="button" class="diff-mode-btn" data-diff-mode="character" data-i18n="diff.modeCharacters" aria-pressed="false"></button>
+      </div>
       <div class="sp"></div>
       <span class="diffstat" id="diffStat"></span>
     </div>
@@ -180,6 +184,7 @@
 <script src="./scripts/mt/provider-settings.js"></script>
 <script src="./scripts/mt/secret-vault.js"></script>
 <script src="./scripts/mt/providers.js"></script>
+<script src="./scripts/compare/token-aware-diff.js"></script>
 <script src="./scripts/app.js"></script>
 <script type="module" src="./scripts/metadata-guidance.js"></script>
 <script type="module" src="./scripts/new-translation.js"></script>
