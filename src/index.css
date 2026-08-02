@@ -1770,6 +1770,27 @@ html.compact-view .app-chrome {
 .menu-item.warn svg {
   color: var(--warn);
 }
+.attention-pulse,
+.menu-item.settings-reference-needed {
+  animation: attention-pulse 1.8s ease-in-out infinite;
+  border-color: color-mix(in srgb, var(--warn) 72%, var(--border));
+}
+@keyframes attention-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--warn) 24%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attention-pulse,
+  .menu-item.settings-reference-needed {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn) 22%, transparent);
+  }
+}
 .menu-field {
   display: flex;
   align-items: center;

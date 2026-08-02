@@ -1,5 +1,5 @@
 import { Download, Menu } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { WorkspaceMenu } from "@/components/layout/WorkspaceMenu";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,12 @@ export function AppHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
+
+  // New translations start without a target filename — open the menu so the
+  // pulsing field is visible instead of waiting for the user to find it.
+  useEffect(() => {
+    if (workspace.isOpen && !workspace.filename.trim()) setMenuOpen(true);
+  }, [workspace.isOpen, workspace.filename]);
 
   const percent =
     workspace.progress.total === 0

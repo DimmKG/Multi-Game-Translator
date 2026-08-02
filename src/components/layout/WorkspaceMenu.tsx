@@ -138,9 +138,13 @@ export function WorkspaceMenu({
                 <Input
                   id="menu-filename"
                   type="text"
-                  className="ltr-isolate font-mono"
+                  className={cn(
+                    "ltr-isolate font-mono",
+                    !filenameDraft.trim() && "attention-pulse",
+                  )}
                   spellCheck={false}
                   placeholder="*.lang"
+                  title={t("fname.title")}
                   value={filenameDraft}
                   onChange={(event) => {
                     const next = event.target.value;
@@ -174,7 +178,12 @@ export function WorkspaceMenu({
               </p>
               <button
                 type="button"
-                className={cn("menu-item", !workspace.referenceAvailable && "warn")}
+                className={cn(
+                  "menu-item",
+                  workspace.settings.referenceReminder &&
+                    !workspace.referenceAvailable &&
+                    "warn settings-reference-needed",
+                )}
                 onClick={run(onPickReference)}
               >
                 <BookMarked size={15} />
