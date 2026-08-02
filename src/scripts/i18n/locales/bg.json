@@ -241,6 +241,12 @@
     "diff.modeCharacters": "Знаци",
     "diff.changedKeys": "Ключове: {n}",
     "diff.changedValues": "Стойности: {n}",
-    "diff.prefixOnly": "Само статус: {n}"
+    "diff.prefixOnly": "Само статус: {n}",
+    "compact.enter": "Компактен изглед",
+    "compact.enterTitle": "Скрива второстепенните панели и освобождава повече място за превода.",
+    "compact.exit": "Нормален изглед",
+    "compact.exitTitle": "Връща всички контроли на работното пространство.",
+    "compact.unnamed": "Превод без име",
+    "compact.progress": "{done} / {total} преведени"
   }
 }

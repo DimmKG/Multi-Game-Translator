@@ -249,7 +249,13 @@ globalThis.NecesseLocales.register({
     "diff.modeCharacters": "Characters",
     "diff.changedKeys": "Keys: {n}",
     "diff.changedValues": "Values: {n}",
-    "diff.prefixOnly": "Status only: {n}"
+    "diff.prefixOnly": "Status only: {n}",
+    "compact.enter": "Compact view",
+    "compact.enterTitle": "Hide secondary panels and provide more space for translation.",
+    "compact.exit": "Normal view",
+    "compact.exitTitle": "Restore the full workspace controls.",
+    "compact.unnamed": "Unnamed translation",
+    "compact.progress": "{done} / {total} translated"
   }
 });
 
@@ -624,7 +630,13 @@ globalThis.NecesseLocales.register({
     "diff.modeCharacters": "Знаци",
     "diff.changedKeys": "Ключове: {n}",
     "diff.changedValues": "Стойности: {n}",
-    "diff.prefixOnly": "Само статус: {n}"
+    "diff.prefixOnly": "Само статус: {n}",
+    "compact.enter": "Компактен изглед",
+    "compact.enterTitle": "Скрива второстепенните панели и освобождава повече място за превода.",
+    "compact.exit": "Нормален изглед",
+    "compact.exitTitle": "Връща всички контроли на работното пространство.",
+    "compact.unnamed": "Превод без име",
+    "compact.progress": "{done} / {total} преведени"
   }
 });
 
@@ -3175,7 +3187,13 @@ globalThis.NecesseLocales.register({
     "diff.modeCharacters": "Символы",
     "diff.changedKeys": "Ключи: {n}",
     "diff.changedValues": "Значения: {n}",
-    "diff.prefixOnly": "Только статус: {n}"
+    "diff.prefixOnly": "Только статус: {n}",
+    "compact.enter": "Компактный вид",
+    "compact.enterTitle": "Скрывает второстепенные панели и освобождает больше места для перевода.",
+    "compact.exit": "Обычный вид",
+    "compact.exitTitle": "Возвращает все элементы управления рабочей области.",
+    "compact.unnamed": "Перевод без имени",
+    "compact.progress": "{done} / {total} переведено"
   }
 });
 

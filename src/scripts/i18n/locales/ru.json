@@ -241,6 +241,12 @@
     "diff.modeCharacters": "Символы",
     "diff.changedKeys": "Ключи: {n}",
     "diff.changedValues": "Значения: {n}",
-    "diff.prefixOnly": "Только статус: {n}"
+    "diff.prefixOnly": "Только статус: {n}",
+    "compact.enter": "Компактный вид",
+    "compact.enterTitle": "Скрывает второстепенные панели и освобождает больше места для перевода.",
+    "compact.exit": "Обычный вид",
+    "compact.exitTitle": "Возвращает все элементы управления рабочей области.",
+    "compact.unnamed": "Перевод без имени",
+    "compact.progress": "{done} / {total} переведено"
   }
 }

@@ -38,6 +38,7 @@
     scope.querySelectorAll("[data-i18n-aria-label]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel)); });
     document.documentElement.lang = UI;
     document.title = t("app.title");
+    if (typeof syncCompactBar === "function") syncCompactBar();
   }
   function setUiLang(code){
     if (!I18N[code]) return;
@@ -83,7 +84,42 @@
     diffOther: null,   // {name, lines[]}
     diffOnly: true,    // collapse equal runs
     diffMode: "word",   // inline Compare granularity: word | character
+    compactView: false,  // non-destructive layout-only workspace state
   };
+
+  // ---------- Compact workspace layout ----------
+  function compactCounts(){
+    let total = 0, done = 0;
+    for (const item of state.items){
+      if (item.type !== "entry") continue;
+      total++;
+      if (statusOf(item) !== "missing") done++;
+    }
+    return {done, total};
+  }
+
+  function syncCompactBar(){
+    const filename = $("compactFilename");
+    const progress = $("compactProgress");
+    const save = $("compactSaveStatus");
+    if (!filename || !progress || !save) return;
+    const liveName = ($("outName")?.value || state.filename || "").trim();
+    filename.textContent = liveName || t("compact.unnamed");
+    filename.title = filename.textContent;
+    const count = compactCounts();
+    progress.textContent = t("compact.progress", count);
+    save.textContent = $("saveText")?.textContent || t("save.saved");
+  }
+
+  function setCompactView(enabled){
+    state.compactView = !!enabled && state.items.length > 0;
+    document.documentElement.classList.toggle("compact-view", state.compactView);
+    const toggle = $("compactToggle");
+    if (toggle) toggle.setAttribute("aria-pressed", state.compactView ? "true" : "false");
+    const bar = $("compactBar");
+    if (bar) bar.style.display = state.compactView ? "flex" : "none";
+    syncCompactBar();
+  }
 
   // ---------- parsing ----------
   function classifyLine(line){
@@ -338,6 +374,7 @@
     return {missing, done, same, total, missBase, missDone, touched};
   }
   function refreshMeter(){
+    syncCompactBar();
     syncReferenceDependentUi();
     const c = counts();
     $("c-missing").textContent = c.missing;
@@ -1181,6 +1218,8 @@ function targetFromName(name){
     $("meter").style.display = "flex";
     $("topActions").style.display = "flex";
     $("outName").value = state.filename;
+    $("compactToggle").disabled = false;
+    setCompactView(state.compactView);
     state.mtProvider = validProvider(state.mtProvider);
     const providerSelect = $("mtProvider");
     if (providerSelect){
@@ -1441,6 +1480,18 @@ function targetFromName(name){
     const f = e.dataTransfer.files[0]; if (!f) return;
     const r = new FileReader(); r.onload = () => { loadWorkspaceFromText(r.result, {filename: f.name}); toast(t("toast.fileLoaded")); };
     r.readAsText(f, "UTF-8");
+  });
+
+  $("compactToggle")?.addEventListener("click", () => setCompactView(!state.compactView));
+  $("compactExit")?.addEventListener("click", () => setCompactView(false));
+  $("outName")?.addEventListener("input", syncCompactBar);
+  if ($("saveText")) new MutationObserver(syncCompactBar).observe($("saveText"), {childList:true, characterData:true, subtree:true});
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && state.compactView){
+      event.preventDefault();
+      setCompactView(false);
+      $("compactToggle")?.focus();
+    }
   });
 
   // restore banner

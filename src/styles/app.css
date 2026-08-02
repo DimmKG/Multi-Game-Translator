@@ -453,3 +453,52 @@ header>.meter{flex:0 1 300px;width:auto;min-width:210px;max-width:340px;margin-i
   .diffbar{overflow-x:auto;flex-wrap:nowrap}
   .diffstat .diff-detail{display:none}
 }
+
+
+/* Compact translation workspace foundation */
+.compact-toggle{white-space:nowrap}
+.compact-bar{
+  position:sticky;
+  top:0;
+  z-index:45;
+  min-height:42px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:6px 16px;
+  border-bottom:1px solid var(--line);
+  background:var(--panel);
+  box-shadow:0 8px 22px rgba(0,0,0,.18);
+}
+.compact-file,.compact-progress,.compact-save{
+  min-width:0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.compact-file{max-width:min(34vw,420px);font-family:var(--editor-font,ui-monospace,monospace);font-weight:700;color:var(--ink)}
+.compact-progress{color:var(--ink-dim)}
+.compact-save{color:var(--ink-dim)}
+.compact-spacer{flex:1 1 auto}
+.compact-exit{flex:0 0 auto;margin-inline-start:auto}
+html.compact-view header,
+html.compact-view #side,
+html.compact-view #mtbar,
+html.compact-view #footnote{display:none!important}
+html.compact-view main{grid-template-columns:minmax(0,1fr)}
+html.compact-view #work{min-width:0}
+html.compact-view #compactBar{display:flex!important}
+html[dir="rtl"] .compact-file,
+html[dir="rtl"] .compact-progress,
+html[dir="rtl"] .compact-save{direction:ltr;unicode-bidi:isolate;text-align:left}
+@media (max-width:760px){
+  .compact-bar{gap:8px;padding-inline:10px}
+  .compact-file{max-width:38vw}
+  .compact-progress{font-size:.86em}
+  .compact-save{display:none}
+  .compact-exit{padding-inline:10px}
+}
+@media (max-width:480px){
+  .compact-progress{display:none}
+  .compact-file{max-width:58vw}
+}
