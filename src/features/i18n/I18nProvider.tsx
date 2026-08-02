@@ -51,7 +51,7 @@ function detectLanguage() {
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [installedLocales, setInstalledLocales] = useState(restoreInstalledInterfaceLocales);
   const [language, setLanguageState] = useState(detectLanguage);
-  const locales = useMemo(() => getAllLocales(), [installedLocales]);
+  const locales = getAllLocales();
 
   const setLanguage = useCallback(
     (code: string) => {
