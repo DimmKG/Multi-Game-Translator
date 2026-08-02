@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "build:standalone": "tsc -b && vite build --mode standalone --outDir dist-standalone && node scripts/build-standalone.mjs",
     "preview": "npm run build && vite preview --host 0.0.0.0 --port 4173",
     "preview:built": "vite preview --host 0.0.0.0 --port 4173",
     "test": "vitest run",
@@ -19,7 +20,7 @@
     "validate:interface-locales": "node scripts/validate-interface-locales.mjs",
     "validate:glossaries": "node scripts/validate-glossaries.mjs",
     "generate:fixtures": "node --experimental-strip-types scripts/generate-fixtures.mjs",
-    "verify": "npm run lint && npm run format:check && npm test && npm run validate:locales && npm run validate:interface-locales && npm run validate:glossaries && npm run build",
+    "verify": "npm run lint && npm run format:check && npm test && npm run validate:locales && npm run validate:interface-locales && npm run validate:glossaries && npm run build && npm run build:standalone",
     "prepare": "husky"
   },
   "dependencies": {
