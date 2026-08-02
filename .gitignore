@@ -1,17 +1,7 @@
 # Normal files
 node_modules/
-dist/
 .preview/
 .DS_Store
 Thumbs.db
-*.local
-
 # Local copyrighted game localization fixtures
 /test/locals/
-
-# Local visual capture artifacts (never commit)
-.cursor-visual-*.png
-
-# Editor
-.vscode/*
-!.vscode/extensions.json
