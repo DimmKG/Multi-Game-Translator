@@ -20,7 +20,15 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
+      "react-refresh/only-export-components": [
+        "warn",
+        {
+          allowConstantExport: true,
+          // Co-located hooks next to their providers — Fast Refresh still remounts
+          // the provider on hook edits, which is the intended trade-off.
+          allowExportNames: ["useI18n", "useWorkspace"],
+        },
+      ],
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
