@@ -545,3 +545,5 @@ html[dir="rtl"] .compact-rail{border-inline-start:0;border-inline-end:1px solid 
 }
 
 #compactRail,#compactDrawer{isolation:isolate}
+
+.compact-rail-btn[hidden]{display:none!important}

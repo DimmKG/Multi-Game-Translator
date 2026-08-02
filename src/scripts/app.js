@@ -137,6 +137,10 @@
       button.classList.toggle("active", active);
       button.setAttribute("aria-current", active ? "page" : "false");
     }
+    document.querySelectorAll("#compactRail [data-compact-views]").forEach(button => {
+      const allowed = String(button.dataset.compactViews || "").split(/\s+/).filter(Boolean);
+      button.hidden = !allowed.includes(state.view);
+    });
     const filterButton = $("compactRailFilters");
     if (filterButton){
       filterButton.dataset.activeFilter = state.filter || "all";
@@ -164,7 +168,7 @@
     const title = $("compactDrawerTitle");
     if (!body || !title) return;
     body.replaceChildren();
-    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : kind === "more" ? "compact.more" : "compact.drawerTitle");
+    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : "compact.drawerTitle");
 
     if (kind === "filters"){
       document.querySelectorAll("#filters .filt").forEach(original => {
@@ -189,20 +193,10 @@
       return;
     }
 
-    if (kind === "more"){
-      body.append(compactDrawerButton(t("compact.settings"), () => document.querySelector('[data-i18n="settings.button"]')?.click()));
-      const note = document.createElement("p");
-      note.className = "compact-drawer-empty";
-      note.textContent = t("compact.moreComing");
-      body.append(note);
-      return;
-    }
-
     body.append(compactDrawerButton(t("compact.editor"), () => setView("editor"), {active:state.view === "editor"}));
     body.append(compactDrawerButton(t("compact.review"), () => setView("review"), {active:state.view === "review"}));
     body.append(compactDrawerButton(t("compact.compare"), () => setView("diff"), {active:state.view === "diff"}));
-    body.append(compactDrawerButton(t("compact.filters"), () => openCompactDrawer("filters", compactDrawerInvoker)));
-    body.append(compactDrawerButton(t("compact.sections"), () => openCompactDrawer("sections", compactDrawerInvoker)));
+    body.append(compactDrawerButton(t("compact.settings"), () => globalThis.NecesseSettings?.open?.()));
   }
 
   function openCompactDrawer(kind = "navigation", invoker = document.activeElement){
@@ -1598,7 +1592,6 @@ function targetFromName(name){
   $("compactRailNav")?.addEventListener("click", event => openCompactDrawer("navigation", event.currentTarget));
   $("compactRailFilters")?.addEventListener("click", event => openCompactDrawer("filters", event.currentTarget));
   $("compactRailSections")?.addEventListener("click", event => openCompactDrawer("sections", event.currentTarget));
-  $("compactRailMore")?.addEventListener("click", event => openCompactDrawer("more", event.currentTarget));
   $("compactRailEditor")?.addEventListener("click", () => setView("editor"));
   $("compactRailReview")?.addEventListener("click", () => setView("review"));
   $("compactRailCompare")?.addEventListener("click", () => setView("diff"));
@@ -1606,13 +1599,14 @@ function targetFromName(name){
     const input = state.view === "review" ? $("reviewSearch") : $("search");
     input?.focus(); input?.select();
   });
-  $("compactRailSettings")?.addEventListener("click", () => document.querySelector('[data-i18n="settings.button"]')?.click());
+  $("compactRailSettings")?.addEventListener("click", () => globalThis.NecesseSettings?.open?.());
   $("compactDrawerClose")?.addEventListener("click", () => closeCompactDrawer());
   $("compactDrawerBackdrop")?.addEventListener("click", () => closeCompactDrawer());
   $("outName")?.addEventListener("input", syncCompactBar);
   if ($("saveText")) new MutationObserver(syncCompactBar).observe($("saveText"), {childList:true, characterData:true, subtree:true});
   document.addEventListener("keydown", event => {
     if (event.key !== "Escape" || !state.compactView) return;
+    if (document.querySelector(".settings-backdrop.open")) return;
     event.preventDefault();
     if (state.compactDrawerOpen){ closeCompactDrawer(); return; }
     setCompactView(false);

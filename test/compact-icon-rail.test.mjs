@@ -21,7 +21,6 @@ test("Compact view exposes a persistent icon rail", () => {
     "compactRailFilters",
     "compactRailSections",
     "compactRailSettings",
-    "compactRailMore",
     "compactRailExit"
   ]) assert.ok(html.includes(`id="${id}"`), id);
 });
@@ -59,7 +58,6 @@ test("reviewed locales include icon rail and drawer messages", () => {
     "compact.filters",
     "compact.sections",
     "compact.settings",
-    "compact.more",
     "compact.drawerTitle",
     "compact.closeDrawer"
   ];
@@ -74,4 +72,19 @@ test("rail and drawer have responsive and RTL-safe styles", () => {
   assert.ok(css.includes("inset-inline-start"));
   assert.ok(css.includes("html[dir=\"rtl\"]"));
   assert.ok(css.includes("@media (max-width:"));
+});
+
+
+test("rail tools follow the active workspace view", () => {
+  assert.ok(html.includes('id="compactRailSearch" data-compact-views="editor review"'));
+  assert.ok(html.includes('id="compactRailFilters" data-compact-views="editor"'));
+  assert.ok(html.includes('id="compactRailSections" data-compact-views="editor"'));
+  assert.ok(!html.includes('id="compactRailMore"'));
+  assert.ok(app.includes('button.hidden = !allowed.includes(state.view)'));
+});
+
+test("navigation drawer contains only global destinations", () => {
+  assert.ok(app.includes('globalThis.NecesseSettings?.open?.()'));
+  assert.ok(!app.includes('openCompactDrawer("filters", compactDrawerInvoker)'));
+  assert.ok(!app.includes('openCompactDrawer("sections", compactDrawerInvoker)'));
 });

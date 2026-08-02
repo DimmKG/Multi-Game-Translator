@@ -551,6 +551,8 @@ html[dir="rtl"] .compact-rail{border-inline-start:0;border-inline-end:1px solid 
 }
 
 #compactRail,#compactDrawer{isolation:isolate}
+
+.compact-rail-btn[hidden]{display:none!important}
 </style>
 <style>
   /* Keep machine-readable values stable inside right-to-left interface text. */
@@ -638,11 +640,10 @@ html[dir="rtl"] .compact-rail{border-inline-start:0;border-inline-end:1px solid 
   <button type="button" class="compact-rail-btn" id="compactRailEditor" data-i18n-title="compact.editor"><span aria-hidden="true">✎</span></button>
   <button type="button" class="compact-rail-btn" id="compactRailReview" data-i18n-title="compact.review"><span aria-hidden="true">✓</span></button>
   <button type="button" class="compact-rail-btn" id="compactRailCompare" data-i18n-title="compact.compare"><span aria-hidden="true">⇄</span></button>
-  <button type="button" class="compact-rail-btn" id="compactRailSearch" data-i18n-title="compact.search"><span aria-hidden="true">⌕</span></button>
-  <button type="button" class="compact-rail-btn" id="compactRailFilters" data-compact-drawer="filters" data-i18n-title="compact.filters"><span aria-hidden="true">◉</span></button>
-  <button type="button" class="compact-rail-btn" id="compactRailSections" data-compact-drawer="sections" data-i18n-title="compact.sections"><span aria-hidden="true">§</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSearch" data-compact-views="editor review" data-i18n-title="compact.search"><span aria-hidden="true">⌕</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailFilters" data-compact-views="editor" data-compact-drawer="filters" data-i18n-title="compact.filters"><span aria-hidden="true">◉</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSections" data-compact-views="editor" data-compact-drawer="sections" data-i18n-title="compact.sections"><span aria-hidden="true">§</span></button>
   <button type="button" class="compact-rail-btn" id="compactRailSettings" data-i18n-title="compact.settings"><span aria-hidden="true">⚙</span></button>
-  <button type="button" class="compact-rail-btn" id="compactRailMore" data-compact-drawer="more" data-i18n-title="compact.more"><span aria-hidden="true">⋯</span></button>
   <div class="compact-rail-spacer"></div>
   <button type="button" class="compact-rail-btn compact-rail-exit" id="compactRailExit" data-i18n-title="compact.exitTitle"><span aria-hidden="true">↙</span></button>
 </nav>
@@ -5829,6 +5830,10 @@ globalThis.NecesseLocales.register({
       button.classList.toggle("active", active);
       button.setAttribute("aria-current", active ? "page" : "false");
     }
+    document.querySelectorAll("#compactRail [data-compact-views]").forEach(button => {
+      const allowed = String(button.dataset.compactViews || "").split(/\s+/).filter(Boolean);
+      button.hidden = !allowed.includes(state.view);
+    });
     const filterButton = $("compactRailFilters");
     if (filterButton){
       filterButton.dataset.activeFilter = state.filter || "all";
@@ -5856,7 +5861,7 @@ globalThis.NecesseLocales.register({
     const title = $("compactDrawerTitle");
     if (!body || !title) return;
     body.replaceChildren();
-    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : kind === "more" ? "compact.more" : "compact.drawerTitle");
+    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : "compact.drawerTitle");
 
     if (kind === "filters"){
       document.querySelectorAll("#filters .filt").forEach(original => {
@@ -5881,20 +5886,10 @@ globalThis.NecesseLocales.register({
       return;
     }
 
-    if (kind === "more"){
-      body.append(compactDrawerButton(t("compact.settings"), () => document.querySelector('[data-i18n="settings.button"]')?.click()));
-      const note = document.createElement("p");
-      note.className = "compact-drawer-empty";
-      note.textContent = t("compact.moreComing");
-      body.append(note);
-      return;
-    }
-
     body.append(compactDrawerButton(t("compact.editor"), () => setView("editor"), {active:state.view === "editor"}));
     body.append(compactDrawerButton(t("compact.review"), () => setView("review"), {active:state.view === "review"}));
     body.append(compactDrawerButton(t("compact.compare"), () => setView("diff"), {active:state.view === "diff"}));
-    body.append(compactDrawerButton(t("compact.filters"), () => openCompactDrawer("filters", compactDrawerInvoker)));
-    body.append(compactDrawerButton(t("compact.sections"), () => openCompactDrawer("sections", compactDrawerInvoker)));
+    body.append(compactDrawerButton(t("compact.settings"), () => globalThis.NecesseSettings?.open?.()));
   }
 
   function openCompactDrawer(kind = "navigation", invoker = document.activeElement){
@@ -7290,7 +7285,6 @@ function targetFromName(name){
   $("compactRailNav")?.addEventListener("click", event => openCompactDrawer("navigation", event.currentTarget));
   $("compactRailFilters")?.addEventListener("click", event => openCompactDrawer("filters", event.currentTarget));
   $("compactRailSections")?.addEventListener("click", event => openCompactDrawer("sections", event.currentTarget));
-  $("compactRailMore")?.addEventListener("click", event => openCompactDrawer("more", event.currentTarget));
   $("compactRailEditor")?.addEventListener("click", () => setView("editor"));
   $("compactRailReview")?.addEventListener("click", () => setView("review"));
   $("compactRailCompare")?.addEventListener("click", () => setView("diff"));
@@ -7298,13 +7292,14 @@ function targetFromName(name){
     const input = state.view === "review" ? $("reviewSearch") : $("search");
     input?.focus(); input?.select();
   });
-  $("compactRailSettings")?.addEventListener("click", () => document.querySelector('[data-i18n="settings.button"]')?.click());
+  $("compactRailSettings")?.addEventListener("click", () => globalThis.NecesseSettings?.open?.());
   $("compactDrawerClose")?.addEventListener("click", () => closeCompactDrawer());
   $("compactDrawerBackdrop")?.addEventListener("click", () => closeCompactDrawer());
   $("outName")?.addEventListener("input", syncCompactBar);
   if ($("saveText")) new MutationObserver(syncCompactBar).observe($("saveText"), {childList:true, characterData:true, subtree:true});
   document.addEventListener("keydown", event => {
     if (event.key !== "Escape" || !state.compactView) return;
+    if (document.querySelector(".settings-backdrop.open")) return;
     event.preventDefault();
     if (state.compactDrawerOpen){ closeCompactDrawer(); return; }
     setCompactView(false);
@@ -7915,6 +7910,7 @@ if (typeof document !== "undefined") setupNewTranslationUi();
     ui.open = document.createElement("button");
     ui.open.type = "button";
     ui.open.className = "btn ghost settings-open";
+    ui.open.id = "settingsOpen";
     ui.open.textContent = "⚙";
     document.getElementById("uiLang")?.insertAdjacentElement("afterend", ui.open);
 
@@ -7988,6 +7984,7 @@ if (typeof document !== "undefined") setupNewTranslationUi();
   else buildUi();
 
   globalThis.NecesseSettings = Object.freeze({
+    open() { ui.open?.click(); },
     get: () => ({ ...state }),
     set(name, value) {
       if (!(name in defaults)) throw new TypeError(`Unknown setting: ${name}`);

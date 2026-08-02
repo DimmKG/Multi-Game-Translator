@@ -66,6 +66,7 @@
     ui.open = document.createElement("button");
     ui.open.type = "button";
     ui.open.className = "btn ghost settings-open";
+    ui.open.id = "settingsOpen";
     ui.open.textContent = "⚙";
     document.getElementById("uiLang")?.insertAdjacentElement("afterend", ui.open);
 
@@ -139,6 +140,7 @@
   else buildUi();
 
   globalThis.NecesseSettings = Object.freeze({
+    open() { ui.open?.click(); },
     get: () => ({ ...state }),
     set(name, value) {
       if (!(name in defaults)) throw new TypeError(`Unknown setting: ${name}`);
