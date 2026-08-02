@@ -11,11 +11,14 @@ export interface LocaleDefinition {
   name: string;
   nativeName: string;
   reviewed?: boolean;
+  authors?: readonly string[];
+  updatedAt?: string;
   messages: Record<string, string>;
 }
 
 const registry = new Map<string, LocaleDefinition>();
 const messageTables = new Map<string, Record<string, string>>();
+const builtInCodes = new Set<string>();
 
 function loadBuiltIns() {
   const entries = Object.entries(localeModules)
@@ -29,6 +32,7 @@ function loadBuiltIns() {
     if (locale.code === "en") continue;
     registerLocale(locale);
   }
+  for (const locale of entries) builtInCodes.add(locale.code);
 }
 
 export function registerLocale(locale: LocaleDefinition) {
@@ -61,8 +65,16 @@ export function getAllLocales(): LocaleManifestEntry[] {
   }));
 }
 
+export function getEnglishMessageKeys() {
+  return new Set(Object.keys(messageTables.get("en") || {}));
+}
+
+export function getEnglishMessages() {
+  return { ...(messageTables.get("en") || {}) };
+}
+
 export function isBuiltInLocale(code: string) {
-  return registry.has(code);
+  return builtInCodes.has(code);
 }
 
 export function translateMessage(
@@ -92,10 +104,18 @@ export function translateMessage(
 }
 
 export function applyInstallableLocale(locale: LocaleDefinition) {
-  if (["en", "bg", "ru"].includes(locale.code)) {
+  if (isBuiltInLocale(locale.code)) {
     throw new TypeError(`Built-in locale “${locale.code}” cannot be replaced.`);
   }
   registerLocale(locale);
+}
+
+export function removeInstallableLocale(code: string) {
+  if (isBuiltInLocale(code)) {
+    throw new TypeError(`Built-in locale “${code}” cannot be removed.`);
+  }
+  registry.delete(code);
+  messageTables.delete(code);
 }
 
 loadBuiltIns();

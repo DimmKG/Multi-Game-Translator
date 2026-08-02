@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InterfaceLocalesPanel } from "@/features/i18n/InterfaceLocalesPanel";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { SecretVaultPanel } from "@/features/mt/SecretVaultPanel";
 import { useWorkspace } from "@/state/workspace-store";
@@ -43,6 +44,7 @@ export function SettingsDialog({
         <Tabs defaultValue="general" className="w-full">
           <TabsList className="mb-3 flex h-auto w-full flex-wrap justify-start gap-1">
             <TabsTrigger value="general">{t("settings.tab.general")}</TabsTrigger>
+            <TabsTrigger value="interface-locales">{t("interfaceLocales.button")}</TabsTrigger>
             <TabsTrigger value="fonts">{t("settings.tab.fonts")}</TabsTrigger>
             <TabsTrigger value="mt">{t("settings.tab.machine-translation")}</TabsTrigger>
             <TabsTrigger value="secrets">{t("settings.tab.secrets")}</TabsTrigger>
@@ -61,6 +63,10 @@ export function SettingsDialog({
                 </span>
               </span>
             </label>
+          </TabsContent>
+
+          <TabsContent value="interface-locales">
+            <InterfaceLocalesPanel />
           </TabsContent>
 
           <TabsContent value="fonts" className="grid gap-4">
