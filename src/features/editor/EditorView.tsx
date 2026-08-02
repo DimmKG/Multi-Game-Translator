@@ -12,7 +12,12 @@ import {
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
-import { VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
+import {
+  ListEmpty,
+  LIST_CLASS,
+  VirtualList,
+  type VirtualListApi,
+} from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
@@ -32,6 +37,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  CARD_CLASS,
+  CARD_STATUS_CLASS,
+  ENTRY_BADGE_CLASS,
+  GUIDE_CLASS,
+  KEY_CLASS,
+  OLABEL_CLASS,
+  ORIG_CLASS,
+  ROW1_CLASS,
+  ROW3_CLASS,
+  TEXTAREA_CLASS,
+  WARNLINE_CLASS,
+} from "@/features/editor/card-classes";
 import {
   calibrateCardMetrics,
   CardHeightCache,
@@ -58,15 +76,33 @@ import { cn } from "@/lib/utils";
 const FALLBACK_CARD_HEIGHT = 168;
 
 const STATUS_BADGE: Record<string, { className: string; labelKey: string }> = {
-  missing: { className: "b-missing", labelKey: "badge.missing" },
-  done: { className: "b-done", labelKey: "badge.done" },
-  same: { className: "b-same", labelKey: "badge.same" },
+  missing: { className: "bg-primary-soft text-primary", labelKey: "badge.missing" },
+  done: { className: "bg-success-soft text-success", labelKey: "badge.done" },
+  same: { className: "bg-same-soft text-same", labelKey: "badge.same" },
 };
+
+/** Section rule: the label, then a line that fades out across the rest of the row. */
+const SECTION_HEAD_CLASS = cn(
+  "text-primary mt-[22px] mb-3 flex scroll-mt-3 items-center gap-3 first:mt-1",
+  "font-mono text-xs tracking-[0.12em] uppercase",
+  "after:h-px after:flex-1 after:bg-linear-to-r after:from-border after:to-transparent after:content-['']",
+);
 
 /** `[tile]` -> `tile`; the parser keeps the brackets, the UI does not show them. */
 function sectionLabel(name: string) {
   return name.replace(/^\[|\]$/g, "");
 }
+
+/**
+ * Protected tokens are set in mono at a slightly smaller size so they read as
+ * markup inside prose; the two that are easiest to lose also get a tinted pill.
+ */
+const TOKEN_CLASS: Record<string, string> = {
+  var: "text-tok-var",
+  ref: "text-tok-ref",
+  fmt: "text-tok-fmt bg-tok-fmt/12 rounded-[3px] px-0.5",
+  nl: "text-tok-nl bg-tok-nl/14 rounded-[3px] px-[3px]",
+};
 
 /** Splits source text into plain runs and coloured protected tokens. */
 function renderTokenized(text: string): ReactNode[] {
@@ -80,7 +116,10 @@ function renderTokenized(text: string): ReactNode[] {
     if (index === -1) continue;
     if (index > 0) nodes.push(rest.slice(0, index));
     nodes.push(
-      <span key={`t${key++}`} className={`t-${tokenKind(token)}`}>
+      <span
+        key={`t${key++}`}
+        className={cn("font-mono text-[0.94em]", TOKEN_CLASS[tokenKind(token)])}
+      >
         {token}
       </span>,
     );
@@ -120,98 +159,118 @@ const EntryCard = memo(function EntryCard({
 
   return (
     <article
-      className={cn("card", `st-${status}`)}
+      // use-keyboard-inset finds the focused card by this slot, not by a class.
+      data-slot="entry-card"
+      className={cn(CARD_CLASS, CARD_STATUS_CLASS[status])}
       data-key={entry.key}
       onFocusCapture={() => onPin(entry.id)}
     >
-      <div className="row1">
+      <div className={ROW1_CLASS}>
         <button
           type="button"
-          className="key ltr-isolate"
+          className={cn(KEY_CLASS, "ltr-isolate")}
           title={t("card.copyKey")}
           onClick={() => void navigator.clipboard?.writeText(entry.key)}
         >
           {entry.key}
         </button>
-        <Badge className={cn("entry-badge", badge.className)}>{t(badge.labelKey)}</Badge>
-        {entry.mtDraft && <Badge className="entry-badge b-mt">{t("badge.mt")}</Badge>}
-        {whitespace.any && <Badge className="entry-badge b-ws">{t("filter.ws")}</Badge>}
-        <span className="spacer" />
+        <Badge className={cn(ENTRY_BADGE_CLASS, badge.className)}>{t(badge.labelKey)}</Badge>
+        {entry.mtDraft && (
+          <Badge className={cn(ENTRY_BADGE_CLASS, "bg-mt-soft text-mt-ink")}>{t("badge.mt")}</Badge>
+        )}
+        {whitespace.any && (
+          <Badge className={cn(ENTRY_BADGE_CLASS, "bg-warn-soft text-warn")}>
+            {t("filter.ws")}
+          </Badge>
+        )}
+        <span className="flex-1" />
       </div>
 
-      {guidance && <div className="guide">ⓘ {t(guidance.messageKey)}</div>}
+      {guidance && <div className={GUIDE_CLASS}>ⓘ {t(guidance.messageKey)}</div>}
 
       {reference != null && (
-        <div className="orig">
-          <span className="olabel">{t("card.referenceText")}</span>
+        <div className={ORIG_CLASS}>
+          <span className={OLABEL_CLASS}>{t("card.referenceText")}</span>
           <span className="ltr-isolate">{renderTokenized(reference)}</span>
         </div>
       )}
 
-      <div className="tawrap">
-        <Textarea
-          value={entry.value}
-          spellCheck={workspace.spellcheck}
-          onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
-          onKeyDown={(event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-              event.preventDefault();
-              const entries = workspace.filteredEntries;
-              const index = entries.findIndex((item) => item.id === entry.id);
-              const next = entries.slice(index + 1).find((item) => statusOf(item) === "missing");
-              if (next) requestEditorScroll({ type: "key", key: next.key });
-            }
-          }}
-        />
-      </div>
+      <Textarea
+        className={TEXTAREA_CLASS}
+        value={entry.value}
+        spellCheck={workspace.spellcheck}
+        onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
+        onKeyDown={(event) => {
+          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+            event.preventDefault();
+            const entries = workspace.filteredEntries;
+            const index = entries.findIndex((item) => item.id === entry.id);
+            const next = entries.slice(index + 1).find((item) => statusOf(item) === "missing");
+            if (next) requestEditorScroll({ type: "key", key: next.key });
+          }
+        }}
+      />
 
-      <div className="row3">
-        {missing.length > 0 && <span className="toklead">{t("tokens.label")}</span>}
+      <div className={ROW3_CLASS}>
+        {missing.length > 0 && (
+          <span className="text-foreground-faint me-0.5 text-[11px]">{t("tokens.label")}</span>
+        )}
         {missing.map((token) => (
-          <button
+          <Button
             type="button"
             key={token}
-            className={cn("chip miss", tokenKind(token))}
+            variant="outline"
+            size="xs"
+            className={cn("border-warn bg-warn-soft text-warn font-mono", "hover:bg-warn-soft/70")}
             title={t("tokens.insertMissing")}
             onClick={() => workspace.updateEntryValue(entry.id, `${entry.value}${token}`)}
           >
-            {token}
-          </button>
+            ⚠ {token}
+          </Button>
         ))}
         {whitespace.any && (
-          <button
+          <Button
             type="button"
-            className="chip wsfix"
+            variant="outline"
+            size="xs"
+            className={cn("border-warn bg-warn-soft text-warn font-mono", "hover:bg-warn-soft/70")}
             title={t("review.wsFixTitle", { list: whitespaceLabels(entry, t).join(", ") })}
             onClick={() => workspace.updateEntryValue(entry.id, fixWhitespace(entry))}
           >
             {t("review.wsFix")}
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="button"
-          className="chip mt"
+          variant="outline"
+          size="xs"
+          className="border-tok-ref text-tok-ref hover:bg-tok-ref/10 font-mono"
           title={t("mt.btnTitle")}
           disabled={!workspace.targetLanguage}
           onClick={() => void workspace.translateEntry(entry.id)}
         >
           {t("mt.btn")}
-        </button>
+        </Button>
         {entry.ref != null && (
-          <button
+          <Button
             type="button"
-            className={cn("samebtn", entry.markedSame && "on")}
+            variant="outline"
+            size="sm"
+            className={cn(
+              "hover:border-same hover:text-same ms-auto",
+              entry.markedSame && "border-same bg-same-soft text-same",
+            )}
             title={t("same.title")}
             onClick={() => workspace.toggleMarkedSame(entry.id)}
           >
             {t(entry.markedSame ? "same.on" : "same.off")}
-          </button>
+          </Button>
         )}
       </div>
 
       {terminology.map((issue, index) => (
-        <div className="warnline" key={`${issue.type}-${index}`}>
-          <TriangleAlert size={13} aria-hidden="true" />
+        <div className={WARNLINE_CLASS} key={`${issue.type}-${index}`}>
+          <TriangleAlert size={13} aria-hidden="true" className="shrink-0" />
           {issue.type === "forbidden"
             ? t("terminology.forbidden", {
                 found: issue.found ?? issue.source,
@@ -593,23 +652,23 @@ export function EditorView() {
       </Toolbar>
 
       <VirtualList
-        className="list"
+        className={LIST_CLASS}
         apiRef={listApi}
         items={rows}
         overscan={18}
         estimateSize={estimateSize}
         getKey={(row) => (row.kind === "section" ? `s-${row.name}` : row.entry.id)}
         empty={
-          <div className="empty-state">
+          <ListEmpty>
             {emptyKey === "empty.allDone" && (
-              <CircleCheck className="empty-icon" size={18} aria-hidden="true" />
+              <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
             )}
             {t(emptyKey)}
-          </div>
+          </ListEmpty>
         }
         renderItem={(row) =>
           row.kind === "section" ? (
-            <div className="sec-head" data-section={row.name}>
+            <div className={SECTION_HEAD_CLASS} data-section={row.name}>
               {sectionLabel(row.name)}
             </div>
           ) : (
