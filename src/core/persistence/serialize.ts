@@ -101,6 +101,10 @@ function deserializeV2(document: Record<string, unknown>): WorkspaceSnapshot {
     return entry;
   });
 
+  // Progress rows omit entry.section; rebuild it from preserved [section] lines
+  // so metadata guidance (e.g. credits in [lang]) still matches after restore.
+  assignEntrySections(items);
+
   return {
     filename,
     referenceFilename: String(document.n || ""),
@@ -137,6 +141,8 @@ function deserializeV1(document: Record<string, unknown>): WorkspaceSnapshot {
     return classifyNonEntryLine(String(row.raw || ""));
   });
 
+  assignEntrySections(items);
+
   return {
     filename: String(document.filename || ""),
     referenceFilename: String(document.referenceFilename || ""),
@@ -150,6 +156,18 @@ function deserializeV1(document: Record<string, unknown>): WorkspaceSnapshot {
       autocompleteEnabled: mt.ac !== false,
     },
   };
+}
+
+/** Stamp each entry with the nearest preceding `[section]` header name. */
+function assignEntrySections(items: LangLine[]) {
+  let currentSection = "";
+  for (const item of items) {
+    if (item.type === "section") {
+      currentSection = item.name;
+      continue;
+    }
+    if (item.type === "entry") item.section = currentSection;
+  }
 }
 
 export function saveProgressToLocalStorage(snapshot: WorkspaceSnapshot): boolean {
