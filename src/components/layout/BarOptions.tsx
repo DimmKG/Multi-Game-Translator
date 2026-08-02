@@ -1,9 +1,11 @@
 import { SlidersHorizontal } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import type { ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useI18n } from "@/features/i18n/I18nProvider";
+import { cn } from "@/lib/utils";
 
 /** Below this a control bar cannot hold its contents without scrolling sideways. */
 const COMPACT_QUERY = "(max-width: 860px)";
@@ -12,87 +14,49 @@ const COMPACT_QUERY = "(max-width: 860px)";
  * Secondary controls of a view's toolbar.
  *
  * Wide screens show them inline, as before. On a phone the same row would run
- * off the edge, so they drop down as a panel pinned under the bar — no overlay,
- * so the search field and the list stay visible and usable behind it.
+ * off the edge, so they drop into a popover instead.
  *
- * The panel is portalled and positioned from the bar's box rather than nested
- * inside it: the bar scrolls horizontally, and a child would be clipped by it.
+ * Radix portals the panel and anchors it with floating-ui, which is what the
+ * hand-rolled version was doing with getBoundingClientRect — the bars scroll
+ * horizontally and would clip a nested child. `modal` stays off so the search
+ * field and the list behind the panel keep working.
  */
 export function BarOptions({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const compact = useMediaQuery(COMPACT_QUERY);
-  const [open, setOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [box, setBox] = useState<{ top: number; left: number; width: number } | null>(null);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    const bar = triggerRef.current?.closest(".toolbar, .reviewbar, .diffbar");
-    if (!bar) return;
-
-    const place = () => {
-      const rect = bar.getBoundingClientRect();
-      setBox({ top: rect.bottom, left: rect.left, width: rect.width });
-    };
-    place();
-
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (panelRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
 
   if (!compact) return <>{children}</>;
 
   return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="qbtn bar-more"
+    <Popover>
+      <PopoverTrigger asChild>
+        {/* Always the trailing control of its bar, whatever precedes it. */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="ms-auto flex-none"
+          aria-label={t("menu.viewOptions")}
+          title={t("menu.viewOptions")}
+        >
+          <SlidersHorizontal aria-hidden="true" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        collisionPadding={8}
         aria-label={t("menu.viewOptions")}
-        title={t("menu.viewOptions")}
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-      >
-        <SlidersHorizontal size={14} aria-hidden="true" />
-      </button>
-
-      {open &&
-        box &&
-        createPortal(
-          <div
-            ref={panelRef}
-            role="dialog"
-            aria-label={t("menu.viewOptions")}
-            className="bar-options-panel"
-            style={{ top: box.top, left: box.left, width: box.width }}
-          >
-            <div className="options-body">{children}</div>
-          </div>,
-          document.body,
+        className={cn(
+          // Full bleed on a phone, the way the panel it replaces used to hang
+          // under the bar; capped so it does not sprawl at the 860px edge.
+          "w-[calc(100vw-1rem)] max-w-[28rem] items-stretch",
+          // Stacked, these read as menu rows rather than centred pills.
+          "[&_[data-slot=button]]:w-full [&_[data-slot=button]]:justify-start",
+          "[&_[data-slot=toggle-group-item]]:flex-1 [&_[data-slot=toggle-group]]:w-full",
         )}
-    </>
+      >
+        {children}
+      </PopoverContent>
+    </Popover>
   );
 }

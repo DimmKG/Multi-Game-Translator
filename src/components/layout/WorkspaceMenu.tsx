@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -38,10 +40,23 @@ import { cn } from "@/lib/utils";
 
 const NO_LANGUAGE = "__none__";
 
+/** A row of the menu: full-width, icon then label, quiet until hovered. */
+const MENU_ITEM = cn(
+  "h-auto w-full justify-start gap-2.5 px-2.5 py-2 text-[13px] font-normal",
+  "border border-transparent hover:border-border",
+  "[&_svg]:text-muted-foreground hover:[&_svg]:text-primary",
+  "disabled:opacity-45",
+);
+
+/** Label beside its control, rather than stacked — the sheet is a narrow column. */
+const MENU_FIELD = "px-2.5 pt-1 pb-2 *:data-[slot=field-label]:flex-none";
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="menu-section">
-      <h3 className="menu-label">{title}</h3>
+    <section className="flex flex-col gap-1">
+      <h3 className="text-foreground-faint mb-1 text-[10px] font-semibold tracking-[0.16em] uppercase">
+        {title}
+      </h3>
       {children}
     </section>
   );
@@ -112,6 +127,8 @@ export function WorkspaceMenu({
     (item) => item.type === "entry" && item.ref != null,
   ).length;
 
+  const needsReference = workspace.settings.referenceReminder && !workspace.referenceAvailable;
+
   const run = (action: () => void) => () => {
     onOpenChange(false);
     action();
@@ -121,7 +138,7 @@ export function WorkspaceMenu({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="menu-sheet"
+        className="gap-0"
         // Otherwise the filename field grabs focus and selects itself on open.
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
@@ -130,17 +147,22 @@ export function WorkspaceMenu({
           <SheetDescription className="sr-only">{t("menu.title")}</SheetDescription>
         </SheetHeader>
 
-        <div className="menu-body">
+        <div className="flex flex-col gap-[18px] overflow-y-auto px-[18px] pb-[22px]">
           {workspace.isOpen && (
             <Section title={t("menu.file")}>
-              <div className="menu-field">
-                <Label htmlFor="menu-filename">{t("fname.label")}</Label>
+              <Field orientation="horizontal" className={MENU_FIELD}>
+                <FieldLabel htmlFor="menu-filename">{t("fname.label")}</FieldLabel>
                 <Input
                   id="menu-filename"
                   type="text"
                   className={cn(
-                    "ltr-isolate font-mono",
-                    !filenameDraft.trim() && "attention-pulse",
+                    "ltr-isolate min-w-0 flex-1 font-mono",
+                    !filenameDraft.trim() && [
+                      "animate-attention-pulse",
+                      "border-[color-mix(in_srgb,var(--warn)_72%,var(--border))]",
+                      "motion-reduce:animate-none",
+                      "motion-reduce:shadow-[0_0_0_3px_color-mix(in_srgb,var(--warn)_22%,transparent)]",
+                    ],
                   )}
                   spellCheck={false}
                   placeholder="*.lang"
@@ -154,72 +176,84 @@ export function WorkspaceMenu({
                   }}
                   onBlur={() => workspace.setFilename(filenameDraft)}
                 />
-              </div>
-              <button type="button" className="menu-item" onClick={run(workspace.exportLang)}>
-                <Download size={15} />
+              </Field>
+              <Button variant="ghost" className={MENU_ITEM} onClick={run(workspace.exportLang)}>
+                <Download />
                 {t("btn.export")}
-              </button>
-              <button type="button" className="menu-item" onClick={run(onPickLangFile)}>
-                <FolderOpen size={15} />
+              </Button>
+              <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickLangFile)}>
+                <FolderOpen />
                 {t("btn.newFile")}
-              </button>
-              <button type="button" className="menu-item" onClick={run(onPickNewTranslation)}>
-                <FilePlus2 size={15} />
+              </Button>
+              <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickNewTranslation)}>
+                <FilePlus2 />
                 {t("btn.newTranslation")}
-              </button>
+              </Button>
             </Section>
           )}
 
           {workspace.isOpen && (
             <Section title={t("menu.progress")}>
-              <p className={cn("menu-status", workspace.saveState)}>
-                <span className="sdot" />
+              <p className="mb-1.5 flex items-center gap-2 px-2.5 font-mono text-xs">
+                <span
+                  className={cn(
+                    "size-2 flex-none rounded-full",
+                    workspace.saveState === "saving" && "bg-primary",
+                    workspace.saveState === "error" && "bg-warn",
+                    workspace.saveState === "saved" && "bg-success",
+                  )}
+                />
                 {saveLabel}
               </p>
-              <button
-                type="button"
+              {/* Machine translation without a reference file silently produces
+                  nothing useful, so when it is configured this row pulses. */}
+              <Button
+                variant="ghost"
                 className={cn(
-                  "menu-item",
-                  workspace.settings.referenceReminder &&
-                    !workspace.referenceAvailable &&
-                    "warn settings-reference-needed",
+                  MENU_ITEM,
+                  needsReference && [
+                    "animate-attention-pulse border-[color-mix(in_srgb,var(--warn)_72%,var(--border))]",
+                    "motion-reduce:animate-none",
+                    "motion-reduce:shadow-[0_0_0_3px_color-mix(in_srgb,var(--warn)_22%,transparent)]",
+                    "[&_svg]:text-warn",
+                  ],
                 )}
                 onClick={run(onPickReference)}
               >
-                <BookMarked size={15} />
+                <BookMarked />
                 {workspace.referenceFilename
                   ? t("btn.enRefLoaded", {
                       file: workspace.referenceFilename,
                       n: referenceMatches,
                     })
                   : t("btn.enRef")}
-              </button>
-              <button
-                type="button"
-                className="menu-item"
+              </Button>
+              <Button
+                variant="ghost"
+                className={MENU_ITEM}
                 onClick={run(() => void workspace.saveProgressFile())}
               >
-                <FileDown size={15} />
+                <FileDown />
                 {t("btn.saveProgress")}
-              </button>
-              <button type="button" className="menu-item" onClick={run(onPickProgress)}>
-                <FileUp size={15} />
+              </Button>
+              <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickProgress)}>
+                <FileUp />
                 {t("btn.loadProgress")}
-              </button>
-              <button
-                type="button"
-                className="menu-item"
+              </Button>
+              <Button
+                variant="ghost"
+                className={MENU_ITEM}
                 onClick={run(() => workspace.setCompactView(!workspace.compactView))}
               >
-                {workspace.compactView ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                {workspace.compactView ? <Minimize2 /> : <Maximize2 />}
                 {t(workspace.compactView ? "compact.exit" : "compact.enter")}
-              </button>
+              </Button>
             </Section>
           )}
 
           {workspace.isOpen && (
             <Section title={t("menu.editing")}>
-              <div className="menu-item menu-switch">
+              <div className={cn(MENU_ITEM, "flex items-center rounded-lg")}>
                 <Label htmlFor="menu-spellcheck" className="flex-1 cursor-pointer font-normal">
                   {t("toggle.spell")}
                 </Label>
@@ -231,7 +265,7 @@ export function WorkspaceMenu({
                   onCheckedChange={(checked) => workspace.setSpellcheck(checked)}
                 />
               </div>
-              <div className="menu-item menu-switch">
+              <div className={cn(MENU_ITEM, "flex items-center rounded-lg")}>
                 <Label htmlFor="menu-autocomplete" className="flex-1 cursor-pointer font-normal">
                   {t("toggle.ac")}
                 </Label>
@@ -248,13 +282,13 @@ export function WorkspaceMenu({
 
           {workspace.isOpen && (
             <Section title={t("menu.translation")}>
-              <div className="menu-field">
-                <Label>{t("mt.label")}</Label>
+              <Field orientation="horizontal" className={MENU_FIELD}>
+                <FieldLabel>{t("mt.label")}</FieldLabel>
                 <Select
                   value={workspace.mtProvider}
                   onValueChange={(value) => workspace.setMtProvider(value)}
                 >
-                  <SelectTrigger className="w-full font-mono" title={t("mt.providerTitle")}>
+                  <SelectTrigger className="min-w-0 flex-1 font-mono" title={t("mt.providerTitle")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent position="popper">
@@ -265,16 +299,16 @@ export function WorkspaceMenu({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="menu-field">
-                <Label>{t("mt.langLabel")}</Label>
+              </Field>
+              <Field orientation="horizontal" className={MENU_FIELD}>
+                <FieldLabel>{t("mt.langLabel")}</FieldLabel>
                 <Select
                   value={workspace.targetLanguage || NO_LANGUAGE}
                   onValueChange={(value) =>
                     workspace.setTargetLanguage(value === NO_LANGUAGE ? "" : value)
                   }
                 >
-                  <SelectTrigger className="w-full font-mono" title={t("mt.langTitle")}>
+                  <SelectTrigger className="min-w-0 flex-1 font-mono" title={t("mt.langTitle")}>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent position="popper" className="max-h-72">
@@ -286,16 +320,18 @@ export function WorkspaceMenu({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <p className="menu-note">{t("mt.perLineHint")}</p>
+              </Field>
+              <p className="text-muted-foreground mt-0.5 px-2.5 text-[11.5px]">
+                {t("mt.perLineHint")}
+              </p>
             </Section>
           )}
 
           <Section title={t("menu.view")}>
-            <div className="menu-field">
-              <Label>{t("menu.uiLang")}</Label>
+            <Field orientation="horizontal" className={MENU_FIELD}>
+              <FieldLabel>{t("menu.uiLang")}</FieldLabel>
               <Select value={language} onValueChange={setLanguage}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="min-w-0 flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent position="popper" className="max-h-72">
@@ -306,11 +342,11 @@ export function WorkspaceMenu({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="menu-field">
-              <Label>{t("menu.theme")}</Label>
+            </Field>
+            <Field orientation="horizontal" className={MENU_FIELD}>
+              <FieldLabel>{t("menu.theme")}</FieldLabel>
               <Select value={theme} onValueChange={onThemeChange}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="min-w-0 flex-1">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent position="popper">
@@ -321,27 +357,27 @@ export function WorkspaceMenu({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <button
-              type="button"
-              className="menu-item"
+            </Field>
+            <Button
+              variant="ghost"
+              className={MENU_ITEM}
               disabled={darkOnly}
               onClick={() => onModeChange(effectiveMode === "dark" ? "light" : "dark")}
             >
-              {effectiveMode === "dark" ? <Moon size={15} /> : <Sun size={15} />}
+              {effectiveMode === "dark" ? <Moon /> : <Sun />}
               {t("menu.mode")}
-            </button>
+            </Button>
           </Section>
 
           <Section title={t("menu.tools")}>
-            <button type="button" className="menu-item" onClick={run(onOpenGlossaries)}>
-              <BookMarked size={15} />
+            <Button variant="ghost" className={MENU_ITEM} onClick={run(onOpenGlossaries)}>
+              <BookMarked />
               {t("glossary.button")}
-            </button>
-            <button type="button" className="menu-item" onClick={run(onOpenSettings)}>
-              <Settings size={15} />
+            </Button>
+            <Button variant="ghost" className={MENU_ITEM} onClick={run(onOpenSettings)}>
+              <Settings />
               {t("settings.button")}
-            </button>
+            </Button>
           </Section>
         </div>
       </SheetContent>

@@ -3,9 +3,12 @@ import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 import { BarOptions } from "@/components/layout/BarOptions";
+import { Toolbar } from "@/components/layout/Toolbar";
 import { VirtualList } from "@/components/layout/VirtualList";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { compareEntryPair, diffRows, summarizeRows } from "@/core/compare/token-aware-diff";
 import type { DiffSegment } from "@/core/compare/token-aware-diff";
@@ -137,41 +140,39 @@ export function CompareView() {
 
   return (
     <>
-      <div className="diffbar">
-        <Button type="button" variant="secondary" onClick={() => inputRef.current?.click()}>
+      <Toolbar>
+        {/* The compare tab's primary action keeps its place but yields width. */}
+        <Button
+          type="button"
+          variant="secondary"
+          className="max-[860px]:min-w-0 max-[860px]:flex-[0_1_auto] max-[860px]:overflow-hidden"
+          onClick={() => inputRef.current?.click()}
+        >
           {t("diff.loadFile")}
         </Button>
         <BarOptions>
-          <label className="toggle" title={t("diff.onlyDiffTitle")}>
+          <Label className="flex items-center gap-2 text-xs" title={t("diff.onlyDiffTitle")}>
             <Switch
               size="sm"
               checked={workspace.diffOnly}
               onCheckedChange={(checked) => workspace.setDiffOnly(checked)}
             />
             <span>{t("diff.onlyDiff")}</span>
-          </label>
-          <div className="diff-mode" role="group" aria-label={t("diff.inlineMode")}>
-            <button
-              type="button"
-              className={cn("diff-mode-btn", workspace.diffMode === "word" && "on")}
-              aria-pressed={workspace.diffMode === "word"}
-              onClick={() => workspace.setDiffMode("word")}
-            >
-              {t("diff.modeWords")}
-            </button>
-            <button
-              type="button"
-              className={cn("diff-mode-btn", workspace.diffMode === "character" && "on")}
-              aria-pressed={workspace.diffMode === "character"}
-              onClick={() => workspace.setDiffMode("character")}
-            >
-              {t("diff.modeCharacters")}
-            </button>
-          </div>
+          </Label>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            aria-label={t("diff.inlineMode")}
+            value={workspace.diffMode}
+            onValueChange={(value) => value && workspace.setDiffMode(value as "word" | "character")}
+          >
+            <ToggleGroupItem value="word">{t("diff.modeWords")}</ToggleGroupItem>
+            <ToggleGroupItem value="character">{t("diff.modeCharacters")}</ToggleGroupItem>
+          </ToggleGroup>
           {!compact && stats}
         </BarOptions>
-        <div className="sp" />
-      </div>
+        <div className="flex-1" />
+      </Toolbar>
 
       {compact && stats && <div className="diffstat-row">{stats}</div>}
 

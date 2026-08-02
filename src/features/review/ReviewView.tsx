@@ -1,9 +1,11 @@
-import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BarOptions } from "@/components/layout/BarOptions";
+import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
 import { VirtualList } from "@/components/layout/VirtualList";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import type { ReviewFilter } from "@/core/lang/markers";
 import { statusOf, type TranslationEntry } from "@/core/lang/status";
@@ -124,36 +126,33 @@ export function ReviewView() {
 
   return (
     <>
-      <div className="reviewbar">
-        <div className="search" style={{ maxWidth: 340 }}>
-          <Search className="ic" size={14} aria-hidden="true" />
-          <input
-            type="text"
-            autoComplete="off"
-            placeholder={t("review.searchPh")}
-            value={workspace.reviewQuery}
-            onChange={(event) => workspace.setReviewQuery(event.target.value)}
-          />
-        </div>
+      <Toolbar>
+        <ToolbarSearch
+          className="max-w-[340px]"
+          placeholder={t("review.searchPh")}
+          value={workspace.reviewQuery}
+          onChange={(event) => workspace.setReviewQuery(event.target.value)}
+        />
         <BarOptions>
-          <div className="rchips">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            value={workspace.reviewFilter}
+            onValueChange={(value) => value && workspace.setReviewFilter(value as ReviewFilter)}
+          >
             {chips.map((chip) => (
-              <button
-                type="button"
-                key={chip.id}
-                className={cn("rchip", workspace.reviewFilter === chip.id && "on")}
-                disabled={chip.disabled}
-                onClick={() => workspace.setReviewFilter(chip.id)}
-              >
+              <ToggleGroupItem key={chip.id} value={chip.id} disabled={chip.disabled}>
                 <span>{chip.label}</span>
-                <span className="n">{chip.n}</span>
-              </button>
+                <Badge variant="secondary" className="font-mono">
+                  {chip.n}
+                </Badge>
+              </ToggleGroupItem>
             ))}
-          </div>
-          <span className="hint">{t("review.scopeHint")}</span>
+          </ToggleGroup>
+          <ToolbarHint>{t("review.scopeHint")}</ToolbarHint>
         </BarOptions>
-        <div className="sp" />
-      </div>
+        <span className="flex-1" />
+      </Toolbar>
 
       <VirtualList
         className="reviewlist"

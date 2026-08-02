@@ -4,6 +4,7 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { CompactBar } from "@/components/layout/CompactBar";
 import { RecoveryBanner } from "@/components/layout/RecoveryBanner";
+import { Badge } from "@/components/ui/badge";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -128,27 +129,26 @@ function WorkspaceShell({
                   in CSS would leave its width reserved by the layout gap. */}
               {workspace.view === "editor" && !workspace.compactView && <EditorSidebar />}
               <SidebarInset className="min-h-0 min-w-0">
-                <TabsList
-                  variant="line"
+                <div
                   className={cn(
-                    "bg-card w-full flex-none justify-start gap-1 rounded-none border-b px-4 pt-2 pb-0",
-                    "max-[860px]:no-scrollbar max-[860px]:overflow-x-auto max-[860px]:*:flex-none",
+                    "flex flex-none items-center px-4 py-2.5",
+                    "max-[860px]:no-scrollbar max-[860px]:overflow-x-auto",
                   )}
                 >
-                  <TabsTrigger value="editor">{t("tab.editor")}</TabsTrigger>
-                  <TabsTrigger value="review">
-                    {t("tab.review")}
-                    <span
-                      className={cn(
-                        "text-foreground-faint ms-1.5 font-mono text-[11px]",
-                        "data-active:text-primary",
-                      )}
-                    >
-                      {reviewCount}
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger value="diff">{t("tab.diff")}</TabsTrigger>
-                </TabsList>
+                  <TabsList>
+                    <TabsTrigger value="editor">{t("tab.editor")}</TabsTrigger>
+                    <TabsTrigger value="review">
+                      {t("tab.review")}
+                      <Badge
+                        variant="ghost"
+                        className="text-muted-foreground h-4 min-w-4 px-1 font-mono text-[10px] tabular-nums"
+                      >
+                        {reviewCount}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="diff">{t("tab.diff")}</TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent value="editor" className={TAB_PANE} tabIndex={-1}>
                   <EditorView />

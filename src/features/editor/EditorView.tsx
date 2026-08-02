@@ -6,14 +6,16 @@ import {
   Equal,
   List,
   Pilcrow,
-  Search,
   TriangleAlert,
   type LucideIcon,
 } from "lucide-react";
 
 import { BarOptions } from "@/components/layout/BarOptions";
+import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
 import { VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import {
   Sidebar,
   SidebarContent,
@@ -528,69 +530,67 @@ export function EditorView() {
 
   return (
     <>
-      <div className="toolbar">
+      <Toolbar>
         <SidebarTrigger title={t("menu.filters")} aria-label={t("menu.filters")} />
-        <div className="search">
-          <Search className="ic" size={14} aria-hidden="true" />
-          <input
-            type="text"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder={t("search.ph")}
-            value={workspace.query}
-            onChange={(event) => workspace.setQuery(event.target.value)}
-          />
-        </div>
+        <ToolbarSearch
+          placeholder={t("search.ph")}
+          value={workspace.query}
+          onChange={(event) => workspace.setQuery(event.target.value)}
+        />
         <BarOptions>
-          <button
+          <Button
             type="button"
-            className="qbtn"
+            variant="secondary"
+            className="font-mono"
             title={t("btn.findDblTitle")}
             onClick={() => workspace.setQuery("  ")}
           >
             {t("btn.findDbl")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="qbtn"
+            variant="secondary"
+            className="font-mono"
             title={t("btn.findTabTitle")}
             onClick={() => workspace.setQuery("\t")}
           >
             {t("btn.findTab")}
-          </button>
+          </Button>
           {workspace.query.trim() && (
-            <span className="qhint">
+            <span className="text-warn font-mono text-[11.5px] whitespace-nowrap">
               {t("query.hint", { q: workspace.query, n: workspace.filteredEntries.length })}
             </span>
           )}
-          <button
+          {/* Reports terminology state even with nothing to filter, so it stays
+              legible when disabled rather than dimming out like a dead action. */}
+          <Button
             type="button"
+            variant="outline"
             className={cn(
-              "termpill",
-              terminologyCount === 0 && "clean",
-              workspace.terminologyFilterActive && "on",
+              "font-mono disabled:opacity-100",
+              workspace.terminologyFilterActive && "border-primary bg-primary-soft text-primary",
             )}
             title={t("terminology.filterTitle")}
             disabled={terminologyCount === 0}
             onClick={() => workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive)}
           >
             {terminologyCount === 0 ? (
-              <CircleCheck size={13} aria-hidden="true" />
+              <CircleCheck className="text-success" aria-hidden="true" />
             ) : (
-              <TriangleAlert size={13} aria-hidden="true" />
+              <TriangleAlert className="text-warn" aria-hidden="true" />
             )}
             <span>
               {t(terminologyCount === 1 ? "terminology.count.one" : "terminology.count.other", {
                 n: terminologyCount,
               })}
             </span>
-          </button>
+          </Button>
         </BarOptions>
-        <span className="sp" />
-        <span className="hint">
-          <kbd>Ctrl</kbd>+<kbd>↵</kbd> {t("hint.ctrlEnter")}
-        </span>
-      </div>
+        <span className="flex-1" />
+        <ToolbarHint>
+          <Kbd>Ctrl</Kbd>+<Kbd>↵</Kbd> {t("hint.ctrlEnter")}
+        </ToolbarHint>
+      </Toolbar>
 
       <VirtualList
         className="list"
