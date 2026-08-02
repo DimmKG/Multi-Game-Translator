@@ -265,24 +265,6 @@ body {
   unicode-bidi: isolate;
 }
 
-.brand-mark {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--primary);
-  text-shadow: 0 0 14px color-mix(in srgb, var(--primary) 35%, transparent);
-}
-
-.status-missing {
-  border-left: 3px solid var(--primary);
-}
-.status-done {
-  border-left: 3px solid var(--success);
-}
-.status-same {
-  border-left: 3px solid var(--same);
-}
-
 .t-var {
   color: var(--tok-var);
 }
@@ -294,13 +276,6 @@ body {
 }
 .t-nl {
   color: var(--tok-nl);
-}
-
-.diff-add {
-  background: var(--diff-add);
-}
-.diff-del {
-  background: var(--diff-del);
 }
 
 html.compact-view .app-chrome {
@@ -383,28 +358,6 @@ html.compact-view .app-chrome {
   white-space: nowrap;
 }
 
-.uilang {
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  font-size: 12.5px;
-  padding: 6px 9px;
-  outline: none;
-  transition: 0.12s;
-  min-width: 118px;
-  max-width: 220px;
-  flex: 0 0 auto;
-}
-.uilang:hover {
-  color: var(--foreground);
-}
-.uilang:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
-}
-
 .btn {
   border: 1px solid var(--border);
   background: var(--secondary);
@@ -442,14 +395,6 @@ html.compact-view .app-chrome {
 .btn.ghost {
   background: transparent;
 }
-.btn.okbtn {
-  border-color: var(--success);
-  color: var(--success);
-}
-.btn.warn {
-  border-color: var(--warn);
-  color: var(--warn);
-}
 .btn.icon {
   padding: 7px 9px;
   min-width: 34px;
@@ -463,55 +408,6 @@ html.compact-view .app-chrome {
 .btn:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
-}
-
-.filebar {
-  order: 10;
-  flex: 1 1 100%;
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-block: 2px 3px;
-  scrollbar-width: thin;
-  overscroll-behavior-inline: contain;
-}
-.filebar > * {
-  flex: 0 0 auto;
-}
-.fname {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: var(--foreground-faint);
-  white-space: nowrap;
-  flex: 1 0 220px;
-  min-width: 190px;
-  max-width: 420px;
-  margin-inline-start: auto;
-}
-.fname input {
-  width: auto;
-  min-width: 110px;
-  flex: 1 1 150px;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--foreground);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  padding: 7px 9px;
-  outline: none;
-  transition: 0.12s;
-}
-.fname input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 
 /* ---------- progress meter ---------- */
@@ -1089,52 +985,6 @@ html.compact-view .app-chrome {
   flex: 1;
 }
 
-/* ---------- MT bar ---------- */
-.mtbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 9px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--secondary);
-  flex: 0 0 auto;
-  flex-wrap: wrap;
-}
-.mtbar .grp {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  color: var(--foreground-faint);
-  letter-spacing: 0.03em;
-}
-.mtbar select,
-.mtbar .mini {
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--foreground);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  padding: 6px 9px;
-  outline: none;
-  transition: 0.12s;
-}
-.mtbar select:focus,
-.mtbar .mini:focus {
-  border-color: var(--tok-ref);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tok-ref) 12%, transparent);
-}
-.mtprov {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  color: var(--tok-ref);
-}
-.mthint {
-  font-size: 11.5px;
-  color: var(--muted-foreground);
-  white-space: nowrap;
-}
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -1464,13 +1314,6 @@ html.compact-view .app-chrome {
   border-radius: 3px;
   padding: 0 3px;
 }
-.ws {
-  background: color-mix(in srgb, var(--warn) 28%, transparent);
-  color: var(--warn);
-  border-radius: 3px;
-  font-family: var(--font-mono);
-  outline: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
-}
 
 /* ---------- empty states ---------- */
 .empty-state {
@@ -1688,29 +1531,6 @@ html.compact-view .app-chrome {
   display: inline;
 }
 
-/* On phones the diff summary is a strip under the bar: it is worth reading
-   while scrolling, so it should not sit behind the options button. */
-.diffstat-row {
-  flex: 0 0 auto;
-  padding: 7px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--secondary);
-  overflow-x: auto;
-  white-space: nowrap;
-  scrollbar-width: none;
-}
-.diffstat-row::-webkit-scrollbar {
-  display: none;
-}
-.diffstat-row .diff-detail {
-  display: inline;
-}
-
-.diffname {
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  color: var(--foreground);
-}
 .diffstat {
   font-family: var(--font-mono);
   font-size: 12px;
@@ -2097,8 +1917,7 @@ html.compact-view .app-chrome {
   text-align: center;
 }
 .options-body .hint,
-.options-body .diffstat,
-.options-body .diffname {
+.options-body .diffstat {
   display: block;
   font-size: 12px;
   line-height: 1.5;
@@ -2216,7 +2035,6 @@ html.compact-view .app-chrome {
   /* One scrollable row each, instead of towers of wrapped controls. */
   .tabs,
   .toolbar,
-  .mtbar,
   .reviewbar,
   .diffbar {
     flex-wrap: nowrap;
@@ -2225,13 +2043,11 @@ html.compact-view .app-chrome {
   }
   .tabs::-webkit-scrollbar,
   .toolbar::-webkit-scrollbar,
-  .mtbar::-webkit-scrollbar,
   .reviewbar::-webkit-scrollbar,
   .diffbar::-webkit-scrollbar {
     display: none;
   }
   .toolbar > *,
-  .mtbar > *,
   .reviewbar > *,
   .diffbar > * {
     flex: 0 0 auto;
@@ -2252,7 +2068,6 @@ html.compact-view .app-chrome {
     line-height: 34px;
   }
   .toolbar .hint,
-  .mtbar .mthint,
   .reviewbar .hint {
     display: none;
   }
@@ -2320,7 +2135,6 @@ html.compact-view .app-chrome {
 
 /* ---------- RTL: keep machine-readable values LTR ---------- */
 html[dir="rtl"] .brand .mark,
-html[dir="rtl"] .fname input,
 html[dir="rtl"] .meter .pct,
 html[dir="rtl"] .filt .cnt,
 html[dir="rtl"] .sec-jump,
@@ -2328,10 +2142,8 @@ html[dir="rtl"] .sec-head,
 html[dir="rtl"] .key,
 html[dir="rtl"] .rkey,
 html[dir="rtl"] .chip,
-html[dir="rtl"] .mtprov,
 html[dir="rtl"] .qhint,
 html[dir="rtl"] .hint kbd,
-html[dir="rtl"] .diffname,
 html[dir="rtl"] .diffstat,
 html[dir="rtl"] .difflist,
 html[dir="rtl"] .compact-file,
