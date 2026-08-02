@@ -1,6 +1,7 @@
 # Normal files
 node_modules/
 dist/
+dist-standalone/
 .preview/
 .DS_Store
 Thumbs.db
