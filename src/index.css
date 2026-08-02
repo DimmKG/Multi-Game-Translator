@@ -6,6 +6,21 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Three globals are toggled on <html> by JS — compact view by the store, the two
+   keyboard states by use-keyboard-inset. As variants they stay expressible from
+   the components that react to them (`compact:hidden`, `kb-open:hidden`) instead
+   of needing a matching rule here for every element. */
+@custom-variant compact (html.compact-view &);
+@custom-variant kb-open (html.keyboard-open &);
+@custom-variant kb-cramped (html.keyboard-cramped &);
+
+/* Machine-readable strings — keys, file names, source text — keep their own
+   direction inside an RTL interface. No utility pair expresses this. */
+@utility ltr-isolate {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -66,6 +81,20 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-attention-pulse: attention-pulse 1.8s ease-in-out infinite;
+}
+
+/* Draws the eye to a control the user has to touch before anything else works —
+   currently the reference-file item once machine translation is configured.
+   Under reduced motion the callers swap it for a static ring. */
+@keyframes attention-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--warn) 24%, transparent);
+  }
 }
 
 /* ==========================================================================
