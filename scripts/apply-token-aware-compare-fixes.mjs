@@ -13,12 +13,6 @@ app = replaceOnce(
   '    scope.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });\n    scope.querySelectorAll("[data-i18n-aria-label]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel)); });\n',
   "localized aria-label support"
 );
-app = replaceOnce(
-  app,
-  '    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);\n    updateReferenceUi();\n',
-  '    $("diffOnlyToggle").classList.toggle("on", state.diffOnly);\n    syncDiffModeControls();\n    updateReferenceUi();\n',
-  "Compare mode synchronization in openWorkspace"
-);
 fs.writeFileSync("src/scripts/app.js", app);
 
 let css = fs.readFileSync("src/styles/app.css", "utf8");
