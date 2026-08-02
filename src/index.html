@@ -50,6 +50,7 @@
     <span class="sub" data-i18n="app.sub"></span>
   </div>
   <select id="uiLang" class="uilang" aria-label="Interface language"></select>
+  <button type="button" class="btn ghost compact-toggle" id="compactToggle" data-i18n="compact.enter" data-i18n-title="compact.enterTitle" aria-pressed="false"></button>
   <div class="meter" id="meter" style="display:none">
     <div class="bar"><div class="fill" id="fill"></div></div>
     <div class="pct" id="pct"></div>
@@ -77,6 +78,14 @@
   <div class="grow2"><span data-i18n="restore.found"></span> <b id="restoreName"></b> (<span id="restoreWhen"></span>)</div>
   <button class="p" id="restoreYes" data-i18n="restore.continue"></button>
   <button id="restoreNo" data-i18n="restore.startOver"></button>
+</div>
+
+<div class="compact-bar" id="compactBar" style="display:none" aria-live="polite">
+  <div class="compact-file" id="compactFilename"></div>
+  <div class="compact-progress" id="compactProgress"></div>
+  <div class="compact-save" id="compactSaveStatus"></div>
+  <div class="compact-spacer"></div>
+  <button type="button" class="btn ghost compact-exit" id="compactExit" data-i18n="compact.exit" data-i18n-title="compact.exitTitle"></button>
 </div>
 
 <main>

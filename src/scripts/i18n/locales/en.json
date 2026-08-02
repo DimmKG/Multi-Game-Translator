@@ -241,6 +241,12 @@
     "diff.modeCharacters": "Characters",
     "diff.changedKeys": "Keys: {n}",
     "diff.changedValues": "Values: {n}",
-    "diff.prefixOnly": "Status only: {n}"
+    "diff.prefixOnly": "Status only: {n}",
+    "compact.enter": "Compact view",
+    "compact.enterTitle": "Hide secondary panels and provide more space for translation.",
+    "compact.exit": "Normal view",
+    "compact.exitTitle": "Restore the full workspace controls.",
+    "compact.unnamed": "Unnamed translation",
+    "compact.progress": "{done} / {total} translated"
   }
 }
