@@ -98,6 +98,8 @@ npx shadcn@latest add button
 
 ## License
 
+Copyright (C) 2026 Shteryan Nikolaev, Dmitrii Petrov and contributors.
+
 This project is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
 
 ## Feedback
