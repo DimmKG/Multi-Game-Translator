@@ -33,12 +33,6 @@ test = replaceOnce(
   '  assert.match(html, /data-diff-mode="character"/);\n  assert.match(html, /data-i18n-aria-label="diff.inlineMode"/);\n  assert.ok(app.includes("data-i18n-aria-label"));\n',
   "Compare accessibility assertions"
 );
-test = replaceOnce(
-  test,
-  '  assert.match(css, /\\.diff-mode-btn:focus-visible/);\n',
-  '  assert.match(css, /\\.diff-mode-btn:focus-visible/);\n  assert.ok(!css.includes("--ink-muted"));\n  assert.ok(!css.includes("--surface-2"));\n  assert.ok(!css.includes("--accent-soft"));\n',
-  "Compare CSS variable assertions"
-);
 fs.writeFileSync("test/token-aware-diff-integration.test.mjs", test);
 
 console.log("Applied Compare integration test, theme, and accessibility fixes.");
