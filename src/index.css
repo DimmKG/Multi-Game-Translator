@@ -1,0 +1,1968 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "shadcn-theme-switcher/themes.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-same: var(--same);
+  --color-same-soft: var(--same-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-tok-var: var(--tok-var);
+  --color-tok-ref: var(--tok-ref);
+  --color-tok-fmt: var(--tok-fmt);
+  --color-tok-nl: var(--tok-nl);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --font-sans: var(--user-interface-font, "Geist Variable", system-ui, sans-serif);
+  --font-mono: var(
+    --user-editor-font,
+    ui-monospace,
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace
+  );
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+/* ==========================================================================
+   Theming
+   -------
+   Colour palettes come from shadcn-theme-switcher (imported above). They define
+   only the standard shadcn tokens, so everything the workspace additionally
+   needs — status hues, diff shading, chrome greys — is DERIVED from those here.
+   That means a new palette drops in with no per-theme work.
+
+   `dungeon` is the one hand-tuned exception: it is the app's own identity and
+   keeps its literal values.
+   ========================================================================== */
+
+/* The palette files also ship per-theme font stacks. The app owns typography
+   (including the user's font settings), so re-assert ours at equal specificity. */
+:root,
+html[data-theme] {
+  --font-sans: var(--user-interface-font, "Geist Variable", system-ui, sans-serif);
+  --font-mono: var(
+    --user-editor-font,
+    ui-monospace,
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace
+  );
+  --font-serif: var(--font-sans);
+}
+
+/* ---------- derived workspace tokens ---------- */
+:root {
+  /* Status hues are fixed on the colour wheel and only shift lightness/chroma
+     between light and dark mode, so they read the same in every palette. */
+  --hue-success: 150;
+  --hue-same: 245;
+  --hue-warn: 25;
+  --hue-var: 75;
+  --hue-fmt: 310;
+  --hue-nl: 250;
+  --hue-mt: 295;
+
+  /* dark mode defaults */
+  --status-l: 0.78;
+  --status-c: 0.12;
+  --soft-l: 0.28;
+  --soft-c: 0.05;
+
+  --success: oklch(var(--status-l) var(--status-c) var(--hue-success));
+  --success-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-success));
+  --same: oklch(var(--status-l) var(--status-c) var(--hue-same));
+  --same-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-same));
+  --warn: oklch(var(--status-l) var(--status-c) var(--hue-warn));
+  --warn-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-warn));
+
+  --tok-var: oklch(var(--status-l) var(--status-c) var(--hue-var));
+  --tok-ref: oklch(var(--status-l) var(--status-c) var(--hue-same));
+  --tok-fmt: oklch(var(--status-l) var(--status-c) var(--hue-fmt));
+  --tok-nl: oklch(var(--status-l) calc(var(--status-c) * 0.35) var(--hue-nl));
+  --mt-ink: oklch(var(--status-l) var(--status-c) var(--hue-mt));
+  --mt-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-mt));
+
+  --diff-add: oklch(calc(var(--soft-l) * 0.78) calc(var(--soft-c) * 0.9) var(--hue-success));
+  --diff-del: oklch(calc(var(--soft-l) * 0.78) calc(var(--soft-c) * 0.9) var(--hue-warn));
+
+  /* Chrome greys, mixed out of the palette's own background/foreground. */
+  --border-soft: color-mix(in oklab, var(--border) 55%, var(--background));
+  --foreground-faint: color-mix(in oklab, var(--foreground) 84%, var(--background));
+  --filt-on-border: color-mix(in oklab, var(--primary) 45%, var(--accent));
+  --gutter: color-mix(in oklab, var(--muted) 45%, var(--background));
+  --diff-gap: color-mix(in oklab, var(--muted) 25%, var(--background));
+  --overlay: var(--popover);
+  --shadow-soft: oklch(0 0 0 / 0.18);
+  --shadow-strong: oklch(0 0 0 / 0.5);
+  --scrollbar-thumb: color-mix(in oklab, var(--border) 65%, var(--foreground));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--border) 40%, var(--foreground));
+  /* Percentages must total 100% — color-mix turns any shortfall into alpha. */
+  --header-gradient: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--card) 96%, var(--foreground) 4%),
+    var(--background)
+  );
+}
+
+/* Light mode needs darker ink and paler washes. */
+:root:not(.dark) {
+  --status-l: 0.55;
+  --status-c: 0.15;
+  --soft-l: 0.94;
+  --soft-c: 0.045;
+}
+:root:not(.dark) {
+  --diff-add: oklch(0.93 0.06 var(--hue-success));
+  --diff-del: oklch(0.93 0.06 var(--hue-warn));
+  --shadow-soft: oklch(0 0 0 / 0.08);
+  --shadow-strong: oklch(0 0 0 / 0.18);
+  --scrollbar-thumb: color-mix(in oklab, var(--border) 78%, var(--foreground));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--border) 55%, var(--foreground));
+}
+
+/* ---------- dungeon: the app's own hand-tuned identity ----------
+   Scoped to its own attribute (plus the pre-hydration fallback) so it never
+   leaks into the imported palettes — a bare `:root` here would win over all
+   of them, since it matches the same element. */
+:root:not([data-theme]),
+:root[data-theme="dungeon"],
+[data-theme="dungeon"] {
+  --background: #14110d;
+  --foreground: #f6efe1;
+  --card: #1d1913;
+  --card-foreground: #f6efe1;
+  --popover: #100d09;
+  --popover-foreground: #f6efe1;
+  --primary: #e8a13a;
+  --primary-foreground: #1a1204;
+  --secondary: #241f17;
+  --secondary-foreground: #f6efe1;
+  --muted: #241f17;
+  --muted-foreground: #c4b69a;
+  --accent: #3a2c14;
+  --accent-foreground: #ffffff;
+  --destructive: #e2695b;
+  --border: #352d21;
+  --input: #352d21;
+  --ring: #e8a13a;
+  --radius: 0.5rem;
+
+  --success: #8fd69a;
+  --success-soft: #1f3324;
+  --same: #92c2e8;
+  --same-soft: #1c2c3a;
+  --warn: #ec7d6f;
+  --warn-soft: #37201d;
+  --tok-var: #e8c25c;
+  --tok-ref: #8fbcee;
+  --tok-fmt: #d49ae8;
+  --tok-nl: #9fb0c4;
+  --mt-soft: #2a2140;
+  --mt-ink: #c4abee;
+
+  --border-soft: #2a241b;
+  --foreground-faint: #bdae94;
+  --filt-on-border: #5a431c;
+  --gutter: #171410;
+  --diff-gap: #141009;
+  --diff-add: #132a19;
+  --diff-del: #2a1512;
+  --overlay: #100d09;
+  --scrollbar-thumb: #4a3f2f;
+  --scrollbar-thumb-hover: #63533d;
+  --header-gradient: linear-gradient(180deg, #221c14, #1a1610);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.ltr-isolate {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.brand-mark {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.status-missing {
+  border-left: 3px solid var(--primary);
+}
+.status-done {
+  border-left: 3px solid var(--success);
+}
+.status-same {
+  border-left: 3px solid var(--same);
+}
+
+.t-var {
+  color: var(--tok-var);
+}
+.t-ref {
+  color: var(--tok-ref);
+}
+.t-fmt {
+  color: var(--tok-fmt);
+}
+.t-nl {
+  color: var(--tok-nl);
+}
+
+.diff-add {
+  background: var(--diff-add);
+}
+.diff-del {
+  background: var(--diff-del);
+}
+
+html.compact-view .app-chrome {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Sidebar tokens, derived for every palette */
+:root {
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ==========================================================================
+   Workspace chrome — ported from the single-file prototype so the React app
+   keeps the same silhouette. Every colour resolves through a theme token, so
+   the layout is identical whichever palette is active.
+   ========================================================================== */
+
+/* ---------- top bar ---------- */
+.app-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 16px;
+  background: var(--header-gradient);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.app-header > .brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex: 0 1 auto;
+  margin-inline-end: auto;
+  user-select: none;
+}
+.brand .mark {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  font-size: 15px;
+  text-shadow: 0 0 14px color-mix(in srgb, var(--primary) 35%, transparent);
+  white-space: nowrap;
+}
+.brand .sub {
+  font-size: 11px;
+  color: var(--foreground-faint);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.uilang {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  padding: 6px 9px;
+  outline: none;
+  transition: 0.12s;
+  min-width: 118px;
+  max-width: 220px;
+  flex: 0 0 auto;
+}
+.uilang:hover {
+  color: var(--foreground);
+}
+.uilang:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+  font-family: inherit;
+  cursor: pointer;
+  padding: 7px 13px;
+  border-radius: 7px;
+  font-size: 13px;
+  line-height: 1.25;
+  transition: 0.15s;
+  text-align: center;
+  white-space: nowrap;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--foreground);
+}
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.btn.primary:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--primary) 85%, var(--primary-foreground));
+  color: var(--primary-foreground);
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn.okbtn {
+  border-color: var(--success);
+  color: var(--success);
+}
+.btn.warn {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.btn.icon {
+  padding: 7px 9px;
+  min-width: 34px;
+}
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  border-color: var(--border) !important;
+  color: var(--muted-foreground) !important;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.filebar {
+  order: 10;
+  flex: 1 1 100%;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 2px 3px;
+  scrollbar-width: thin;
+  overscroll-behavior-inline: contain;
+}
+.filebar > * {
+  flex: 0 0 auto;
+}
+.fname {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--foreground-faint);
+  white-space: nowrap;
+  flex: 1 0 220px;
+  min-width: 190px;
+  max-width: 420px;
+  margin-inline-start: auto;
+}
+.fname input {
+  width: auto;
+  min-width: 110px;
+  flex: 1 1 150px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 7px 9px;
+  outline: none;
+  transition: 0.12s;
+}
+.fname input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+/* ---------- progress meter ---------- */
+.meter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 1 300px;
+  min-width: 210px;
+  max-width: 340px;
+  margin-inline-start: 4px;
+}
+.meter .bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+  border-radius: 6px;
+  background: var(--border-soft);
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+}
+.meter .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--primary) 70%, var(--primary-foreground)),
+    var(--primary)
+  );
+  transition: width 0.3s;
+}
+.meter .pct {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--foreground);
+  width: 112px;
+  flex: 0 0 112px;
+  text-align: right;
+  white-space: nowrap;
+}
+.meter .pct b {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* ---------- save-status pill ---------- */
+/* Fixed box: the label swaps between "saved 13:28", "saving…" and the error
+   text on every edit, and a content-sized pill would shove the toolbar around. */
+.savepill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  flex: 0 0 250px;
+  width: 250px;
+  overflow: hidden;
+  background: var(--secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  color: var(--foreground);
+}
+.savepill:hover {
+  border-color: var(--success);
+  color: var(--foreground);
+}
+.savepill .sdot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  flex: 0 0 auto;
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--success) 50%, transparent);
+}
+.savepill .stext {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.savepill.saving {
+  color: var(--primary);
+}
+.savepill.saving .sdot {
+  background: var(--primary);
+  box-shadow: none;
+}
+.savepill.error {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.savepill.error .sdot {
+  background: var(--warn);
+  box-shadow: none;
+}
+/* ---------- restore banner ---------- */
+.restore {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 16px;
+  background: var(--success-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--success) 35%, var(--success-soft));
+  color: color-mix(in srgb, var(--success) 65%, var(--foreground));
+  font-size: 13px;
+  flex: 0 0 auto;
+}
+.restore svg {
+  color: var(--success);
+}
+.restore .grow2 {
+  flex: 1;
+  min-width: 0;
+}
+.restore button {
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--success) 40%, var(--success-soft));
+  background: transparent;
+  color: inherit;
+}
+.restore button.p {
+  background: var(--success);
+  color: var(--success-soft);
+  border-color: var(--success);
+  font-weight: 600;
+}
+
+/* ---------- compact bar ---------- */
+.compact-bar {
+  position: sticky;
+  top: 0;
+  z-index: 45;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 8px 22px var(--shadow-soft);
+  flex: 0 0 auto;
+}
+.compact-file,
+.compact-progress,
+.compact-save {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compact-file {
+  max-width: min(34vw, 420px);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--foreground);
+}
+.compact-progress,
+.compact-save {
+  color: var(--foreground);
+}
+.compact-spacer {
+  flex: 1 1 auto;
+}
+
+/* ---------- layout ---------- */
+.workspace-main {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  min-height: 0;
+}
+.side {
+  position: relative;
+  flex: 0 0 236px;
+  background: var(--card);
+  border-inline-end: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.side.collapsed {
+  flex-basis: 44px;
+}
+.side.collapsed .filt .l span,
+.side.collapsed .filt .cnt,
+.side.collapsed .block,
+.side.collapsed .sections {
+  display: none;
+}
+.side.collapsed .filters {
+  padding: 6px 4px;
+}
+.side.collapsed .filt {
+  justify-content: center;
+  padding: 9px 0;
+}
+.side-toggle {
+  display: flex;
+  padding: 8px 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+  flex: 0 0 auto;
+}
+.side.collapsed .side-toggle {
+  padding-inline: 4px;
+}
+.side-toggle button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+  transition: 0.12s;
+}
+.side.collapsed .side-toggle button {
+  justify-content: center;
+  padding-inline: 0;
+}
+.side-toggle button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.side .block {
+  padding: 14px 14px 6px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.side .lbl {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--foreground-faint);
+  margin-bottom: 8px;
+}
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+}
+.filt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: start;
+  width: 100%;
+  cursor: pointer;
+  transition: 0.12s;
+}
+.filt:hover:not(:disabled) {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.filt.on {
+  background: var(--accent);
+  border-color: var(--filt-on-border);
+  color: var(--accent-foreground);
+}
+.filt:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.filt .cnt {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted-foreground);
+  flex: 0 0 auto;
+}
+.filt.on .cnt {
+  color: var(--primary);
+}
+.filt.warn .cnt {
+  color: var(--warn);
+}
+.filt .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+.filt .l {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  overflow: hidden;
+  min-width: 0;
+}
+.dot-missing {
+  background: var(--primary);
+}
+.dot-same {
+  background: var(--same);
+}
+.dot-done {
+  background: var(--success);
+}
+.dot-all {
+  background: var(--foreground-faint);
+}
+.dot-ws {
+  background: var(--warn);
+}
+
+.sections {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 8px;
+  min-height: 0;
+}
+.sec-jump {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  text-align: start;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sec-jump:hover {
+  background: var(--secondary);
+  color: var(--primary);
+}
+.sec-jump .sn {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sec-jump .sc {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+
+/* ---------- work area ---------- */
+.work {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* ---------- tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px 0;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.tab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: color-mix(in oklab, var(--foreground) 78%, var(--background));
+  font-family: inherit;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
+  transition: 0.12s;
+}
+.tab:hover {
+  color: var(--foreground);
+}
+.tab[data-state="active"] {
+  background: var(--background);
+  border-color: var(--border);
+  color: var(--primary);
+  position: relative;
+  top: 1px;
+}
+.tab .tcount {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--foreground-faint);
+  margin-inline-start: 6px;
+}
+.tab[data-state="active"] .tcount {
+  color: var(--primary);
+}
+
+/* ---------- toolbar ---------- */
+.toolbar,
+.reviewbar,
+.diffbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+.search {
+  flex: 1;
+  max-width: 560px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.search:focus-within {
+  border-color: var(--primary);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 13px;
+}
+.search input::placeholder {
+  color: var(--foreground-faint);
+}
+.search .ic {
+  color: var(--foreground-faint);
+  flex: 0 0 auto;
+}
+.hint {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.hint kbd {
+  font-family: var(--font-mono);
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.qbtn {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: 0.12s;
+  white-space: nowrap;
+}
+.qbtn:hover:not(:disabled) {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.qbtn.on {
+  background: var(--accent);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.qbtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Terminology status: a card, not a dimmed button — it reports state even when
+   there is nothing to filter, so it should read as information. */
+.termpill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: 0.12s;
+  white-space: nowrap;
+}
+.termpill svg {
+  flex: 0 0 auto;
+  color: var(--warn);
+}
+.termpill.clean {
+  cursor: default;
+  opacity: 1;
+}
+.termpill.clean svg {
+  color: var(--success);
+}
+.termpill:not(.clean):hover {
+  border-color: var(--warn);
+}
+.termpill.on {
+  background: var(--accent);
+  border-color: var(--primary);
+  color: var(--accent-foreground);
+}
+
+.qhint {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--warn);
+  white-space: nowrap;
+}
+.sp {
+  flex: 1;
+}
+
+/* ---------- MT bar ---------- */
+.mtbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--secondary);
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+}
+.mtbar .grp {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--foreground-faint);
+  letter-spacing: 0.03em;
+}
+.mtbar select,
+.mtbar .mini {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  padding: 6px 9px;
+  outline: none;
+  transition: 0.12s;
+}
+.mtbar select:focus,
+.mtbar .mini:focus {
+  border-color: var(--tok-ref);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tok-ref) 12%, transparent);
+}
+.mtprov {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--tok-ref);
+}
+.mthint {
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--foreground);
+  font-size: 12px;
+}
+.toggle .tk {
+  width: 34px;
+  height: 19px;
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--muted-foreground) 25%, var(--secondary));
+  border: 1px solid var(--border);
+  position: relative;
+  transition: 0.15s;
+  flex: 0 0 auto;
+}
+.toggle .tk::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+  transition: 0.15s;
+}
+.toggle.on .tk {
+  background: var(--accent);
+  border-color: var(--primary);
+}
+.toggle.on .tk::after {
+  inset-inline-start: 16px;
+  background: var(--primary);
+}
+
+/* ---------- entry list ---------- */
+/* No `scroll-behavior: smooth` here, unlike the original: these lists are
+   virtualised, so a jump crosses thousands of unrendered rows. Animating it
+   would both scroll through blank space and restart on every measurement. */
+.list,
+.reviewlist {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px 120px;
+  min-height: 0;
+}
+.sec-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 12px;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  scroll-margin-top: 12px;
+}
+.sec-head:first-child {
+  margin-top: 4px;
+}
+.sec-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+}
+
+/* ---------- entry card ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  transition: border-color 0.15s;
+  border-inline-start: 3px solid var(--border);
+}
+.card.st-missing {
+  border-inline-start-color: var(--primary);
+}
+.card.st-done {
+  border-inline-start-color: var(--success);
+}
+.card.st-same {
+  border-inline-start-color: var(--same);
+}
+.card:focus-within {
+  border-color: var(--border);
+  border-inline-start-color: var(--primary);
+  background: var(--secondary);
+}
+.card .row1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.key {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: 0.12s;
+}
+.key:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.badge {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.b-missing {
+  background: var(--accent);
+  color: var(--primary);
+}
+.b-done {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.b-same {
+  background: var(--same-soft);
+  color: var(--same);
+}
+.b-mt {
+  background: var(--mt-soft);
+  color: var(--mt-ink);
+}
+.b-ws {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.spacer {
+  flex: 1;
+}
+
+.guide {
+  font-size: 12.5px;
+  color: color-mix(in oklab, var(--foreground) 85%, var(--background));
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.guide::first-letter {
+  color: var(--primary);
+}
+
+.orig {
+  font-size: 13.5px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  padding: 8px 11px;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.55;
+}
+.orig .olabel {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground-faint);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.tawrap {
+  position: relative;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  transition: 0.12s;
+}
+.tawrap:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+.tawrap > textarea {
+  display: block;
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
+  padding: 9px 11px;
+  border: 0;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  tab-size: 4;
+  background: transparent;
+  color: var(--foreground);
+  resize: vertical;
+  min-height: 42px;
+  outline: none;
+}
+.tawrap.rv > textarea {
+  font-size: 13.5px;
+  padding: 8px 10px;
+  min-height: 38px;
+}
+
+.card .row3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  cursor: pointer;
+  transition: 0.12s;
+  color: var(--muted-foreground);
+}
+.chip:hover {
+  border-color: var(--primary);
+}
+.chip.var {
+  color: var(--tok-var);
+}
+.chip.ref {
+  color: var(--tok-ref);
+}
+.chip.fmt {
+  color: var(--tok-fmt);
+}
+.chip.nl {
+  color: var(--tok-nl);
+}
+.chip.miss {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.chip.miss::before {
+  content: "⚠ ";
+}
+.chip.wsfix {
+  border-color: var(--warn);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.chip.mt {
+  border-color: var(--tok-ref);
+  color: var(--tok-ref);
+}
+.toklead {
+  font-size: 11px;
+  color: var(--foreground-faint);
+  margin-inline-end: 2px;
+}
+.samebtn {
+  margin-inline-start: auto;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 11px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  transition: 0.12s;
+}
+.samebtn:hover {
+  border-color: var(--same);
+  color: var(--same);
+}
+.samebtn.on {
+  background: var(--same-soft);
+  border-color: var(--same);
+  color: var(--same);
+}
+.warnline {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--warn);
+  margin-top: 2px;
+}
+.warnline svg {
+  flex: 0 0 auto;
+}
+
+/* token colouring inside source text */
+.orig .t-var,
+.orig .t-ref,
+.orig .t-fmt,
+.orig .t-nl,
+.ren .t-var,
+.ren .t-ref,
+.ren .t-fmt,
+.ren .t-nl {
+  font-family: var(--font-mono);
+  font-size: 0.94em;
+}
+.t-fmt {
+  background: color-mix(in srgb, var(--tok-fmt) 12%, transparent);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.t-nl {
+  background: color-mix(in srgb, var(--tok-nl) 14%, transparent);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.ws {
+  background: color-mix(in srgb, var(--warn) 28%, transparent);
+  color: var(--warn);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  outline: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+}
+
+/* ---------- empty states ---------- */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted-foreground);
+  padding: 60px 20px;
+  font-size: 14px;
+}
+.empty-state .empty-icon {
+  color: var(--success);
+  flex: 0 0 auto;
+}
+
+/* ---------- footnote ---------- */
+.footnote {
+  padding: 9px 16px;
+  font-size: 11.5px;
+  color: var(--foreground-faint);
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+/* ---------- review ---------- */
+.rchips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.rchip {
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--foreground);
+  font-family: inherit;
+  cursor: pointer;
+  padding: 6px 11px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  transition: 0.12s;
+}
+.rchip:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--foreground);
+}
+.rchip.on {
+  background: var(--accent);
+  border-color: var(--primary);
+  color: var(--accent-foreground);
+}
+.rchip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rchip .n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: 0.85;
+  margin-inline-start: 5px;
+}
+.rrow {
+  display: grid;
+  grid-template-columns: 170px 1fr 1fr 92px;
+  gap: 14px;
+  align-items: start;
+  padding: 11px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  margin-bottom: 8px;
+  background: var(--card);
+  border-inline-start: 3px solid var(--success);
+}
+.rrow.flag {
+  border-inline-start-color: var(--warn);
+}
+.rrow.mt {
+  border-inline-start-color: var(--mt-ink);
+}
+.rmeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.rkey {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  cursor: pointer;
+  word-break: break-all;
+  text-align: start;
+}
+.rkey:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.rflags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.rflag {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+.rflag.mt {
+  background: var(--mt-soft);
+  color: var(--mt-ink);
+}
+.rflag.miss {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.rflag.same {
+  background: var(--same-soft);
+  color: var(--same);
+}
+.rflag.ws {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.rcol {
+  min-width: 0;
+}
+.rlabel {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--foreground-faint);
+  display: block;
+  margin-bottom: 4px;
+}
+.ren {
+  font-size: 13px;
+  color: var(--foreground);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--background);
+  border: 1px solid var(--border-soft);
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+.ren.empty-ref {
+  color: var(--foreground-faint);
+  font-style: italic;
+}
+.rmiss {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
+}
+.ractions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rbtn {
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  white-space: nowrap;
+  transition: 0.12s;
+}
+.rbtn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.rbtn.ok:hover {
+  border-color: var(--success);
+  color: var(--success);
+}
+@media (max-width: 920px) {
+  .rrow {
+    grid-template-columns: 1fr;
+  }
+  .ractions {
+    flex-direction: row;
+  }
+}
+
+/* ---------- diff view ---------- */
+.diffname {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--foreground);
+}
+.diffstat {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--foreground);
+}
+.diffstat .add {
+  color: var(--success);
+}
+.diffstat .del {
+  color: var(--warn);
+}
+.diffstat .chg {
+  color: var(--primary);
+}
+.diffstat .diff-detail {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.diff-mode {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.diff-mode-btn {
+  border: 0;
+  border-inline-end: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.diff-mode-btn:last-child {
+  border-inline-end: 0;
+}
+.diff-mode-btn:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.diff-mode-btn.on {
+  background: var(--accent);
+  color: var(--primary);
+  font-weight: 700;
+}
+.difflist {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  min-height: 0;
+}
+.dhead,
+.drow {
+  display: grid;
+  grid-template-columns: 46px 1fr 46px 1fr;
+}
+.dhead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--secondary);
+  border-bottom: 1px solid var(--border);
+  color: var(--foreground-faint);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+.dhead > div {
+  padding: 6px 10px;
+}
+.dhead .h2 {
+  border-inline-start: 1px solid var(--border);
+}
+.drow {
+  border-bottom: 1px solid var(--border-soft);
+}
+.dnum {
+  padding: 2px 8px;
+  text-align: end;
+  color: var(--muted-foreground);
+  background: var(--gutter);
+  user-select: none;
+  white-space: nowrap;
+}
+.dtxt {
+  padding: 2px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  border-inline-start: 1px solid var(--border-soft);
+}
+.drow.eq .dtxt {
+  color: color-mix(in oklab, var(--foreground) 82%, var(--background));
+}
+.drow.del .dnum-l,
+.drow.chg .dnum-l {
+  background: var(--diff-del);
+}
+.drow.del .txt-l,
+.drow.chg .txt-l {
+  background: var(--diff-del);
+}
+.drow.add .dnum-r,
+.drow.chg .dnum-r {
+  background: var(--diff-add);
+}
+.drow.add .txt-r,
+.drow.chg .txt-r {
+  background: var(--diff-add);
+}
+.di-del {
+  background: color-mix(in srgb, var(--warn) 42%, transparent);
+  border-radius: 2px;
+}
+.di-add {
+  background: color-mix(in srgb, var(--success) 40%, transparent);
+  border-radius: 2px;
+}
+.dgap {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--foreground-faint);
+  background: var(--diff-gap);
+  padding: 4px 0;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-soft);
+}
+@media (max-width: 720px) {
+  .dhead,
+  .drow {
+    grid-template-columns: 38px 1fr 38px 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .diffbar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .diffstat .diff-detail {
+    display: none;
+  }
+}
+
+/* ---------- drop screen ---------- */
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.drop {
+  width: min(560px, 90%);
+  border: 1.5px dashed var(--border);
+  border-radius: 16px;
+  padding: 44px 34px;
+  text-align: center;
+  background: var(--card);
+  transition: 0.15s;
+}
+.drop.over {
+  border-color: var(--primary);
+  background: var(--secondary);
+}
+.drop h1 {
+  margin: 0 0 6px;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  color: var(--primary);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.drop p {
+  margin: 0 0 20px;
+  color: var(--muted-foreground);
+  font-size: 13.5px;
+}
+.drop .lg {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.drop .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  font-size: 11.5px;
+  color: var(--foreground-faint);
+}
+.legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+/* ---------- toast ---------- */
+.cn-toast {
+  font-size: 13px;
+  padding: 9px 18px;
+  box-shadow: 0 8px 30px var(--shadow-strong);
+}
+
+/* ---------- scrollbars ---------- */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
+  border: 3px solid var(--card);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ---------- responsive header ---------- */
+@media (max-width: 900px) {
+  .app-header {
+    padding: 9px 12px;
+  }
+  .app-header > .meter {
+    order: 5;
+    flex: 1 1 100%;
+    max-width: none;
+    margin-inline-start: 0;
+  }
+}
+@media (max-width: 760px) {
+  .compact-bar {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .compact-file {
+    max-width: 38vw;
+  }
+  .compact-save {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .app-header {
+    gap: 7px 8px;
+    padding: 8px 10px;
+  }
+  .brand .sub {
+    display: none;
+  }
+  .uilang {
+    min-width: 104px;
+    max-width: 46vw;
+  }
+  .app-header > .btn {
+    padding: 6px 9px;
+  }
+  .app-header > .meter {
+    min-width: 0;
+  }
+  .filebar .savepill {
+    flex-basis: 190px;
+    width: 190px;
+  }
+  .filebar .fname {
+    flex-basis: 190px;
+    min-width: 170px;
+    margin-inline-start: 0;
+  }
+}
+@media (max-width: 480px) {
+  .compact-progress {
+    display: none;
+  }
+  .compact-file {
+    max-width: 58vw;
+  }
+}
+
+/* ---------- RTL: keep machine-readable values LTR ---------- */
+html[dir="rtl"] .brand .mark,
+html[dir="rtl"] .fname input,
+html[dir="rtl"] .meter .pct,
+html[dir="rtl"] .filt .cnt,
+html[dir="rtl"] .sec-jump,
+html[dir="rtl"] .sec-head,
+html[dir="rtl"] .key,
+html[dir="rtl"] .rkey,
+html[dir="rtl"] .chip,
+html[dir="rtl"] .mtprov,
+html[dir="rtl"] .qhint,
+html[dir="rtl"] .hint kbd,
+html[dir="rtl"] .diffname,
+html[dir="rtl"] .diffstat,
+html[dir="rtl"] .difflist,
+html[dir="rtl"] .compact-file,
+html[dir="rtl"] .compact-progress,
+html[dir="rtl"] .compact-save {
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: left;
+}
+html[dir="rtl"] .search input,
+html[dir="rtl"] .orig,
+html[dir="rtl"] .ren,
+html[dir="rtl"] .tawrap textarea {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
