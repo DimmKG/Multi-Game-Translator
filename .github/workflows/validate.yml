@@ -8,7 +8,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   verify:
@@ -17,27 +17,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: agent/compact-icon-rail
-          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      - name: Refine Compact icon rail UX
-        run: node scripts/refine-compact-icon-rail.mjs
-
       - name: Verify project and standalone build
         run: npm run verify
-
-      - name: Commit Compact rail UX refinement
-        run: |
-          git restore --source=HEAD -- .github/workflows/validate.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm scripts/refine-compact-icon-rail.mjs
-          git add -A
-          git commit -m "Refine Compact rail by workspace context"
-          git push origin HEAD:agent/compact-icon-rail
