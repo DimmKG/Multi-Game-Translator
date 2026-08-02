@@ -85,6 +85,7 @@
     diffOnly: true,    // collapse equal runs
     diffMode: "word",   // inline Compare granularity: word | character
     compactView: false,  // non-destructive layout-only workspace state
+    compactDrawerOpen: false,
   };
 
   // ---------- Compact workspace layout ----------
@@ -118,7 +119,109 @@
     if (toggle) toggle.setAttribute("aria-pressed", state.compactView ? "true" : "false");
     const bar = $("compactBar");
     if (bar) bar.style.display = state.compactView ? "flex" : "none";
+    const rail = $("compactRail");
+    if (rail) rail.style.display = state.compactView ? "flex" : "none";
+    if (!state.compactView) closeCompactDrawer({restoreFocus:false});
     syncCompactBar();
+    syncCompactRail();
+  }
+
+  let compactDrawerInvoker = null;
+
+  function syncCompactRail(){
+    const viewMap = {editor:"compactRailEditor", review:"compactRailReview", diff:"compactRailCompare"};
+    for (const [view, id] of Object.entries(viewMap)){
+      const button = $(id);
+      if (!button) continue;
+      const active = state.view === view;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-current", active ? "page" : "false");
+    }
+    document.querySelectorAll("#compactRail [data-compact-views]").forEach(button => {
+      const allowed = String(button.dataset.compactViews || "").split(/\s+/).filter(Boolean);
+      button.hidden = !allowed.includes(state.view);
+    });
+    const filterButton = $("compactRailFilters");
+    if (filterButton){
+      filterButton.dataset.activeFilter = state.filter || "all";
+      filterButton.classList.toggle("active", !["all", "missing"].includes(state.filter));
+    }
+  }
+
+  function compactDrawerButton(label, onClick, options = {}){
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "compact-drawer-item" + (options.active ? " active" : "");
+    button.textContent = label;
+    if (options.count != null){
+      const count = document.createElement("span");
+      count.className = "compact-drawer-count";
+      count.textContent = String(options.count);
+      button.append(count);
+    }
+    button.addEventListener("click", () => { onClick(); closeCompactDrawer(); });
+    return button;
+  }
+
+  function renderCompactDrawer(kind){
+    const body = $("compactDrawerBody");
+    const title = $("compactDrawerTitle");
+    if (!body || !title) return;
+    body.replaceChildren();
+    title.textContent = t(kind === "filters" ? "compact.filters" : kind === "sections" ? "compact.sections" : "compact.drawerTitle");
+
+    if (kind === "filters"){
+      document.querySelectorAll("#filters .filt").forEach(original => {
+        if (original.hidden) return;
+        const label = original.querySelector(".l")?.textContent?.trim() || original.textContent.trim();
+        const count = original.querySelector(".cnt")?.textContent;
+        body.append(compactDrawerButton(label, () => original.click(), {active:original.classList.contains("on"), count}));
+      });
+      const terminology = document.querySelector('[data-terminology-filter], #terminologyFilter');
+      if (terminology) body.append(compactDrawerButton(terminology.textContent.trim(), () => terminology.click(), {active:terminology.classList.contains("on")}));
+      return;
+    }
+
+    if (kind === "sections"){
+      const sections = [...document.querySelectorAll("#sections button")];
+      if (!sections.length){
+        const empty = document.createElement("p");
+        empty.className = "compact-drawer-empty";
+        empty.textContent = t("compact.noSections");
+        body.append(empty);
+      } else sections.forEach(original => body.append(compactDrawerButton(original.textContent.trim(), () => original.click(), {active:original.classList.contains("on")})));
+      return;
+    }
+
+    body.append(compactDrawerButton(t("compact.editor"), () => setView("editor"), {active:state.view === "editor"}));
+    body.append(compactDrawerButton(t("compact.review"), () => setView("review"), {active:state.view === "review"}));
+    body.append(compactDrawerButton(t("compact.compare"), () => setView("diff"), {active:state.view === "diff"}));
+    body.append(compactDrawerButton(t("compact.settings"), () => globalThis.NecesseSettings?.open?.()));
+  }
+
+  function openCompactDrawer(kind = "navigation", invoker = document.activeElement){
+    if (!state.compactView) return;
+    compactDrawerInvoker = invoker instanceof HTMLElement ? invoker : null;
+    state.compactDrawerOpen = true;
+    renderCompactDrawer(kind);
+    const drawer = $("compactDrawer");
+    const backdrop = $("compactDrawerBackdrop");
+    if (drawer) drawer.hidden = false;
+    if (backdrop) backdrop.hidden = false;
+    document.documentElement.classList.add("compact-drawer-open");
+    requestAnimationFrame(() => $("compactDrawerClose")?.focus());
+  }
+
+  function closeCompactDrawer({restoreFocus = true} = {}){
+    if (!state.compactDrawerOpen && $("compactDrawer")?.hidden !== false) return;
+    state.compactDrawerOpen = false;
+    const drawer = $("compactDrawer");
+    const backdrop = $("compactDrawerBackdrop");
+    if (drawer) drawer.hidden = true;
+    if (backdrop) backdrop.hidden = true;
+    document.documentElement.classList.remove("compact-drawer-open");
+    if (restoreFocus) compactDrawerInvoker?.focus();
+    compactDrawerInvoker = null;
   }
 
   // ---------- parsing ----------
@@ -801,6 +904,7 @@
 
   function setView(v){
     state.view = v;
+    syncCompactRail();
     document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.v===v));
     const editor = v==="editor", review = v==="review", diff = v==="diff";
     $("side").style.display = editor ? "flex" : "none";
@@ -1269,6 +1373,7 @@ function targetFromName(name){
   globalThis.NecesseLangTranslator = Object.freeze({loadWorkspaceFromText});
   function setFilter(f, silent){
     state.filter = f;
+    syncCompactRail();
     document.querySelectorAll(".filt").forEach(b => b.classList.toggle("on", b.dataset.f===f));
     if (!silent) renderList();
   }
@@ -1483,15 +1588,29 @@ function targetFromName(name){
   });
 
   $("compactToggle")?.addEventListener("click", () => setCompactView(!state.compactView));
-  $("compactExit")?.addEventListener("click", () => setCompactView(false));
+  $("compactRailExit")?.addEventListener("click", () => { closeCompactDrawer({restoreFocus:false}); setCompactView(false); $("compactToggle")?.focus(); });
+  $("compactRailNav")?.addEventListener("click", event => openCompactDrawer("navigation", event.currentTarget));
+  $("compactRailFilters")?.addEventListener("click", event => openCompactDrawer("filters", event.currentTarget));
+  $("compactRailSections")?.addEventListener("click", event => openCompactDrawer("sections", event.currentTarget));
+  $("compactRailEditor")?.addEventListener("click", () => setView("editor"));
+  $("compactRailReview")?.addEventListener("click", () => setView("review"));
+  $("compactRailCompare")?.addEventListener("click", () => setView("diff"));
+  $("compactRailSearch")?.addEventListener("click", () => {
+    const input = state.view === "review" ? $("reviewSearch") : $("search");
+    input?.focus(); input?.select();
+  });
+  $("compactRailSettings")?.addEventListener("click", () => globalThis.NecesseSettings?.open?.());
+  $("compactDrawerClose")?.addEventListener("click", () => closeCompactDrawer());
+  $("compactDrawerBackdrop")?.addEventListener("click", () => closeCompactDrawer());
   $("outName")?.addEventListener("input", syncCompactBar);
   if ($("saveText")) new MutationObserver(syncCompactBar).observe($("saveText"), {childList:true, characterData:true, subtree:true});
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && state.compactView){
-      event.preventDefault();
-      setCompactView(false);
-      $("compactToggle")?.focus();
-    }
+    if (event.key !== "Escape" || !state.compactView) return;
+    if (document.querySelector(".settings-backdrop.open")) return;
+    event.preventDefault();
+    if (state.compactDrawerOpen){ closeCompactDrawer(); return; }
+    setCompactView(false);
+    $("compactToggle")?.focus();
   });
 
   // restore banner

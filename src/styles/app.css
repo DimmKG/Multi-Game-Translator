@@ -502,3 +502,48 @@ html[dir="rtl"] .compact-save{direction:ltr;unicode-bidi:isolate;text-align:left
   .compact-progress{display:none}
   .compact-file{max-width:58vw}
 }
+
+
+/* Compact icon rail and temporary navigation drawer */
+.compact-rail{
+  position:fixed; inset-block:0; inset-inline-start:0; z-index:90;
+  width:52px; padding:8px 6px; box-sizing:border-box;
+  flex-direction:column; align-items:center; gap:6px;
+  background:var(--bg2); border-inline-end:1px solid var(--border);
+}
+.compact-rail-btn{
+  width:40px; min-height:40px; border:1px solid transparent; border-radius:10px;
+  background:transparent; color:var(--muted); font:inherit; font-size:18px; cursor:pointer;
+}
+.compact-rail-btn:hover,.compact-rail-btn:focus-visible{background:var(--bg3);color:var(--text);outline:2px solid var(--accent);outline-offset:1px}
+.compact-rail-btn.active{background:var(--accent-dim);color:var(--accent);border-color:var(--accent)}
+.compact-rail-spacer{flex:1}
+.compact-rail-exit{margin-block-start:auto;color:var(--text)}
+html.compact-view main,html.compact-view #compactBar{margin-inline-start:52px}
+html.compact-view #compactBar{padding-inline:14px;gap:14px;min-height:42px}
+html.compact-view #compactToggle{display:none!important}
+.compact-drawer-backdrop{position:fixed;inset:0;z-index:94;background:rgba(0,0,0,.42)}
+.compact-drawer{
+  position:fixed;z-index:95;inset-block:0;inset-inline-start:52px;width:min(320px,calc(100vw - 52px));
+  display:flex;flex-direction:column;background:var(--bg2);border-inline-end:1px solid var(--border);box-shadow:0 18px 50px rgba(0,0,0,.45)
+}
+.compact-drawer[hidden],.compact-drawer-backdrop[hidden]{display:none!important}
+.compact-drawer-head{display:flex;align-items:center;gap:12px;padding:14px;border-block-end:1px solid var(--border)}
+.compact-drawer-head h2{font-size:16px;margin:0;flex:1}
+.compact-drawer-close{border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);padding:7px 10px;cursor:pointer}
+.compact-drawer-body{padding:10px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.compact-drawer-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--text);font:inherit;text-align:start;cursor:pointer}
+.compact-drawer-item:hover,.compact-drawer-item:focus-visible{background:var(--bg3);outline:2px solid var(--accent);outline-offset:1px}
+.compact-drawer-item.active{background:var(--accent-dim);border-color:var(--accent)}
+.compact-drawer-count{margin-inline-start:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.compact-drawer-empty{color:var(--muted);line-height:1.45;padding:6px 10px}
+html[dir="rtl"] .compact-rail{border-inline-start:0;border-inline-end:1px solid var(--border)}
+@media (max-width:640px){
+  .compact-rail{width:46px;padding-inline:3px}.compact-rail-btn{width:38px}.compact-drawer{inset-inline-start:46px;width:calc(100vw - 46px)}
+  html.compact-view main,html.compact-view #compactBar{margin-inline-start:46px}
+  #compactBar .compact-save{max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+
+#compactRail,#compactDrawer{isolation:isolate}
+
+.compact-rail-btn[hidden]{display:none!important}

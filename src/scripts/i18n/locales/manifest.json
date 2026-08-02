@@ -9,7 +9,7 @@
       "nativeName": "English",
       "reviewed": true,
       "file": "en.json",
-      "messageCount": 244
+      "messageCount": 257
     },
     {
       "code": "ar",
@@ -25,7 +25,7 @@
       "nativeName": "български",
       "reviewed": true,
       "file": "bg.json",
-      "messageCount": 244
+      "messageCount": 257
     },
     {
       "code": "ca",
@@ -177,7 +177,7 @@
       "nativeName": "русский",
       "reviewed": true,
       "file": "ru.json",
-      "messageCount": 244
+      "messageCount": 257
     },
     {
       "code": "se",

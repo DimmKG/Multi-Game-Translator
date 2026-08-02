@@ -84,9 +84,29 @@
   <div class="compact-file" id="compactFilename"></div>
   <div class="compact-progress" id="compactProgress"></div>
   <div class="compact-save" id="compactSaveStatus"></div>
-  <div class="compact-spacer"></div>
-  <button type="button" class="btn ghost compact-exit" id="compactExit" data-i18n="compact.exit" data-i18n-title="compact.exitTitle"></button>
 </div>
+
+<nav class="compact-rail" id="compactRail" style="display:none" data-i18n-aria-label="compact.nav">
+  <button type="button" class="compact-rail-btn" id="compactRailNav" data-compact-drawer="navigation" data-i18n-title="compact.nav"><span aria-hidden="true">☰</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailEditor" data-i18n-title="compact.editor"><span aria-hidden="true">✎</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailReview" data-i18n-title="compact.review"><span aria-hidden="true">✓</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailCompare" data-i18n-title="compact.compare"><span aria-hidden="true">⇄</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSearch" data-compact-views="editor review" data-i18n-title="compact.search"><span aria-hidden="true">⌕</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailFilters" data-compact-views="editor" data-compact-drawer="filters" data-i18n-title="compact.filters"><span aria-hidden="true">◉</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSections" data-compact-views="editor" data-compact-drawer="sections" data-i18n-title="compact.sections"><span aria-hidden="true">§</span></button>
+  <button type="button" class="compact-rail-btn" id="compactRailSettings" data-i18n-title="compact.settings"><span aria-hidden="true">⚙</span></button>
+  <div class="compact-rail-spacer"></div>
+  <button type="button" class="compact-rail-btn compact-rail-exit" id="compactRailExit" data-i18n-title="compact.exitTitle"><span aria-hidden="true">↙</span></button>
+</nav>
+
+<div class="compact-drawer-backdrop" id="compactDrawerBackdrop" hidden></div>
+<aside class="compact-drawer" id="compactDrawer" role="dialog" aria-modal="true" aria-labelledby="compactDrawerTitle" hidden>
+  <div class="compact-drawer-head">
+    <h2 id="compactDrawerTitle" data-i18n="compact.drawerTitle"></h2>
+    <button type="button" class="compact-drawer-close" id="compactDrawerClose" data-i18n="compact.closeDrawer"></button>
+  </div>
+  <div class="compact-drawer-body" id="compactDrawerBody"></div>
+</aside>
 
 <main>
   <aside class="side" id="side" style="display:none">
