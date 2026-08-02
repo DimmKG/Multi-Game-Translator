@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { WorkspaceMenu } from "@/components/layout/WorkspaceMenu";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { SettingsDialog } from "@/features/settings/SettingsDialog";
 import { GlossaryDialog } from "@/features/glossary/GlossaryDialog";
@@ -64,39 +65,78 @@ export function AppHeader({
           : t("save.saved");
 
   return (
-    <header className="app-header app-chrome">
-      <div className="brand">
-        <span className="mark">necesse.lang</span>
-        <span className="sub">{t("app.sub")}</span>
+    // Chrome stays LTR even in an RTL interface: the workspace menu is a
+    // physical side="right" sheet, so its trigger must stay on that edge.
+    <header
+      className={cn(
+        "ltr-isolate compact:hidden kb-cramped:hidden",
+        "flex flex-none flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2.5",
+        "[background:var(--header-gradient)]",
+        "max-[900px]:px-3",
+        "max-[560px]:gap-x-2 max-[560px]:gap-y-[7px] max-[560px]:px-2.5 max-[560px]:py-2",
+      )}
+    >
+      <div className="me-auto flex min-w-0 shrink items-baseline gap-2.5 select-none">
+        <span
+          className={cn(
+            "text-primary font-mono text-[15px] font-bold tracking-[0.5px] whitespace-nowrap",
+            "[text-shadow:0_0_14px_color-mix(in_srgb,var(--primary)_35%,transparent)]",
+          )}
+        >
+          necesse.lang
+        </span>
+        <span
+          className={cn(
+            "text-foreground-faint text-[11px] tracking-[0.14em] whitespace-nowrap uppercase",
+            "max-[560px]:hidden",
+          )}
+        >
+          {t("app.sub")}
+        </span>
       </div>
 
       {workspace.isOpen && (
-        <>
-          <div className="meter">
-            <div className="bar">
-              <div className="fill" style={{ width: `${percent}%` }} />
-            </div>
-            <div className="pct ltr-isolate">
-              <b>{workspace.progress.done}</b> / {workspace.progress.total} ({percent}%)
-            </div>
-            {/* Save state is status, not an action — a dot next to the progress it
-                describes, with the wording in its tooltip and in the menu. */}
-            <button
-              type="button"
-              className={cn("savedot", workspace.saveState !== "saved" && workspace.saveState)}
-              title={`${saveLabel} — ${t("save.title")}`}
-              aria-label={saveLabel}
-              onClick={() => {
-                workspace.setView("review");
-                workspace.setReviewFilter("all");
-              }}
-            />
+        // Below 720px the meter takes a row of its own: brand, export and menu
+        // already fill a phone's width, and a 40px bar tells you nothing.
+        <div
+          className={cn(
+            "ms-1 flex max-w-[340px] min-w-[210px] flex-[0_1_300px] items-center gap-2.5",
+            "max-[720px]:order-5 max-[720px]:ms-0 max-[720px]:min-w-0",
+            "max-[720px]:max-w-none max-[720px]:flex-[1_1_100%]",
+          )}
+        >
+          <Progress value={percent} className="h-2 flex-1" />
+          <div className="ltr-isolate flex-none font-mono text-xs whitespace-nowrap">
+            <b className="text-primary font-semibold">{workspace.progress.done}</b> /{" "}
+            {workspace.progress.total} ({percent}%)
           </div>
-        </>
+          {/* Save state is status, not an action — a dot next to the progress it
+              describes, with the wording in its tooltip and in the menu. */}
+          <button
+            type="button"
+            className={cn(
+              "size-[9px] flex-none cursor-pointer rounded-full border-0 p-0",
+              "transition-[background-color,box-shadow] duration-200",
+              "hover:outline-2 hover:outline-offset-2",
+              workspace.saveState === "saving" && "bg-primary",
+              workspace.saveState === "error" && "bg-warn",
+              workspace.saveState === "saved" && [
+                "bg-success shadow-[0_0_8px_color-mix(in_srgb,var(--success)_50%,transparent)]",
+                "hover:outline-[color-mix(in_srgb,var(--success)_45%,transparent)]",
+              ],
+            )}
+            title={`${saveLabel} — ${t("save.title")}`}
+            aria-label={saveLabel}
+            onClick={() => {
+              workspace.setView("review");
+              workspace.setReviewFilter("all");
+            }}
+          />
+        </div>
       )}
 
       {/* Export and menu stay paired at the trailing edge, not adrift mid-bar. */}
-      <div className="header-actions">
+      <div className="ms-auto flex flex-none items-center gap-2 max-[720px]:order-3">
         {workspace.isOpen && (
           <Button
             type="button"
@@ -112,7 +152,6 @@ export function AppHeader({
           type="button"
           variant="ghost"
           size="icon"
-          className="menu-trigger"
           aria-label={t("menu.open")}
           title={t("menu.open")}
           aria-expanded={menuOpen}

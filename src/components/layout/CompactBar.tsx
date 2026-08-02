@@ -1,6 +1,7 @@
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function CompactBar() {
   const { t } = useI18n();
@@ -24,13 +25,28 @@ export function CompactBar() {
           : t("save.saved");
 
   return (
-    <div className="compact-bar" aria-live="polite">
-      <div className="compact-file" title={filename}>
+    <div
+      className={cn(
+        "bg-card sticky top-0 z-45 flex min-h-[42px] flex-none items-center gap-3 border-b px-4 py-1.5",
+        "shadow-[0_8px_22px_var(--shadow-soft)]",
+        "max-[760px]:gap-2 max-[760px]:px-2.5",
+      )}
+      aria-live="polite"
+    >
+      <div
+        className={cn(
+          "ltr-isolate max-w-[min(34vw,420px)] min-w-0 truncate font-mono font-bold",
+          "max-[760px]:max-w-[38vw] max-[480px]:max-w-[58vw]",
+        )}
+        title={filename}
+      >
         {filename || t("compact.unnamed")}
       </div>
-      <div className="compact-progress">{t("compact.progress", progress)}</div>
-      <div className="compact-save">{saveLabel}</div>
-      <div className="compact-spacer" />
+      <div className="ltr-isolate min-w-0 truncate max-[480px]:hidden">
+        {t("compact.progress", progress)}
+      </div>
+      <div className="ltr-isolate min-w-0 truncate max-[760px]:hidden">{saveLabel}</div>
+      <div className="flex-1" />
       <Button
         type="button"
         variant="ghost"

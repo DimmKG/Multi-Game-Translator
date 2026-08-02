@@ -222,6 +222,9 @@ const EntryCard = memo(function EntryCard({
   );
 });
 
+/** What an icon-width rail has no room for. Set by Sidebar on its outer group. */
+const COLLAPSE_HIDDEN = "group-data-[collapsible=icon]:hidden";
+
 /** Filter rail + section jump list. Rendered beside the tab strip, editor view only. */
 export function EditorSidebar() {
   const { t } = useI18n();
@@ -331,7 +334,7 @@ export function EditorSidebar() {
                     }}
                   >
                     <filter.icon className={filter.tint} aria-hidden="true" />
-                    <span className="group-data-[collapsible=icon]:hidden">{filter.label}</span>
+                    <span className={COLLAPSE_HIDDEN}>{filter.label}</span>
                   </SidebarMenuButton>
                   <SidebarMenuBadge
                     className={cn(
@@ -355,9 +358,7 @@ export function EditorSidebar() {
                 }}
               >
                 <BookA className="text-warn" aria-hidden="true" />
-                <span className="group-data-[collapsible=icon]:hidden">
-                  {t("terminology.filter")}
-                </span>
+                <span className={COLLAPSE_HIDDEN}>{t("terminology.filter")}</span>
               </SidebarMenuButton>
               <SidebarMenuBadge className="text-warn font-mono">
                 {terminologyCount}
@@ -367,12 +368,12 @@ export function EditorSidebar() {
         </SidebarGroup>
       </SidebarHeader>
 
-      <SidebarSeparator className="mx-0 group-data-[collapsible=icon]:hidden" />
+      <SidebarSeparator className={cn("mx-0", COLLAPSE_HIDDEN)} />
 
       <SidebarContent>
         {/* Section names have no icon to shrink to, and a 48px rail cannot show
             enough of one to be worth keeping. The whole list stands down. */}
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+        <SidebarGroup className={COLLAPSE_HIDDEN}>
           <SidebarGroupLabel className="text-[10px] tracking-[0.16em] uppercase">
             {t("side.sections")}
           </SidebarGroupLabel>

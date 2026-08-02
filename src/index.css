@@ -58,6 +58,7 @@
   --color-gutter: var(--gutter);
   --color-border-soft: var(--border-soft);
   --color-foreground-faint: var(--foreground-faint);
+  --color-primary-soft: var(--primary-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -169,10 +170,15 @@ html[data-theme] {
   --diff-add: oklch(calc(var(--soft-l) * 0.78) calc(var(--soft-c) * 0.9) var(--hue-success));
   --diff-del: oklch(calc(var(--soft-l) * 0.78) calc(var(--soft-c) * 0.9) var(--hue-warn));
 
+  /* The wash behind anything that reads as "primary/active". Derived from
+     --primary rather than --accent: a palette is free to make accent a second
+     saturated hue (catppuccin pairs a purple primary with a cyan accent), and
+     primary ink on an accent tile then clashes instead of reading as one state. */
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, var(--card));
+
   /* Chrome greys, mixed out of the palette's own background/foreground. */
   --border-soft: color-mix(in oklab, var(--border) 55%, var(--background));
   --foreground-faint: color-mix(in oklab, var(--foreground) 84%, var(--background));
-  --filt-on-border: color-mix(in oklab, var(--primary) 45%, var(--accent));
   --gutter: color-mix(in oklab, var(--muted) 45%, var(--background));
   --diff-gap: color-mix(in oklab, var(--muted) 25%, var(--background));
   --overlay: var(--popover);
@@ -246,7 +252,6 @@ html[data-theme] {
 
   --border-soft: #2a241b;
   --foreground-faint: #bdae94;
-  --filt-on-border: #5a431c;
   --gutter: #171410;
   --diff-gap: #141009;
   --diff-add: #132a19;
@@ -274,17 +279,9 @@ body,
 html.keyboard-open #root {
   height: calc(100% - var(--keyboard-inset, 0px));
 }
-/* Every row counts once the keyboard has taken half the screen, and the
-   footnote is status text nobody reads while typing. */
-html.keyboard-open .footnote {
-  display: none;
-}
-/* On a short phone even that is not enough for a whole card, so the header
-   stands down too — progress is not what you are looking at mid-word, and it
-   comes back the moment the keyboard does. */
-html.keyboard-cramped .app-header {
-  display: none;
-}
+/* The two states above are consumed as the `kb-open` and `kb-cramped` variants:
+   the footnote stands down once the keyboard has taken half the screen, and on a
+   short phone the header goes too — neither is what you are reading mid-word. */
 
 body {
   margin: 0;
@@ -295,11 +292,6 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
-}
-
-.ltr-isolate {
-  direction: ltr;
-  unicode-bidi: isolate;
 }
 
 .t-var {
@@ -313,10 +305,6 @@ body {
 }
 .t-nl {
   color: var(--tok-nl);
-}
-
-html.compact-view .app-chrome {
-  display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -358,220 +346,6 @@ html.compact-view .app-chrome {
    the layout is identical whichever palette is active.
    ========================================================================== */
 
-/* ---------- top bar ---------- */
-/* Keep chrome LTR even when the UI language is RTL: the workspace menu is a
-   physical `side="right"` sheet, so the trigger must stay on that same edge. */
-.app-header {
-  direction: ltr;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 10px 16px;
-  background: var(--header-gradient);
-  border-bottom: 1px solid var(--border);
-  flex: 0 0 auto;
-}
-.app-header > .brand {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  min-width: 0;
-  flex: 0 1 auto;
-  margin-inline-end: auto;
-  user-select: none;
-}
-.brand .mark {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  color: var(--primary);
-  font-size: 15px;
-  text-shadow: 0 0 14px color-mix(in srgb, var(--primary) 35%, transparent);
-  white-space: nowrap;
-}
-.brand .sub {
-  font-size: 11px;
-  color: var(--foreground-faint);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-/* ---------- progress meter ---------- */
-.meter {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex: 0 1 300px;
-  min-width: 210px;
-  max-width: 340px;
-  margin-inline-start: 4px;
-}
-.meter .bar {
-  position: relative;
-  flex: 1;
-  min-width: 0;
-  height: 8px;
-  border-radius: 6px;
-  background: var(--border-soft);
-  overflow: hidden;
-  border: 1px solid var(--border-soft);
-}
-.meter .fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 0;
-  background: linear-gradient(
-    90deg,
-    color-mix(in oklab, var(--primary) 70%, var(--primary-foreground)),
-    var(--primary)
-  );
-  transition: width 0.3s;
-}
-.meter .pct {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--foreground);
-  width: auto;
-  flex: 0 0 auto;
-  text-align: end;
-  white-space: nowrap;
-}
-.meter .pct b {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-/* ---------- save-status dot ----------
-   Sits with the progress it reports; the wording lives in its tooltip and in
-   the menu, so the header keeps a single row of controls. */
-.savedot {
-  width: 9px;
-  height: 9px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  flex: 0 0 auto;
-  cursor: pointer;
-  background: var(--success);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--success) 50%, transparent);
-  transition:
-    background-color 0.2s,
-    box-shadow 0.2s;
-}
-.savedot:hover {
-  outline: 2px solid color-mix(in srgb, var(--success) 45%, transparent);
-  outline-offset: 2px;
-}
-.savedot.saving {
-  background: var(--primary);
-  box-shadow: none;
-}
-.savedot.error {
-  background: var(--warn);
-  box-shadow: none;
-}
-
-.menu-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 6px;
-  padding: 0 11px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--foreground);
-}
-.menu-status .sdot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--success);
-  flex: 0 0 auto;
-}
-.menu-status.saving .sdot {
-  background: var(--primary);
-}
-.menu-status.error .sdot {
-  background: var(--warn);
-}
-
-/* ---------- restore banner ---------- */
-.restore {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 10px 16px;
-  background: var(--success-soft);
-  border-bottom: 1px solid color-mix(in srgb, var(--success) 35%, var(--success-soft));
-  color: color-mix(in srgb, var(--success) 65%, var(--foreground));
-  font-size: 13px;
-  flex: 0 0 auto;
-}
-.restore svg {
-  color: var(--success);
-}
-.restore .grow2 {
-  flex: 1;
-  min-width: 0;
-}
-.restore [data-slot="button"] {
-  font-family: inherit;
-  font-size: 12px;
-  border: 1px solid color-mix(in srgb, var(--success) 40%, var(--success-soft));
-  background: transparent;
-  color: inherit;
-  box-shadow: none;
-}
-.restore [data-slot="button"][data-variant="default"] {
-  background: var(--success);
-  color: var(--success-soft);
-  border-color: var(--success);
-  font-weight: 600;
-}
-.restore [data-slot="button"][data-variant="outline"] {
-  background: transparent;
-  color: inherit;
-}
-
-/* ---------- compact bar ---------- */
-.compact-bar {
-  position: sticky;
-  top: 0;
-  z-index: 45;
-  min-height: 42px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: 0 8px 22px var(--shadow-soft);
-  flex: 0 0 auto;
-}
-.compact-file,
-.compact-progress,
-.compact-save {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.compact-file {
-  max-width: min(34vw, 420px);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  color: var(--foreground);
-}
-.compact-progress,
-.compact-save {
-  color: var(--foreground);
-}
-.compact-spacer {
-  flex: 1 1 auto;
-}
-
 /* ---------- layout ---------- */
 .workspace-main {
   flex: 1;
@@ -591,47 +365,6 @@ html.compact-view .app-chrome {
   flex-direction: column;
   min-height: 0;
   min-width: 0;
-}
-
-/* ---------- tabs ---------- */
-.tabs {
-  display: flex;
-  gap: 4px;
-  padding: 8px 16px 0;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  flex: 0 0 auto;
-}
-.tab {
-  border: 1px solid transparent;
-  border-bottom: none;
-  background: transparent;
-  color: color-mix(in oklab, var(--foreground) 78%, var(--background));
-  font-family: inherit;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 8px 8px 0 0;
-  font-size: 13px;
-  transition: 0.12s;
-}
-.tab:hover {
-  color: var(--foreground);
-}
-.tab[data-state="active"] {
-  background: var(--background);
-  border-color: var(--border);
-  color: var(--primary);
-  position: relative;
-  top: 1px;
-}
-.tab .tcount {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  color: var(--foreground-faint);
-  margin-inline-start: 6px;
-}
-.tab[data-state="active"] .tcount {
-  color: var(--primary);
 }
 
 /* ---------- toolbar ---------- */
@@ -733,7 +466,7 @@ html.compact-view .app-chrome {
   color: var(--warn);
 }
 .qbtn.on {
-  background: var(--accent);
+  background: var(--primary-soft);
   border-color: var(--primary);
   color: var(--primary);
 }
@@ -773,9 +506,9 @@ html.compact-view .app-chrome {
   border-color: var(--warn);
 }
 .termpill.on {
-  background: var(--accent);
+  background: var(--primary-soft);
   border-color: var(--primary);
-  color: var(--accent-foreground);
+  color: var(--primary);
 }
 
 .qhint {
@@ -890,7 +623,7 @@ html.compact-view .app-chrome {
   border-color: transparent;
 }
 .b-missing {
-  background: var(--accent);
+  background: var(--primary-soft);
   color: var(--primary);
 }
 .b-done {
@@ -1118,17 +851,6 @@ html.compact-view .app-chrome {
   flex: 0 0 auto;
 }
 
-/* ---------- footnote ---------- */
-.footnote {
-  padding: 9px 16px;
-  font-size: 11.5px;
-  color: var(--foreground-faint);
-  border-top: 1px solid var(--border);
-  background: var(--card);
-  flex: 0 0 auto;
-  text-align: center;
-}
-
 /* ---------- review ---------- */
 .rchips {
   display: flex;
@@ -1151,9 +873,9 @@ html.compact-view .app-chrome {
   color: var(--foreground);
 }
 .rchip.on {
-  background: var(--accent);
+  background: var(--primary-soft);
   border-color: var(--primary);
-  color: var(--accent-foreground);
+  color: var(--primary);
 }
 .rchip:disabled {
   opacity: 0.5;
@@ -1362,7 +1084,7 @@ html.compact-view .app-chrome {
   color: var(--foreground);
 }
 .diff-mode-btn.on {
-  background: var(--accent);
+  background: var(--primary-soft);
   color: var(--primary);
   font-weight: 700;
 }
@@ -1506,7 +1228,7 @@ html.compact-view .app-chrome {
   height: 56px;
   margin: 0 auto 18px;
   border-radius: 12px;
-  background: var(--accent);
+  background: var(--primary-soft);
   color: var(--primary);
   display: flex;
   align-items: center;
@@ -1737,25 +1459,7 @@ html.compact-view .app-chrome {
   font-size: 11.5px;
   color: var(--muted-foreground);
 }
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-  margin-inline-start: auto;
-}
-.header-actions > [data-slot="button"][data-size="icon"] {
-  width: 34px;
-  height: 34px;
-}
-
 /* ---------- responsive ---------- */
-@media (max-width: 900px) {
-  .app-header {
-    padding: 9px 12px;
-  }
-}
-
 /* One scrollable row per bar instead of towers of wrapped controls; the rail
    itself turns into a Sheet in JS at the same width — see use-mobile. */
 @media (max-width: 860px) {
@@ -1766,7 +1470,6 @@ html.compact-view .app-chrome {
     margin-inline-start: auto;
   }
 
-  .tabs,
   .toolbar,
   .reviewbar,
   .diffbar {
@@ -1774,7 +1477,6 @@ html.compact-view .app-chrome {
     overflow-x: auto;
     scrollbar-width: none;
   }
-  .tabs::-webkit-scrollbar,
   .toolbar::-webkit-scrollbar,
   .reviewbar::-webkit-scrollbar,
   .diffbar::-webkit-scrollbar {
@@ -1809,61 +1511,9 @@ html.compact-view .app-chrome {
   .card {
     padding: 10px 11px;
   }
-  .footnote {
-    font-size: 11px;
-    padding: 7px 10px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-@media (max-width: 760px) {
-  .compact-bar {
-    gap: 8px;
-    padding-inline: 10px;
-  }
-  .compact-file {
-    max-width: 38vw;
-  }
-  .compact-save {
-    display: none;
-  }
-}
-/* Give the meter its own row rather than a sliver: brand + export + menu
-   already fill a phone's width, and a 40px progress bar tells you nothing. */
-@media (max-width: 720px) {
-  .app-header > .meter {
-    order: 5;
-    flex: 1 1 100%;
-    max-width: none;
-    min-width: 0;
-    margin-inline-start: 0;
-  }
-  .header-actions {
-    order: 3;
-  }
-}
-@media (max-width: 560px) {
-  .app-header {
-    gap: 7px 8px;
-    padding: 8px 10px;
-  }
-  .brand .sub {
-    display: none;
-  }
-}
-@media (max-width: 480px) {
-  .compact-progress {
-    display: none;
-  }
-  .compact-file {
-    max-width: 58vw;
-  }
 }
 
 /* ---------- RTL: keep machine-readable values LTR ---------- */
-html[dir="rtl"] .brand .mark,
-html[dir="rtl"] .meter .pct,
 html[dir="rtl"] .sec-head,
 html[dir="rtl"] .key,
 html[dir="rtl"] .rkey,
@@ -1871,10 +1521,7 @@ html[dir="rtl"] .chip,
 html[dir="rtl"] .qhint,
 html[dir="rtl"] .hint kbd,
 html[dir="rtl"] .diffstat,
-html[dir="rtl"] .difflist,
-html[dir="rtl"] .compact-file,
-html[dir="rtl"] .compact-progress,
-html[dir="rtl"] .compact-save {
+html[dir="rtl"] .difflist {
   direction: ltr;
   unicode-bidi: isolate;
   text-align: left;

@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { CompactBar } from "@/components/layout/CompactBar";
 import { RecoveryBanner } from "@/components/layout/RecoveryBanner";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { CompareView } from "@/features/compare/CompareView";
@@ -16,6 +17,7 @@ import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { WorkspaceProvider, useWorkspace } from "@/state/workspace-store";
 import { statusOf, type TranslationEntry } from "@/core/lang/status";
 import { scanWhitespace } from "@/core/tokens/whitespace";
+import { cn } from "@/lib/utils";
 import { applyTheme, loadStoredMode, loadStoredTheme, type ThemeMode } from "@/themes/themes";
 
 function Footnote() {
@@ -35,8 +37,21 @@ function Footnote() {
   if (same) text += t("footnote.same", { n: same });
   if (whitespace) text += t("footnote.ws", { n: whitespace });
 
-  return <div className="footnote app-chrome ltr-isolate">{text}</div>;
+  return (
+    <div
+      className={cn(
+        "ltr-isolate compact:hidden kb-open:hidden",
+        "text-foreground-faint bg-card flex-none border-t px-4 py-[9px] text-center text-[11.5px]",
+        "max-[860px]:truncate max-[860px]:px-2.5 max-[860px]:py-[7px] max-[860px]:text-[11px]",
+      )}
+    >
+      {text}
+    </div>
+  );
 }
+
+/** Every view is a column that owns its own scrolling, so the pane may not grow. */
+const TAB_PANE = "flex min-h-0 min-w-0 flex-1 flex-col";
 
 /** Kept from before the shadcn Sidebar landed: "1" means collapsed. */
 const RAIL_STORAGE_KEY = "necesse-translator.sidebar-collapsed.v1";
@@ -99,7 +114,9 @@ function WorkspaceShell({
         <TabsPrimitive.Root
           value={workspace.view}
           onValueChange={(value) => workspace.setView(value as "editor" | "review" | "diff")}
-          className="flex min-h-0 flex-1"
+          // `group/tabs` is what TabsList and TabsTrigger key their layout off;
+          // shadcn's own Tabs root supplies it, and we replace that root here.
+          className="group/tabs flex min-h-0 flex-1"
           asChild
         >
           {/* Not a <main> — SidebarInset below is the one, and it may not nest. */}
@@ -111,28 +128,37 @@ function WorkspaceShell({
                   in CSS would leave its width reserved by the layout gap. */}
               {workspace.view === "editor" && !workspace.compactView && <EditorSidebar />}
               <SidebarInset className="min-h-0 min-w-0">
-                <TabsPrimitive.List className="tabs">
-                  <TabsPrimitive.Trigger className="tab" value="editor">
-                    {t("tab.editor")}
-                  </TabsPrimitive.Trigger>
-                  <TabsPrimitive.Trigger className="tab" value="review">
+                <TabsList
+                  variant="line"
+                  className={cn(
+                    "bg-card w-full flex-none justify-start gap-1 rounded-none border-b px-4 pt-2 pb-0",
+                    "max-[860px]:no-scrollbar max-[860px]:overflow-x-auto max-[860px]:*:flex-none",
+                  )}
+                >
+                  <TabsTrigger value="editor">{t("tab.editor")}</TabsTrigger>
+                  <TabsTrigger value="review">
                     {t("tab.review")}
-                    <span className="tcount">{reviewCount}</span>
-                  </TabsPrimitive.Trigger>
-                  <TabsPrimitive.Trigger className="tab" value="diff">
-                    {t("tab.diff")}
-                  </TabsPrimitive.Trigger>
-                </TabsPrimitive.List>
+                    <span
+                      className={cn(
+                        "text-foreground-faint ms-1.5 font-mono text-[11px]",
+                        "data-active:text-primary",
+                      )}
+                    >
+                      {reviewCount}
+                    </span>
+                  </TabsTrigger>
+                  <TabsTrigger value="diff">{t("tab.diff")}</TabsTrigger>
+                </TabsList>
 
-                <TabsPrimitive.Content value="editor" className="work" tabIndex={-1}>
+                <TabsContent value="editor" className={TAB_PANE} tabIndex={-1}>
                   <EditorView />
-                </TabsPrimitive.Content>
-                <TabsPrimitive.Content value="review" className="work" tabIndex={-1}>
+                </TabsContent>
+                <TabsContent value="review" className={TAB_PANE} tabIndex={-1}>
                   <ReviewView />
-                </TabsPrimitive.Content>
-                <TabsPrimitive.Content value="diff" className="work" tabIndex={-1}>
+                </TabsContent>
+                <TabsContent value="diff" className={TAB_PANE} tabIndex={-1}>
                   <CompareView />
-                </TabsPrimitive.Content>
+                </TabsContent>
 
                 <Footnote />
               </SidebarInset>
