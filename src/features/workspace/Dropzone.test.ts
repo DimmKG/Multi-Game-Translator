@@ -22,7 +22,6 @@ describe("dropzone empty state (matches original card)", () => {
   });
 
   it("renders the flat legend row with token swatches, as in the original", () => {
-    expect(dropzoneSource).toContain('className="legend"');
     expect(dropzoneSource).toContain('data-testid="dropzone-legend"');
     expect(dropzoneSource).toContain("legend.var");
     expect(dropzoneSource).toContain("[item/input=…]");
@@ -34,10 +33,11 @@ describe("dropzone empty state (matches original card)", () => {
     expect(dropzoneSource).toContain("var(--tok-nl)");
   });
 
-  it("uses the original drop card chrome", () => {
-    expect(dropzoneSource).toContain('className="empty"');
-    expect(dropzoneSource).toContain('cn("drop", dragging && "over")');
-    expect(dropzoneSource).toContain('className="lg"');
+  it("uses shadcn Empty for the drop card chrome", () => {
+    expect(dropzoneSource).toContain("Empty");
+    expect(dropzoneSource).toContain("EmptyMedia");
+    expect(dropzoneSource).toContain("EmptyTitle");
+    expect(dropzoneSource).toContain('data-testid="dropzone"');
     expect(dropzoneSource).toContain('id="btnPick"');
     expect(dropzoneSource).toContain("<Button");
   });

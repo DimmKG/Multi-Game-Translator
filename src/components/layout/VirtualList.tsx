@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useLayoutEffect, useRef, type ComponentProps, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -16,19 +16,6 @@ export const LIST_CLASS = cn(
   "min-h-0 flex-1 overflow-auto px-4 pt-3.5 pb-30",
   "max-[860px]:px-2.5 max-[860px]:pt-2.5",
 );
-
-/** A one-line "nothing here" notice, sized for the inside of a list. */
-export function ListEmpty({ className, ...props }: ComponentProps<"div">) {
-  return (
-    <div
-      className={cn(
-        "text-muted-foreground flex items-center justify-center gap-2 px-5 py-15 text-center",
-        className,
-      )}
-      {...props}
-    />
-  );
-}
 
 /**
  * Windowed list for the workspace's long scrollers.

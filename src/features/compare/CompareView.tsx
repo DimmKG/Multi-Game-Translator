@@ -3,9 +3,11 @@ import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 import { BarOptions } from "@/components/layout/BarOptions";
+import { LIST_CLASS, VirtualList } from "@/components/layout/VirtualList";
 import { Toolbar } from "@/components/layout/Toolbar";
-import { VirtualList } from "@/components/layout/VirtualList";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -26,7 +28,10 @@ function renderSegments(pair: InlinePair, side: "left" | "right"): ReactNode[] {
   return pair[side].map((segment, index) => (
     <span
       key={index}
-      className={cn(segment.kind === "delete" && "di-del", segment.kind === "add" && "di-add")}
+      className={cn(
+        segment.kind === "delete" && "bg-warn/42 rounded-sm",
+        segment.kind === "add" && "bg-success/40 rounded-sm",
+      )}
     >
       {segment.text}
     </span>
@@ -37,6 +42,21 @@ const DIFF_ROW_HEIGHT = 20;
 /** Equal lines kept either side of a change, so it is never shown bare. */
 const DIFF_CONTEXT = 3;
 const DIFF_CHARS_PER_LINE = 78; // one diff column at 12.5px monospace
+
+const DIFF_LIST_CLASS = cn(
+  LIST_CLASS,
+  "px-0 pt-0 font-mono text-[12.5px] leading-normal ltr-isolate",
+);
+
+const DIFF_GRID_CLASS = cn(
+  "grid grid-cols-[46px_1fr_46px_1fr]",
+  "max-[720px]:grid-cols-[38px_1fr_38px_1fr]",
+);
+
+const DIFF_NUM_CLASS =
+  "bg-gutter text-muted-foreground select-none whitespace-nowrap px-2 py-0.5 text-end";
+const DIFF_TXT_CLASS =
+  "border-border-soft border-s px-2.5 py-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere]";
 
 export function CompareView() {
   const { t } = useI18n();
@@ -123,11 +143,18 @@ export function CompareView() {
   // strip under the bar rather than hiding behind the options button.
   const compact = useMediaQuery("(max-width: 860px)");
   const stats = summary && (
-    <span className="diffstat ltr-isolate">
-      <span className="del">−{summary.deleted}</span>{" "}
-      <span className="chg">~{summary.changed}</span> <span className="add">+{summary.added}</span>{" "}
+    <span className="ltr-isolate text-foreground font-mono text-xs">
+      <Badge variant="secondary" className="text-warn bg-transparent px-1 font-mono">
+        −{summary.deleted}
+      </Badge>{" "}
+      <Badge variant="secondary" className="text-primary bg-transparent px-1 font-mono">
+        ~{summary.changed}
+      </Badge>{" "}
+      <Badge variant="secondary" className="text-success bg-transparent px-1 font-mono">
+        +{summary.added}
+      </Badge>{" "}
       {t("diff.stat", { total: Math.max(leftLines.length, rightLines.length) })}
-      <span className="diff-detail">
+      <span className="text-muted-foreground whitespace-nowrap max-[760px]:hidden">
         {" · "}
         {t("diff.changedKeys", { n: summary.changedKeys })}
         {" · "}
@@ -174,36 +201,51 @@ export function CompareView() {
         <div className="flex-1" />
       </Toolbar>
 
-      {compact && stats && <div className="diffstat-row">{stats}</div>}
+      {compact && stats && (
+        <div className="bg-secondary no-scrollbar border-border flex-none [scrollbar-width:none] overflow-x-auto border-b px-3 py-[7px] whitespace-nowrap">
+          {stats}
+        </div>
+      )}
 
       {!workspace.diffOther ? (
-        <div className="difflist">
-          <div className="empty-state" dangerouslySetInnerHTML={{ __html: t("diff.empty") }} />
-        </div>
+        <Empty className="border-0">
+          <EmptyHeader>
+            <EmptyDescription dangerouslySetInnerHTML={{ __html: t("diff.empty") }} />
+          </EmptyHeader>
+        </Empty>
       ) : allRows.every((row) => row.kind === "equal") ? (
-        <div className="difflist">
-          <div className="empty-state">{t("diff.identical")}</div>
-        </div>
+        <Empty className="border-0">
+          <EmptyHeader>
+            <EmptyTitle>{t("diff.identical")}</EmptyTitle>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <VirtualList
-          className="difflist"
+          className={DIFF_LIST_CLASS}
           items={rows}
           estimateSize={estimateSize}
           overscan={40}
           getKey={(_item, index) => index}
           header={
-            <div className="dhead">
-              <div>{t("diff.headLine")}</div>
-              <div className="ltr-isolate">{workspace.diffOther.name}</div>
-              <div className="h2">{t("diff.headLine")}</div>
-              <div>{t("diff.headCurrent")}</div>
+            <div
+              className={cn(
+                DIFF_GRID_CLASS,
+                "bg-secondary text-foreground-faint border-border sticky top-0 z-[2] border-b text-[11px] tracking-[0.06em]",
+              )}
+            >
+              <div className="px-2.5 py-1.5">{t("diff.headLine")}</div>
+              <div className="ltr-isolate px-2.5 py-1.5">{workspace.diffOther.name}</div>
+              <div className="border-border border-s px-2.5 py-1.5">{t("diff.headLine")}</div>
+              <div className="px-2.5 py-1.5">{t("diff.headCurrent")}</div>
             </div>
           }
           renderItem={(item) => {
             if (item.type === "gap") {
               return (
-                <div className="drow">
-                  <div className="dgap">{t("diff.gap", { n: item.n })}</div>
+                <div className={DIFF_GRID_CLASS}>
+                  <div className="bg-diff-gap text-foreground-faint border-border-soft col-span-full border-b py-1 text-center text-[11px] tracking-[0.05em]">
+                    {t("diff.gap", { n: item.n })}
+                  </div>
                 </div>
               );
             }
@@ -223,7 +265,9 @@ export function CompareView() {
               if (parsed.type !== "entry") return raw;
               return (
                 <>
-                  <span className={cn(detail.statusChanged && "diff-prefix")}>{parsed.prefix}</span>
+                  <span className={cn(detail.statusChanged && "bg-warn/30 rounded-sm")}>
+                    {parsed.prefix}
+                  </span>
                   {detail.keyChanged ? renderSegments(detail.keyInline, side) : parsed.key}
                   {"="}
                   {detail.valueChanged ? renderSegments(detail.valueInline, side) : parsed.value}
@@ -231,21 +275,37 @@ export function CompareView() {
               );
             };
 
+            const leftChanged = row.kind === "delete" || row.kind === "change";
+            const rightChanged = row.kind === "add" || row.kind === "change";
+
             return (
-              <div
-                className={cn(
-                  "drow",
-                  row.kind === "equal" && "eq",
-                  row.kind === "add" && "add",
-                  row.kind === "delete" && "del",
-                  row.kind === "change" && "chg",
-                  row.prefixOnly && "prefix-only",
-                )}
-              >
-                <div className="dnum dnum-l">{row.leftIndex >= 0 ? row.leftIndex + 1 : ""}</div>
-                <div className="dtxt txt-l ltr-isolate">{renderSide("left", left)}</div>
-                <div className="dnum dnum-r">{row.rightIndex >= 0 ? row.rightIndex + 1 : ""}</div>
-                <div className="dtxt txt-r ltr-isolate">{renderSide("right", right)}</div>
+              <div className={cn(DIFF_GRID_CLASS, "border-border-soft border-b")}>
+                <div className={cn(DIFF_NUM_CLASS, leftChanged && "bg-diff-del")}>
+                  {row.leftIndex >= 0 ? row.leftIndex + 1 : ""}
+                </div>
+                <div
+                  className={cn(
+                    DIFF_TXT_CLASS,
+                    "ltr-isolate",
+                    row.kind === "equal" && "text-foreground/82",
+                    leftChanged && "bg-diff-del",
+                  )}
+                >
+                  {renderSide("left", left)}
+                </div>
+                <div className={cn(DIFF_NUM_CLASS, rightChanged && "bg-diff-add")}>
+                  {row.rightIndex >= 0 ? row.rightIndex + 1 : ""}
+                </div>
+                <div
+                  className={cn(
+                    DIFF_TXT_CLASS,
+                    "ltr-isolate",
+                    row.kind === "equal" && "text-foreground/82",
+                    rightChanged && "bg-diff-add",
+                  )}
+                >
+                  {renderSide("right", right)}
+                </div>
               </div>
             );
           }}

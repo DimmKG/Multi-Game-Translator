@@ -106,8 +106,8 @@ function WorkspaceShell({
       <CompactBar />
 
       {!workspace.isOpen ? (
-        <main className="workspace-main">
-          <section className="work">
+        <main className="flex min-h-0 flex-1 flex-row">
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Dropzone />
           </section>
         </main>

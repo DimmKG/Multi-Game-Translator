@@ -12,14 +12,10 @@ import {
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
-import {
-  ListEmpty,
-  LIST_CLASS,
-  VirtualList,
-  type VirtualListApi,
-} from "@/components/layout/VirtualList";
+import { LIST_CLASS, VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
 import { Kbd } from "@/components/ui/kbd";
 import {
   Sidebar,
@@ -659,12 +655,14 @@ export function EditorView() {
         estimateSize={estimateSize}
         getKey={(row) => (row.kind === "section" ? `s-${row.name}` : row.entry.id)}
         empty={
-          <ListEmpty>
-            {emptyKey === "empty.allDone" && (
-              <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
-            )}
-            {t(emptyKey)}
-          </ListEmpty>
+          <Empty className="border-0">
+            <EmptyHeader className="flex-row">
+              {emptyKey === "empty.allDone" && (
+                <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
+              )}
+              <EmptyDescription>{t(emptyKey)}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         }
         renderItem={(row) =>
           row.kind === "section" ? (

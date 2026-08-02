@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
-import { ListEmpty, LIST_CLASS, VirtualList } from "@/components/layout/VirtualList";
+import { LIST_CLASS, VirtualList } from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { REVIEW_TEXTAREA_CLASS } from "@/features/editor/card-classes";
@@ -175,9 +176,13 @@ export function ReviewView() {
         estimateSize={estimateSize}
         getKey={(entry) => entry.id}
         empty={
-          <ListEmpty>
-            {touched.length === 0 ? t("review.emptyNothing") : t("review.emptyCategory")}
-          </ListEmpty>
+          <Empty className="border-0">
+            <EmptyHeader>
+              <EmptyDescription>
+                {touched.length === 0 ? t("review.emptyNothing") : t("review.emptyCategory")}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
         }
         renderItem={(entry) => {
           const missing = missingTokens(entry);

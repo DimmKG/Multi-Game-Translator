@@ -10,16 +10,17 @@ Protocol against the real `ru.lang` (7472 entries) — not from estimates.
 
 ## Visual parity
 
-The prototype's chrome was ported wholesale into `src/index.css`: header,
-file bar, meter, tabs, toolbars, cards, diff rows, chips, review rows. Layout
-and spacing match; what changed is where the colours come from (below) and how
-the lists render (below).
+Chrome used to live as a pile of selectors in `src/index.css`. That file is now
+tokens only: the four `@custom-variant`s, `@utility ltr-isolate`, `@theme`, the
+derived / dungeon palettes, base resets, `#root` with `--keyboard-inset`, the
+attention-pulse keyframes, scrollbars, and the RTL plaintext rules. Layout and
+controls live as Tailwind utilities on the components, with shadcn primitives
+for buttons, inputs, badges, empty states and the like.
 
-One deliberate difference: `.list` and `.reviewlist` do **not** get
-`scroll-behavior: smooth`. The lists are virtualised, so a jump crosses
-thousands of unrendered rows; animating it scrolls through blank space, and the
-measurement pass restarts the animation on every frame. A section jump never
-arrived until this was removed.
+One deliberate difference from the prototype: the virtualised lists do **not**
+get `scroll-behavior: smooth`. A jump crosses thousands of unrendered rows;
+animating it scrolls through blank space, and the measurement pass restarts the
+animation on every frame. A section jump never arrived until this was removed.
 
 ## Colours
 

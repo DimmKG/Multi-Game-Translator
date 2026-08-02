@@ -2,6 +2,14 @@ import { FileType2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
@@ -21,11 +29,14 @@ export function Dropzone() {
   const [dragging, setDragging] = useState(false);
 
   return (
-    <div className="empty">
-      <div
+    <div className="flex flex-1 items-center justify-center p-10">
+      <Empty
         id="drop"
         data-testid="dropzone"
-        className={cn("drop", dragging && "over")}
+        className={cn(
+          "bg-card w-[min(560px,90%)] border-[1.5px] border-dashed px-[34px] py-11 transition",
+          dragging && "border-primary bg-secondary",
+        )}
         onDragEnter={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -45,46 +56,69 @@ export function Dropzone() {
           if (file) void openLangFile(file);
         }}
       >
-        <div className="lg" aria-hidden="true" data-testid="dropzone-icon">
-          <FileType2 size={26} />
-        </div>
-
-        <h1 data-testid="dropzone-title">*.lang</h1>
-
-        <p dangerouslySetInnerHTML={{ __html: t("drop.text") }} />
-
-        <div className="actions">
-          <Button type="button" id="btnPick" onClick={() => inputRef.current?.click()}>
-            {t("drop.pick")}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            data-new-translation-button=""
-            title={t("btn.newTranslationTitle")}
-            onClick={() => newRef.current?.click()}
+        <EmptyHeader className="max-w-none">
+          <EmptyMedia
+            variant="icon"
+            className="bg-primary-soft text-primary mb-[18px] size-14 rounded-xl [&_svg:not([class*='size-'])]:size-[26px]"
+            aria-hidden="true"
+            data-testid="dropzone-icon"
           >
-            {t("btn.newTranslation")}
-          </Button>
-        </div>
+            <FileType2 />
+          </EmptyMedia>
 
-        <div className="legend" data-testid="dropzone-legend">
-          {LEGEND_ITEMS.map((item) => (
-            <span key={item.id}>
-              <i style={{ background: item.color }} />
-              {"literal" in item ? (
-                <span className="ltr-isolate">{item.literal}</span>
-              ) : item.html ? (
-                <span
-                  className="ltr-isolate"
-                  dangerouslySetInnerHTML={{ __html: t(item.labelKey) }}
+          <EmptyTitle
+            data-testid="dropzone-title"
+            className="text-primary mb-1.5 font-mono text-xl font-bold tracking-[0.5px]"
+          >
+            *.lang
+          </EmptyTitle>
+
+          <EmptyDescription
+            className="mb-5 text-[13.5px]"
+            dangerouslySetInnerHTML={{ __html: t("drop.text") }}
+          />
+        </EmptyHeader>
+
+        <EmptyContent className="max-w-none gap-0">
+          <div className="mb-[22px] flex flex-wrap items-center justify-center gap-2">
+            <Button type="button" id="btnPick" onClick={() => inputRef.current?.click()}>
+              {t("drop.pick")}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              data-new-translation-button=""
+              title={t("btn.newTranslationTitle")}
+              onClick={() => newRef.current?.click()}
+            >
+              {t("btn.newTranslation")}
+            </Button>
+          </div>
+
+          <div
+            className="text-foreground-faint flex flex-wrap justify-center gap-4 text-[11.5px]"
+            data-testid="dropzone-legend"
+          >
+            {LEGEND_ITEMS.map((item) => (
+              <span key={item.id} className="flex items-center gap-1.5">
+                <i
+                  className="inline-block size-[9px] shrink-0 rounded-sm"
+                  style={{ background: item.color }}
                 />
-              ) : (
-                <span className="ltr-isolate">{t(item.labelKey)}</span>
-              )}
-            </span>
-          ))}
-        </div>
+                {"literal" in item ? (
+                  <span className="ltr-isolate">{item.literal}</span>
+                ) : item.html ? (
+                  <span
+                    className="ltr-isolate"
+                    dangerouslySetInnerHTML={{ __html: t(item.labelKey) }}
+                  />
+                ) : (
+                  <span className="ltr-isolate">{t(item.labelKey)}</span>
+                )}
+              </span>
+            ))}
+          </div>
+        </EmptyContent>
 
         <input
           ref={inputRef}
@@ -110,7 +144,7 @@ export function Dropzone() {
             event.target.value = "";
           }}
         />
-      </div>
+      </Empty>
     </div>
   );
 }
