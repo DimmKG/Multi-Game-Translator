@@ -1,0 +1,107 @@
+// Synthetic localization fixture for Necesse-Lang-Translator tests.
+// Not an official game file. Placeholders: <text>, [newline], [item/input=...].
+// MISSING_TRANSLATION / SAME_TRANSLATION prefixes mirror Necesse conventions.
+
+// Reference language: English (synthetic)
+
+[lang]
+localname=English
+engname=English
+credits=By the fixture authors
+extrasymbols=AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz
+
+[tile]
+watertile=Water
+grasstile=Grass
+sandtile=Sand
+lavatile=Lava
+mudtile=Mud
+rocktile=Rock
+spiritwatertile=Spirit Water
+dungeonfloor=Dungeon Floor
+tilepad1=Tile Pad 1
+tilepad2=Tile Pad 2
+tilepad3=Tile Pad 3
+tilepad4=Tile Pad 4
+tilepad5=Tile Pad 5
+tilepad6=Tile Pad 6
+tilepad7=Tile Pad 7
+tilepad8=Tile Pad 8
+tilepad9=Tile Pad 9
+tilepad10=Tile Pad 10
+tilepad11=Tile Pad 11
+tilepad12=Tile Pad 12
+tilepad13=Tile Pad 13
+tilepad14=Tile Pad 14
+tilepad15=Tile Pad 15
+tilepad16=Tile Pad 16
+tilepad17=Tile Pad 17
+tilepad18=Tile Pad 18
+tilepad19=Tile Pad 19
+tilepad20=Tile Pad 20
+tilepad21=Tile Pad 21
+tilepad22=Tile Pad 22
+tilepad23=Tile Pad 23
+tilepad24=Tile Pad 24
+
+[item]
+greeting=Hello <name>
+tooltip=Press [item/input=interact] to use
+multiline=Line one[newline]Line two
+oreformat=<rock> <ore>
+brandnewrelic=Brand New Relic
+loot1=Loot Drop 1
+loot2=Loot Drop 2
+loot3=Loot Drop 3
+loot4=Loot Drop 4
+loot5=Loot Drop 5
+loot6=Loot Drop 6
+loot7=Loot Drop 7
+loot8=Loot Drop 8
+loot9=Loot Drop 9
+loot10=Loot Drop 10
+loot11=Loot Drop 11
+loot12=Loot Drop 12
+loot13=Loot Drop 13
+loot14=Loot Drop 14
+loot15=Loot Drop 15
+loot16=Loot Drop 16
+loot17=Loot Drop 17
+loot18=Loot Drop 18
+loot19=Loot Drop 19
+loot20=Loot Drop 20
+loot21=Loot Drop 21
+loot22=Loot Drop 22
+loot23=Loot Drop 23
+loot24=Loot Drop 24
+loot25=Loot Drop 25
+loot26=Loot Drop 26
+loot27=Loot Drop 27
+loot28=Loot Drop 28
+loot29=Loot Drop 29
+loot30=Loot Drop 30
+
+[ui]
+timerticks=Ticks: <value>
+saveprompt=Save changes?
+unsavedfeature=Unsaved Feature Label
+menuitem1=Menu Item 1
+menuitem2=Menu Item 2
+menuitem3=Menu Item 3
+menuitem4=Menu Item 4
+menuitem5=Menu Item 5
+menuitem6=Menu Item 6
+menuitem7=Menu Item 7
+menuitem8=Menu Item 8
+menuitem9=Menu Item 9
+menuitem10=Menu Item 10
+menuitem11=Menu Item 11
+menuitem12=Menu Item 12
+menuitem13=Menu Item 13
+menuitem14=Menu Item 14
+menuitem15=Menu Item 15
+menuitem16=Menu Item 16
+menuitem17=Menu Item 17
+menuitem18=Menu Item 18
+menuitem19=Menu Item 19
+menuitem20=Menu Item 20

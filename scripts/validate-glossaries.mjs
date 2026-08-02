@@ -11,7 +11,7 @@ async function collectJson(dir) {
   const files = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
     const path = resolve(dir, entry.name);
-    if (entry.isDirectory()) files.push(...await collectJson(path));
+    if (entry.isDirectory()) files.push(...(await collectJson(path)));
     else if (extname(entry.name) === ".json") files.push(path);
   }
   return files;
@@ -27,10 +27,15 @@ function validateEntry(entry, file, index) {
     errors.push(`${where} must be an object`);
     return;
   }
-  if (typeof entry.source !== "string" || !entry.source.trim()) errors.push(`${where}.source is required`);
-  if (typeof entry.target !== "string" || !entry.target.trim()) errors.push(`${where}.target is required`);
+  if (typeof entry.source !== "string" || !entry.source.trim())
+    errors.push(`${where}.source is required`);
+  if (typeof entry.target !== "string" || !entry.target.trim())
+    errors.push(`${where}.target is required`);
   for (const key of ["alternatives", "forbidden"]) {
-    if (key in entry && (!Array.isArray(entry[key]) || entry[key].some(v => typeof v !== "string" || !v.trim()))) {
+    if (
+      key in entry &&
+      (!Array.isArray(entry[key]) || entry[key].some((v) => typeof v !== "string" || !v.trim()))
+    ) {
       errors.push(`${where}.${key} must contain non-empty strings`);
     }
   }
@@ -39,8 +44,12 @@ function validateEntry(entry, file, index) {
 for (const path of await collectJson(glossaryRoot)) {
   const file = path.slice(root.length + 1).replaceAll("\\", "/");
   let data;
-  try { data = JSON.parse(await readFile(path, "utf8")); }
-  catch (error) { errors.push(`${file}: invalid JSON (${error.message})`); continue; }
+  try {
+    data = JSON.parse(await readFile(path, "utf8"));
+  } catch (error) {
+    errors.push(`${file}: invalid JSON (${error.message})`);
+    continue;
+  }
 
   if (data.format === "necesse-glossary-catalog") {
     if (data.version !== 1) errors.push(`${file}: unsupported catalog version`);
@@ -66,7 +75,8 @@ for (const path of await collectJson(glossaryRoot)) {
     continue;
   }
   if (data.version !== 1) errors.push(`${file}: unsupported glossary version`);
-  if (typeof data.id !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(data.id)) errors.push(`${file}: invalid id`);
+  if (typeof data.id !== "string" || !/^[a-z0-9][a-z0-9._-]*$/.test(data.id))
+    errors.push(`${file}: invalid id`);
   if (!isLanguageTag(data.sourceLanguage)) errors.push(`${file}: invalid sourceLanguage`);
   if (!isLanguageTag(data.targetLanguage)) errors.push(`${file}: invalid targetLanguage`);
   if (!Array.isArray(data.entries)) errors.push(`${file}: entries must be an array`);
