@@ -41,8 +41,15 @@ for (const match of scriptMatches) {
   html = html.replace(match[0], `<script type="module">\n${javascript}\n</script>`);
 }
 
+// Only inspect actual HTML tags for unresolved local references. Bundled JavaScript can
+// legitimately contain strings such as "./assets/..." that are not fetched by the browser.
+const htmlWithoutInlinePayloads = html
+  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "<script></script>")
+  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "<style></style>");
 const remainingLocalReferences = [
-  ...html.matchAll(/(?:src|href)=["'](?!data:|https?:|mailto:|#)([^"']+)["']/g),
+  ...htmlWithoutInlinePayloads.matchAll(
+    /(?:src|href)=["'](?!data:|blob:|https?:|mailto:|tel:|#)([^"']+)["']/gi,
+  ),
 ].map((match) => match[1]);
 if (remainingLocalReferences.length > 0) {
   throw new Error(
