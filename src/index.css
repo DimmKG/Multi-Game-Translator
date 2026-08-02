@@ -1,0 +1,350 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "shadcn-theme-switcher/themes.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Three globals are toggled on <html> by JS — compact view by the store, the two
+   keyboard states by use-keyboard-inset. As variants they stay expressible from
+   the components that react to them (`compact:hidden`, `kb-open:hidden`) instead
+   of needing a matching rule here for every element. */
+@custom-variant compact (html.compact-view &);
+@custom-variant kb-open (html.keyboard-open &);
+@custom-variant kb-cramped (html.keyboard-cramped &);
+
+/* Machine-readable strings — keys, file names, source text — keep their own
+   direction inside an RTL interface. No utility pair expresses this. */
+@utility ltr-isolate {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-same: var(--same);
+  --color-same-soft: var(--same-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-tok-var: var(--tok-var);
+  --color-tok-ref: var(--tok-ref);
+  --color-tok-fmt: var(--tok-fmt);
+  --color-tok-nl: var(--tok-nl);
+  --color-mt-ink: var(--mt-ink);
+  --color-mt-soft: var(--mt-soft);
+  --color-diff-add: var(--diff-add);
+  --color-diff-del: var(--diff-del);
+  --color-diff-gap: var(--diff-gap);
+  --color-gutter: var(--gutter);
+  --color-border-soft: var(--border-soft);
+  --color-foreground-faint: var(--foreground-faint);
+  --color-primary-soft: var(--primary-soft);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --font-sans: var(--user-interface-font, "Geist Variable", system-ui, sans-serif);
+  --font-mono: var(
+    --user-editor-font,
+    ui-monospace,
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace
+  );
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  --animate-attention-pulse: attention-pulse 1.8s ease-in-out infinite;
+}
+
+/* Draws the eye to a control the user has to touch before anything else works —
+   currently the reference-file item once machine translation is configured.
+   Under reduced motion the callers swap it for a static ring. */
+@keyframes attention-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--warn) 24%, transparent);
+  }
+}
+
+/* ==========================================================================
+   Theming
+   -------
+   Colour palettes come from shadcn-theme-switcher (imported above). They define
+   only the standard shadcn tokens, so everything the workspace additionally
+   needs — status hues, diff shading, chrome greys — is DERIVED from those here.
+   That means a new palette drops in with no per-theme work.
+
+   `dungeon` is the one hand-tuned exception: it is the app's own identity and
+   keeps its literal values.
+   ========================================================================== */
+
+/* The palette files also ship per-theme font stacks. The app owns typography
+   (including the user's font settings), so re-assert ours at equal specificity. */
+:root,
+html[data-theme] {
+  --font-sans: var(--user-interface-font, "Geist Variable", system-ui, sans-serif);
+  --font-mono: var(
+    --user-editor-font,
+    ui-monospace,
+    "JetBrains Mono",
+    "SF Mono",
+    Menlo,
+    Consolas,
+    monospace
+  );
+  --font-serif: var(--font-sans);
+}
+
+/* ---------- derived workspace tokens ---------- */
+:root {
+  /* Status hues are fixed on the colour wheel and only shift lightness/chroma
+     between light and dark mode, so they read the same in every palette. */
+  --hue-success: 150;
+  --hue-same: 245;
+  --hue-warn: 25;
+  --hue-var: 75;
+  --hue-fmt: 310;
+  --hue-nl: 250;
+  --hue-mt: 295;
+
+  /* dark mode defaults */
+  --status-l: 0.78;
+  --status-c: 0.12;
+  --soft-l: 0.28;
+  --soft-c: 0.05;
+
+  --success: oklch(var(--status-l) var(--status-c) var(--hue-success));
+  --success-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-success));
+  --same: oklch(var(--status-l) var(--status-c) var(--hue-same));
+  --same-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-same));
+  --warn: oklch(var(--status-l) var(--status-c) var(--hue-warn));
+  --warn-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-warn));
+
+  --tok-var: oklch(var(--status-l) var(--status-c) var(--hue-var));
+  --tok-ref: oklch(var(--status-l) var(--status-c) var(--hue-same));
+  --tok-fmt: oklch(var(--status-l) var(--status-c) var(--hue-fmt));
+  --tok-nl: oklch(var(--status-l) calc(var(--status-c) * 0.35) var(--hue-nl));
+  --mt-ink: oklch(var(--status-l) var(--status-c) var(--hue-mt));
+  --mt-soft: oklch(var(--soft-l) var(--soft-c) var(--hue-mt));
+
+  --diff-add: oklch(calc(var(--soft-l) * 0.78) calc(var(--soft-c) * 0.9) var(--hue-success));
+  --diff-del: oklch(calc(var(--soft-l) * 0.78) calc(var(--soft-c) * 0.9) var(--hue-warn));
+
+  /* The wash behind anything that reads as "primary/active". Derived from
+     --primary rather than --accent: a palette is free to make accent a second
+     saturated hue (catppuccin pairs a purple primary with a cyan accent), and
+     primary ink on an accent tile then clashes instead of reading as one state. */
+  --primary-soft: color-mix(in oklab, var(--primary) 14%, var(--card));
+
+  /* Chrome greys, mixed out of the palette's own background/foreground. */
+  --border-soft: color-mix(in oklab, var(--border) 55%, var(--background));
+  --foreground-faint: color-mix(in oklab, var(--foreground) 84%, var(--background));
+  --gutter: color-mix(in oklab, var(--muted) 45%, var(--background));
+  --diff-gap: color-mix(in oklab, var(--muted) 25%, var(--background));
+  --overlay: var(--popover);
+  --shadow-soft: oklch(0 0 0 / 0.18);
+  --shadow-strong: oklch(0 0 0 / 0.5);
+  --scrollbar-thumb: color-mix(in oklab, var(--border) 65%, var(--foreground));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--border) 40%, var(--foreground));
+  /* Percentages must total 100% — color-mix turns any shortfall into alpha. */
+  --header-gradient: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--card) 96%, var(--foreground) 4%),
+    var(--background)
+  );
+}
+
+/* Light mode needs darker ink and paler washes. */
+:root:not(.dark) {
+  --status-l: 0.55;
+  --status-c: 0.15;
+  --soft-l: 0.94;
+  --soft-c: 0.045;
+}
+:root:not(.dark) {
+  --diff-add: oklch(0.93 0.06 var(--hue-success));
+  --diff-del: oklch(0.93 0.06 var(--hue-warn));
+  --shadow-soft: oklch(0 0 0 / 0.08);
+  --shadow-strong: oklch(0 0 0 / 0.18);
+  --scrollbar-thumb: color-mix(in oklab, var(--border) 78%, var(--foreground));
+  --scrollbar-thumb-hover: color-mix(in oklab, var(--border) 55%, var(--foreground));
+}
+
+/* ---------- dungeon: the app's own hand-tuned identity ----------
+   Scoped to its own attribute (plus the pre-hydration fallback) so it never
+   leaks into the imported palettes — a bare `:root` here would win over all
+   of them, since it matches the same element. */
+:root:not([data-theme]),
+:root[data-theme="dungeon"],
+[data-theme="dungeon"] {
+  --background: #14110d;
+  --foreground: #f6efe1;
+  --card: #1d1913;
+  --card-foreground: #f6efe1;
+  --popover: #100d09;
+  --popover-foreground: #f6efe1;
+  --primary: #e8a13a;
+  --primary-foreground: #1a1204;
+  --secondary: #241f17;
+  --secondary-foreground: #f6efe1;
+  --muted: #241f17;
+  --muted-foreground: #c4b69a;
+  --accent: #3a2c14;
+  --accent-foreground: #ffffff;
+  --destructive: #e2695b;
+  --border: #352d21;
+  --input: #352d21;
+  --ring: #e8a13a;
+  --radius: 0.5rem;
+
+  --success: #8fd69a;
+  --success-soft: #1f3324;
+  --same: #92c2e8;
+  --same-soft: #1c2c3a;
+  --warn: #ec7d6f;
+  --warn-soft: #37201d;
+  --tok-var: #e8c25c;
+  --tok-ref: #8fbcee;
+  --tok-fmt: #d49ae8;
+  --tok-nl: #9fb0c4;
+  --mt-soft: #2a2140;
+  --mt-ink: #c4abee;
+
+  --border-soft: #2a241b;
+  --foreground-faint: #bdae94;
+  --gutter: #171410;
+  --diff-gap: #141009;
+  --diff-add: #132a19;
+  --diff-del: #2a1512;
+  --overlay: #100d09;
+  --scrollbar-thumb: #4a3f2f;
+  --scrollbar-thumb-hover: #63533d;
+  --header-gradient: linear-gradient(180deg, #221c14, #1a1610);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* On a phone the keyboard covers the page instead of resizing it, so the shell
+   would keep laying out behind the keys. `--keyboard-inset` is the covered
+   strip, measured from the visual viewport (see use-keyboard-inset). */
+html.keyboard-open #root {
+  height: calc(100% - var(--keyboard-inset, 0px));
+}
+/* The two states above are consumed as the `kb-open` and `kb-cramped` variants:
+   the footnote stands down once the keyboard has taken half the screen, and on a
+   short phone the header goes too — neither is what you are reading mid-word. */
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Sidebar tokens, derived for every palette */
+:root {
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* ---------- scrollbars ---------- */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
+  border: 3px solid var(--card);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* ---------- RTL: keep machine-readable values LTR ---------- */
+html[dir="rtl"] [data-slot="input-group-control"],
+html[dir="rtl"] [data-slot="textarea"] {
+  unicode-bidi: plaintext;
+  text-align: start;
+}

@@ -1,0 +1,12 @@
+dist
+node_modules
+legacy
+package-lock.json
+*.generated.*
+public/glossaries
+src/locales
+docs
+schemas
+glossaries
+interface-locales
+src/components/ui
