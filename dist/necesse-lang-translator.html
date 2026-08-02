@@ -443,6 +443,22 @@ header>.meter{flex:0 1 300px;width:auto;min-width:210px;max-width:340px;margin-i
   .filebar .savepill{min-width:150px;max-width:220px}
   .filebar .fname{flex-basis:190px;min-width:170px;margin-inline-start:0}
 }
+
+
+/* Token-aware Compare controls */
+.diff-mode{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:0 0 auto}
+.diff-mode-btn{border:0;border-inline-end:1px solid var(--line);background:transparent;color:var(--ink-dim);padding:6px 10px;font:inherit;cursor:pointer}
+.diff-mode-btn:last-child{border-inline-end:0}
+.diff-mode-btn:hover{background:var(--panel-2);color:var(--ink)}
+.diff-mode-btn.on{background:var(--torch-soft);color:var(--torch);font-weight:700}
+.diff-mode-btn:focus-visible{outline:2px solid var(--torch);outline-offset:-2px}
+.diffstat .diff-detail{color:var(--ink-dim);font-weight:500;white-space:nowrap}
+.drow.prefix-only .dtxt{background-image:linear-gradient(90deg,transparent,rgba(245,158,11,.08),transparent)}
+.diff-prefix{font-weight:750}
+@media (max-width:760px){
+  .diffbar{overflow-x:auto;flex-wrap:nowrap}
+  .diffstat .diff-detail{display:none}
+}
 </style>
 <style>
   /* Keep machine-readable values stable inside right-to-left interface text. */
@@ -602,6 +618,10 @@ header>.meter{flex:0 1 300px;width:auto;min-width:210px;max-width:340px;margin-i
       <label class="toggle on" id="diffOnlyToggle" data-i18n-title="diff.onlyDiffTitle">
         <span class="tk"></span><span data-i18n="diff.onlyDiff"></span>
       </label>
+      <div class="diff-mode" id="diffInlineMode" role="group" data-i18n-aria-label="diff.inlineMode">
+        <button type="button" class="diff-mode-btn on" data-diff-mode="word" data-i18n="diff.modeWords" aria-pressed="true"></button>
+        <button type="button" class="diff-mode-btn" data-diff-mode="character" data-i18n="diff.modeCharacters" aria-pressed="false"></button>
+      </div>
       <div class="sp"></div>
       <span class="diffstat" id="diffStat"></span>
     </div>
@@ -919,7 +939,13 @@ globalThis.NecesseLocales.register({
     "metadata.localname": "Language name written in this language (for example, Български).",
     "metadata.engname": "Language name written in English (for example, Bulgarian).",
     "metadata.extrasymbols": "Additional characters that must be available in the game font. Keep this as a character list, not a sentence.",
-    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse."
+    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse.",
+    "diff.inlineMode": "Inline difference detail",
+    "diff.modeWords": "Words",
+    "diff.modeCharacters": "Characters",
+    "diff.changedKeys": "Keys: {n}",
+    "diff.changedValues": "Values: {n}",
+    "diff.prefixOnly": "Status only: {n}"
   }
 });
 
@@ -1288,7 +1314,13 @@ globalThis.NecesseLocales.register({
     "metadata.localname": "Името на езика, изписано на самия език (например Български).",
     "metadata.engname": "Името на езика, изписано на английски (например Bulgarian).",
     "metadata.extrasymbols": "Допълнителни знаци, които трябва да присъстват в шрифта на играта. Това е списък със знаци, а не изречение.",
-    "metadata.langCredits": "Имената на преводачите в езиковите заслуги. Запази разделителя и формата, очаквани от Necesse."
+    "metadata.langCredits": "Имената на преводачите в езиковите заслуги. Запази разделителя и формата, очаквани от Necesse.",
+    "diff.inlineMode": "Подробност на разликите в реда",
+    "diff.modeWords": "Думи",
+    "diff.modeCharacters": "Знаци",
+    "diff.changedKeys": "Ключове: {n}",
+    "diff.changedValues": "Стойности: {n}",
+    "diff.prefixOnly": "Само статус: {n}"
   }
 });
 
@@ -3833,7 +3865,13 @@ globalThis.NecesseLocales.register({
     "metadata.localname": "Название языка, написанное на самом языке (например Русский).",
     "metadata.engname": "Название языка, написанное на английском (например Russian).",
     "metadata.extrasymbols": "Дополнительные символы, которые должны присутствовать в игровом шрифте. Это список символов, а не предложение.",
-    "metadata.langCredits": "Имена переводчиков в языковых титрах. Сохраните разделитель и формат, ожидаемые Necesse."
+    "metadata.langCredits": "Имена переводчиков в языковых титрах. Сохраните разделитель и формат, ожидаемые Necesse.",
+    "diff.inlineMode": "Детализация различий в строке",
+    "diff.modeWords": "Слова",
+    "diff.modeCharacters": "Символы",
+    "diff.changedKeys": "Ключи: {n}",
+    "diff.changedValues": "Значения: {n}",
+    "diff.prefixOnly": "Только статус: {n}"
   }
 });
 
@@ -5257,6 +5295,7 @@ globalThis.NecesseLocales.register({
     scope.querySelectorAll("[data-i18n-html]").forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
     scope.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.dataset.i18nTitle); });
     scope.querySelectorAll("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+    scope.querySelectorAll("[data-i18n-aria-label]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel)); });
     document.documentElement.lang = UI;
     document.title = t("app.title");
   }
@@ -5303,6 +5342,7 @@ globalThis.NecesseLocales.register({
     referenceFilename: "",
     diffOther: null,   // {name, lines[]}
     diffOnly: true,    // collapse equal runs
+    diffMode: "word",   // inline Compare granularity: word | character
   };
 
   // ---------- parsing ----------
@@ -5997,154 +6037,120 @@ globalThis.NecesseLocales.register({
     if (editor) renderList(); else if (review) renderReview(); else renderDiff();
   }
 
-  // ---------- text diff (line-based, like a code editor) ----------
-  // Keys can change between versions, so this compares raw lines, not key→value pairs.
-  function lcsPairs(a,b,i1,i2,j1,j2){
-    const n=i2-i1, m=j2-j1;
-    if (n<=0 || m<=0) return [];
-    const w=m+1, dp=new Uint32Array((n+1)*w);
-    for (let i=n-1;i>=0;i--){
-      const row=i*w, next=(i+1)*w;
-      for (let j=m-1;j>=0;j--){
-        dp[row+j] = (a[i1+i]===b[j1+j]) ? dp[next+j+1]+1
-                  : Math.max(dp[next+j], dp[row+j+1]);
-      }
-    }
-    const out=[]; let i=0,j=0;
-    while (i<n && j<m){
-      if (a[i1+i]===b[j1+j]){ out.push([i1+i, j1+j]); i++; j++; }
-      else if (dp[(i+1)*w+j] >= dp[i*w+j+1]) i++;
-      else j++;
-    }
-    return out;
-  }
-  // patience anchors: lines occurring exactly once on both sides
-  function patienceAnchors(a,b,i1,i2,j1,j2){
-    const ca=new Map(), cb=new Map();
-    for (let i=i1;i<i2;i++) ca.set(a[i],(ca.get(a[i])||0)+1);
-    for (let j=j1;j<j2;j++) cb.set(b[j],(cb.get(b[j])||0)+1);
-    const posB=new Map();
-    for (let j=j1;j<j2;j++) if (cb.get(b[j])===1) posB.set(b[j], j);
-    const cand=[];
-    for (let i=i1;i<i2;i++){ const v=a[i]; if (ca.get(v)===1 && posB.has(v)) cand.push([i, posB.get(v)]); }
-    if (!cand.length) return [];
-    // longest increasing subsequence on the b-index
-    const tails=[], idx=[], prev=new Array(cand.length).fill(-1);
-    for (let k=0;k<cand.length;k++){
-      const v=cand[k][1];
-      let lo=0, hi=tails.length;
-      while (lo<hi){ const mid=(lo+hi)>>1; if (tails[mid]<v) lo=mid+1; else hi=mid; }
-      tails[lo]=v; idx[lo]=k; prev[k] = lo>0 ? idx[lo-1] : -1;
-    }
-    const res=[]; let k = tails.length ? idx[tails.length-1] : -1;
-    while (k>=0){ res.push(cand[k]); k=prev[k]; }
-    return res.reverse();
-  }
-  function collectMatches(a,b,i1,i2,j1,j2,depth,out){
-    while (i1<i2 && j1<j2 && a[i1]===b[j1]){ out.push([i1,j1]); i1++; j1++; }
-    const suffix=[];
-    while (i1<i2 && j1<j2 && a[i2-1]===b[j2-1]){ i2--; j2--; suffix.push([i2,j2]); }
-    if (i1<i2 && j1<j2){
-      const anchors = depth<24 ? patienceAnchors(a,b,i1,i2,j1,j2) : [];
-      if (anchors.length){
-        let ci=i1, cj=j1;
-        for (const [ai,bj] of anchors){
-          collectMatches(a,b,ci,ai,cj,bj,depth+1,out);
-          out.push([ai,bj]); ci=ai+1; cj=bj+1;
-        }
-        collectMatches(a,b,ci,i2,cj,j2,depth+1,out);
-      } else if ((i2-i1)*(j2-j1) <= 1500000){
-        for (const p of lcsPairs(a,b,i1,i2,j1,j2)) out.push(p);
-      }
-      // else: region too large without anchors -> treated as a replaced block
-    }
-    for (let k=suffix.length-1;k>=0;k--) out.push(suffix[k]);
+  // ---------- semantic, token-aware text diff ----------
+  function diffEngine(){
+    const engine = globalThis.NecesseTokenAwareDiff;
+    if (!engine) throw new Error("Token-aware Compare engine is not loaded");
+    return engine;
   }
 
-  // build side-by-side rows: {k:'eq'|'chg'|'del'|'add', li, ri}
-  function diffRows(a,b){
-    const matches=[]; collectMatches(a,b,0,a.length,0,b.length,0,matches);
-    const rows=[]; let ai=0, bi=0;
-    const flushGap = (ae,be) => {
-      const dl=ae-ai, al=be-bi, n=Math.max(dl,al);
-      for (let k=0;k<n;k++){
-        const hasL=k<dl, hasR=k<al;
-        rows.push({k: hasL&&hasR ? "chg" : hasL ? "del" : "add",
-                   li: hasL ? ai+k : -1, ri: hasR ? bi+k : -1});
-      }
-      ai=ae; bi=be;
-    };
-    for (const [x,y] of matches){
-      if (x>ai || y>bi) flushGap(x,y);
-      rows.push({k:"eq", li:x, ri:y}); ai=x+1; bi=y+1;
-    }
-    if (ai<a.length || bi<b.length) flushGap(a.length, b.length);
-    return rows;
+  function diffSegmentsHtml(segments, changedClass){
+    if (!segments || !segments.length) return "&nbsp;";
+    return segments.map(segment => {
+      const text = esc(segment.text);
+      return segment.kind === "equal" ? text : `<span class="${changedClass}">${text}</span>`;
+    }).join("") || "&nbsp;";
   }
 
-  // word-level highlight inside a changed pair
-  function inlineDiff(l,r){
-    const A=l.match(/\s+|\S+/g)||[], B=r.match(/\s+|\S+/g)||[];
-    if (A.length*B.length > 60000) return [esc(l), esc(r)];
-    const pairs=lcsPairs(A,B,0,A.length,0,B.length);
-    let ai=0, bi=0, lh="", rh="";
-    for (const [x,y] of pairs){
-      if (ai<x) lh += `<span class="di-del">${esc(A.slice(ai,x).join(""))}</span>`;
-      if (bi<y) rh += `<span class="di-add">${esc(B.slice(bi,y).join(""))}</span>`;
-      lh += esc(A[x]); rh += esc(B[y]); ai=x+1; bi=y+1;
-    }
-    if (ai<A.length) lh += `<span class="di-del">${esc(A.slice(ai).join(""))}</span>`;
-    if (bi<B.length) rh += `<span class="di-add">${esc(B.slice(bi).join(""))}</span>`;
-    return [lh||"&nbsp;", rh||"&nbsp;"];
+  function diffPrefixHtml(prefix, changed, cls){
+    if (!prefix) return "";
+    const html = esc(prefix);
+    return changed ? `<span class="${cls} diff-prefix">${html}</span>` : html;
+  }
+
+  function entryDiffHtml(detail){
+    const prefixChanged = detail.statusChanged;
+    const leftPrefix = diffPrefixHtml(detail.left.prefix, prefixChanged, "di-del");
+    const rightPrefix = diffPrefixHtml(detail.right.prefix, prefixChanged, "di-add");
+    const leftKey = detail.keyChanged
+      ? diffSegmentsHtml(detail.keyInline.left, "di-del")
+      : esc(detail.left.key);
+    const rightKey = detail.keyChanged
+      ? diffSegmentsHtml(detail.keyInline.right, "di-add")
+      : esc(detail.right.key);
+    const leftValue = detail.valueChanged
+      ? diffSegmentsHtml(detail.valueInline.left, "di-del")
+      : esc(detail.left.value);
+    const rightValue = detail.valueChanged
+      ? diffSegmentsHtml(detail.valueInline.right, "di-add")
+      : esc(detail.right.value);
+    return [leftPrefix + leftKey + "=" + leftValue, rightPrefix + rightKey + "=" + rightValue];
+  }
+
+  function inlineDiff(left, right){
+    const detail = diffEngine().compareEntryPair(left, right, state.diffMode);
+    if (detail.type === "entry") return entryDiffHtml(detail);
+    return [
+      diffSegmentsHtml(detail.inline.left, "di-del"),
+      diffSegmentsHtml(detail.inline.right, "di-add")
+    ];
+  }
+
+  function syncDiffModeControls(){
+    document.querySelectorAll("[data-diff-mode]").forEach(button => {
+      const active = button.dataset.diffMode === state.diffMode;
+      button.classList.toggle("on", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   }
 
   function renderDiff(){
     AC.hide();
     const box=$("difflist");
+    syncDiffModeControls();
     if (!state.diffOther){
       box.innerHTML = `<div class="empty-d">${t("diff.empty")}</div>`;
       $("diffStat").textContent = "";
       return;
     }
     const A=state.diffOther.lines, B=buildLang().split(/\r\n|\n/);
-    const rows=diffRows(A,B);
-    let add=0, del=0, chg=0;
-    for (const r of rows){ if (r.k==="add") add++; else if (r.k==="del") del++; else if (r.k==="chg") chg++; }
-    $("diffStat").innerHTML = `<span class="del">−${del}</span> · <span class="chg">~${chg}</span> · <span class="add">+${add}</span> ${esc(t("diff.stat",{total:rows.length}))}`;
+    const engine=diffEngine();
+    const semanticRows=engine.diffRows(A,B);
+    const summary=engine.summarizeRows(semanticRows,A,B);
+    const rows=semanticRows.map(row => ({
+      k: row.kind === "equal" ? "eq" : row.kind === "change" ? "chg" : row.kind === "delete" ? "del" : "add",
+      li: row.leftIndex,
+      ri: row.rightIndex,
+      prefixOnly: !!row.prefixOnly
+    }));
+    $("diffStat").innerHTML =
+      `<span class="del">−${summary.deleted}</span> · <span class="chg">~${summary.changed}</span> · <span class="add">+${summary.added}</span> ${esc(t("diff.stat",{total:rows.length}))}` +
+      ` <span class="diff-detail">· ${esc(t("diff.changedKeys",{n:summary.changedKeys}))} · ${esc(t("diff.changedValues",{n:summary.changedValues}))} · ${esc(t("diff.prefixOnly",{n:summary.prefixOnly}))}</span>`;
 
-    // collapse long equal runs when "only differences" is on
+    // Preserve the existing collapse/context behavior.
     let show=rows.map(()=>true);
     if (state.diffOnly){
       const CTX=3;
       show=rows.map(()=>false);
-      rows.forEach((r,i)=>{
-        if (r.k==="eq") return;
-        for (let j=Math.max(0,i-CTX); j<=Math.min(rows.length-1,i+CTX); j++) show[j]=true;
+      rows.forEach((row,index)=>{
+        if (row.k==="eq") return;
+        for (let current=Math.max(0,index-CTX); current<=Math.min(rows.length-1,index+CTX); current++) show[current]=true;
       });
     }
 
-    const cell=(t)=> t==="" ? "&nbsp;" : esc(t);
+    const cell=text => text==="" ? "&nbsp;" : esc(text);
     const parts=[`<div class="dhead"><div>${esc(t("diff.headLine"))}</div><div>${esc(state.diffOther.name)}</div><div class="h2">${esc(t("diff.headLine"))}</div><div>${esc(t("diff.headCurrent"))}</div></div>`];
     let hidden=0;
     const flushHidden=()=>{ if (hidden){ parts.push(`<div class="dgap">${esc(t("diff.gap",{n:hidden}))}</div>`); hidden=0; } };
-    for (let i=0;i<rows.length;i++){
-      if (!show[i]){ hidden++; continue; }
+    for (let index=0;index<rows.length;index++){
+      if (!show[index]){ hidden++; continue; }
       flushHidden();
-      const r=rows[i];
-      const lt=r.li>=0?A[r.li]:"", rt=r.ri>=0?B[r.ri]:"";
-      let lh, rh;
-      if (r.k==="chg") [lh,rh]=inlineDiff(lt,rt);
-      else { lh=r.li>=0?cell(lt):""; rh=r.ri>=0?cell(rt):""; }
+      const row=rows[index];
+      const left=row.li>=0?A[row.li]:"", right=row.ri>=0?B[row.ri]:"";
+      let leftHtml, rightHtml;
+      if (row.k==="chg") [leftHtml,rightHtml]=inlineDiff(left,right);
+      else { leftHtml=row.li>=0?cell(left):""; rightHtml=row.ri>=0?cell(right):""; }
+      const classes = row.k + (row.prefixOnly ? " prefix-only" : "");
       parts.push(
-        `<div class="drow ${r.k}">`+
-        `<div class="dnum dnum-l">${r.li>=0?r.li+1:""}</div>`+
-        `<div class="dtxt txt-l">${lh}</div>`+
-        `<div class="dnum dnum-r side2">${r.ri>=0?r.ri+1:""}</div>`+
-        `<div class="dtxt txt-r">${rh}</div>`+
+        `<div class="drow ${classes}">`+
+        `<div class="dnum dnum-l">${row.li>=0?row.li+1:""}</div>`+
+        `<div class="dtxt txt-l">${leftHtml}</div>`+
+        `<div class="dnum dnum-r side2">${row.ri>=0?row.ri+1:""}</div>`+
+        `<div class="dtxt txt-r">${rightHtml}</div>`+
         `</div>`);
     }
     flushHidden();
-    if (state.diffOnly && !add && !del && !chg)
+    if (state.diffOnly && !summary.added && !summary.deleted && !summary.changed)
       parts.push(`<div class="empty-d">${esc(t("diff.identical"))}</div>`);
     box.innerHTML = parts.join("");
     box.scrollTop = 0;
@@ -6653,6 +6659,13 @@ function targetFromName(name){
   $("diffOnlyToggle").addEventListener("click", () => {
     state.diffOnly = !state.diffOnly;
     $("diffOnlyToggle").classList.toggle("on", state.diffOnly);
+    renderDiff();
+  });
+  $("diffInlineMode").addEventListener("click", event => {
+    const button = event.target.closest("[data-diff-mode]");
+    if (!button) return;
+    state.diffMode = button.dataset.diffMode === "character" ? "character" : "word";
+    syncDiffModeControls();
     renderDiff();
   });
   $("reviewbar").addEventListener("click", e => {

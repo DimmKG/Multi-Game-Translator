@@ -24,6 +24,8 @@ requireText("term-review-flag", "embedded Review terminology integration");
 requireText("showCombinedIssues", "embedded combined Review issue filter");
 requireText("term-nav-filter", "embedded terminology navigation controls");
 requireText("focusNextIssue", "embedded terminology issue navigation");
+requireText("globalThis.NecesseTokenAwareDiff", "embedded token-aware Compare engine");
+requireText("compareEntryPair", "embedded Compare entry analysis");
 
 if (/<link[^>]+href=["']\.\//i.test(built)) failures.push("Standalone build still references a local stylesheet.");
 if (/<script[^>]+src=["']\.\//i.test(built)) failures.push("Standalone build still references a local script.");

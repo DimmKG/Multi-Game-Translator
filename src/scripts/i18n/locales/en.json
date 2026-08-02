@@ -235,6 +235,12 @@
     "metadata.localname": "Language name written in this language (for example, Български).",
     "metadata.engname": "Language name written in English (for example, Bulgarian).",
     "metadata.extrasymbols": "Additional characters that must be available in the game font. Keep this as a character list, not a sentence.",
-    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse."
+    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse.",
+    "diff.inlineMode": "Inline difference detail",
+    "diff.modeWords": "Words",
+    "diff.modeCharacters": "Characters",
+    "diff.changedKeys": "Keys: {n}",
+    "diff.changedValues": "Values: {n}",
+    "diff.prefixOnly": "Status only: {n}"
   }
 }

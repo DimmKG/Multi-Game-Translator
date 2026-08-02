@@ -243,7 +243,13 @@ globalThis.NecesseLocales.register({
     "metadata.localname": "Language name written in this language (for example, Български).",
     "metadata.engname": "Language name written in English (for example, Bulgarian).",
     "metadata.extrasymbols": "Additional characters that must be available in the game font. Keep this as a character list, not a sentence.",
-    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse."
+    "metadata.langCredits": "Translator names shown in the language credits. Preserve the separator and formatting expected by Necesse.",
+    "diff.inlineMode": "Inline difference detail",
+    "diff.modeWords": "Words",
+    "diff.modeCharacters": "Characters",
+    "diff.changedKeys": "Keys: {n}",
+    "diff.changedValues": "Values: {n}",
+    "diff.prefixOnly": "Status only: {n}"
   }
 });
 
@@ -612,7 +618,13 @@ globalThis.NecesseLocales.register({
     "metadata.localname": "Името на езика, изписано на самия език (например Български).",
     "metadata.engname": "Името на езика, изписано на английски (например Bulgarian).",
     "metadata.extrasymbols": "Допълнителни знаци, които трябва да присъстват в шрифта на играта. Това е списък със знаци, а не изречение.",
-    "metadata.langCredits": "Имената на преводачите в езиковите заслуги. Запази разделителя и формата, очаквани от Necesse."
+    "metadata.langCredits": "Имената на преводачите в езиковите заслуги. Запази разделителя и формата, очаквани от Necesse.",
+    "diff.inlineMode": "Подробност на разликите в реда",
+    "diff.modeWords": "Думи",
+    "diff.modeCharacters": "Знаци",
+    "diff.changedKeys": "Ключове: {n}",
+    "diff.changedValues": "Стойности: {n}",
+    "diff.prefixOnly": "Само статус: {n}"
   }
 });
 
@@ -3157,7 +3169,13 @@ globalThis.NecesseLocales.register({
     "metadata.localname": "Название языка, написанное на самом языке (например Русский).",
     "metadata.engname": "Название языка, написанное на английском (например Russian).",
     "metadata.extrasymbols": "Дополнительные символы, которые должны присутствовать в игровом шрифте. Это список символов, а не предложение.",
-    "metadata.langCredits": "Имена переводчиков в языковых титрах. Сохраните разделитель и формат, ожидаемые Necesse."
+    "metadata.langCredits": "Имена переводчиков в языковых титрах. Сохраните разделитель и формат, ожидаемые Necesse.",
+    "diff.inlineMode": "Детализация различий в строке",
+    "diff.modeWords": "Слова",
+    "diff.modeCharacters": "Символы",
+    "diff.changedKeys": "Ключи: {n}",
+    "diff.changedValues": "Значения: {n}",
+    "diff.prefixOnly": "Только статус: {n}"
   }
 });
 
