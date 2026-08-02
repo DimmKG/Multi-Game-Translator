@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState } from "react";
 
 /** Subscribes to a media query so layout can branch in React, not just in CSS. */

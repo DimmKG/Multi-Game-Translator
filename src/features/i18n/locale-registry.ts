@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { LocaleManifestEntry } from "./types";
 
 const localeModules = import.meta.glob("../../locales/*.json", {

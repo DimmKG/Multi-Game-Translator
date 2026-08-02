@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Jump requests aimed at the editor list, raised from outside it (the section
  * rail, "edit" in review, Ctrl+Enter). The list is windowed, so the target row

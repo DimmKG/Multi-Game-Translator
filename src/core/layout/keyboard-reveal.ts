@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /** Gap kept between a revealed card and the edge of the visible area. */
 export const REVEAL_MARGIN = 8;
 

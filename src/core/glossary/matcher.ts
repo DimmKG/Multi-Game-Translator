@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { PROTECTED_TOKEN_PATTERN } from "@/core/lang/markers";
 
 export interface GlossaryEntry {

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { classifyNonEntryLine } from "@/core/lang/parse";
 import type { LangLine } from "@/core/lang/markers";
 

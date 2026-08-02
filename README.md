@@ -96,6 +96,10 @@ UI primitives are managed with the shadcn CLI (`components.json`). Example:
 npx shadcn@latest add button
 ```
 
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE) (`AGPL-3.0-or-later`).
+
 ## Feedback
 
 Feedback from translators is welcome. Open a GitHub issue with a clear description and, where useful, a screenshot or small reproducible sample.

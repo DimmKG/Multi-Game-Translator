@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { MtProviderSettingField } from "./providers";
 
 const STORAGE_KEY = "necesse-translator.mt-provider-settings.v1";

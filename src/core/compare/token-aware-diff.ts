@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   MISSING_TRANSLATION_PREFIX,
   SAME_TRANSLATION_PREFIX,

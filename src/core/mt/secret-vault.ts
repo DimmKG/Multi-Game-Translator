@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 const FORMAT = "necesse-provider-secrets";
 const VERSION = 1;
 const ITERATIONS = 600_000;

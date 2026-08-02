@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { defaultThemes } from "shadcn-theme-switcher/themes";
 
 export const THEME_STORAGE_KEY = "necesse-translator.theme.v1";

@@ -2,6 +2,7 @@
   "name": "necesse-lang-translator",
   "version": "0.9.0-pre-react.3",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",

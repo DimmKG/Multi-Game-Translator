@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { Download, Menu } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 

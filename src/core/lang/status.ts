@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import type { EntryStatus, LangLine } from "./markers";
 
 export type TranslationEntry = Extract<LangLine, { type: "entry" }>;

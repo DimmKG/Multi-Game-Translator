@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 /**
  * Synthetic Necesse-like `.lang` fixtures for integration tests.
  * Intentionally not derived from copyrighted game localization files.

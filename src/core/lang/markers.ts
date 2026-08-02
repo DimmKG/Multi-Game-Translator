@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 export const MISSING_TRANSLATION_PREFIX = "MISSING_TRANSLATION:";
 export const SAME_TRANSLATION_PREFIX = "SAME_TRANSLATION:";
 
