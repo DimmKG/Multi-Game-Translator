@@ -1,16 +1,34 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  BookA,
   CircleCheck,
-  PanelLeftClose,
-  PanelLeftOpen,
+  CircleDashed,
+  Equal,
+  List,
+  Pilcrow,
   Search,
-  SlidersHorizontal,
   TriangleAlert,
+  type LucideIcon,
 } from "lucide-react";
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuBadge,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarRail,
+  SidebarSeparator,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import {
   calibrateCardMetrics,
@@ -204,33 +222,11 @@ const EntryCard = memo(function EntryCard({
   );
 });
 
-const SIDEBAR_STORAGE_KEY = "necesse-translator.sidebar-collapsed.v1";
-
 /** Filter rail + section jump list. Rendered beside the tab strip, editor view only. */
-export function EditorSidebar({
-  mobileOpen = false,
-  onMobileOpenChange,
-}: {
-  mobileOpen?: boolean;
-  onMobileOpenChange?: (open: boolean) => void;
-} = {}) {
+export function EditorSidebar() {
   const { t } = useI18n();
   const workspace = useWorkspace();
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(SIDEBAR_STORAGE_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_STORAGE_KEY, collapsed ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
-  }, [collapsed]);
+  const { setOpenMobile } = useSidebar();
 
   const entries = useMemo(
     () => workspace.items.filter((item): item is TranslationEntry => item.type === "entry"),
@@ -241,7 +237,8 @@ export function EditorSidebar({
     id: FilterMode;
     label: string;
     count: number | string;
-    dot: string;
+    icon: LucideIcon;
+    tint: string;
     disabled?: boolean;
     warn?: boolean;
     title?: string;
@@ -253,28 +250,38 @@ export function EditorSidebar({
         id: "missing",
         label: t("filter.missing"),
         count: count((entry) => statusOf(entry) === "missing"),
-        dot: "dot-missing",
+        icon: CircleDashed,
+        tint: "text-primary",
       },
       {
         id: "done",
         label: t("filter.done"),
         count: count((entry) => statusOf(entry) === "done"),
-        dot: "dot-done",
+        icon: CircleCheck,
+        tint: "text-success",
       },
       {
         id: "same",
         label: t("filter.same"),
         count: workspace.referenceAvailable ? count((entry) => statusOf(entry) === "same") : "—",
-        dot: "dot-same",
+        icon: Equal,
+        tint: "text-same",
         disabled: !workspace.referenceAvailable,
         title: workspace.referenceAvailable ? undefined : t("reference.notLoaded"),
       },
-      { id: "all", label: t("filter.all"), count: entries.length, dot: "dot-all" },
+      {
+        id: "all",
+        label: t("filter.all"),
+        count: entries.length,
+        icon: List,
+        tint: "text-foreground-faint",
+      },
       {
         id: "ws",
         label: t("filter.ws"),
         count: workspace.whitespaceIssueCount,
-        dot: "dot-ws",
+        icon: Pilcrow,
+        tint: "text-warn",
         warn: true,
         title: t("filter.wsTitle"),
       },
@@ -301,97 +308,101 @@ export function EditorSidebar({
   }, [workspace.items]);
 
   return (
-    <>
-      {/* Narrow screens have no room for a 236px rail, so it becomes a drawer. */}
-      <div
-        className={cn("side-backdrop", mobileOpen && "on")}
-        onClick={() => onMobileOpenChange?.(false)}
-        aria-hidden="true"
-      />
-      <aside
-        className={cn("side app-chrome", collapsed && "collapsed", mobileOpen && "mobile-open")}
-      >
-        <div className="side-toggle">
-          <button
-            type="button"
-            aria-expanded={!collapsed}
-            aria-label={t(collapsed ? "side.expand" : "side.collapse")}
-            title={t(collapsed ? "side.expand" : "side.collapse")}
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            {collapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
-            {!collapsed && <span>{t("side.collapse")}</span>}
-          </button>
-        </div>
+    // Below 860px `Sidebar` renders itself as a Sheet — see use-mobile.
+    <Sidebar collapsible="icon">
+      {/* Filters stay put; only the section list scrolls, so they live in the
+          non-scrolling header rather than in SidebarContent. */}
+      <SidebarHeader className="p-0">
+        <SidebarGroup>
+          <SidebarMenu>
+            {filters.map((filter) => {
+              const active = workspace.filter === filter.id && !workspace.terminologyFilterActive;
+              return (
+                <SidebarMenuItem key={filter.id}>
+                  <SidebarMenuButton
+                    isActive={active}
+                    disabled={filter.disabled}
+                    title={filter.title}
+                    tooltip={`${filter.label} · ${filter.count}`}
+                    onClick={() => {
+                      workspace.setTerminologyFilterActive(false);
+                      workspace.setFilter(filter.id);
+                      setOpenMobile(false);
+                    }}
+                  >
+                    <filter.icon className={filter.tint} aria-hidden="true" />
+                    <span className="group-data-[collapsible=icon]:hidden">{filter.label}</span>
+                  </SidebarMenuButton>
+                  <SidebarMenuBadge
+                    className={cn(
+                      "font-mono",
+                      filter.warn ? "text-warn" : active && "text-primary",
+                    )}
+                  >
+                    {filter.count}
+                  </SidebarMenuBadge>
+                </SidebarMenuItem>
+              );
+            })}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={workspace.terminologyFilterActive}
+                title={t("terminology.filterTitle")}
+                tooltip={`${t("terminology.filter")} · ${terminologyCount}`}
+                onClick={() => {
+                  workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive);
+                  setOpenMobile(false);
+                }}
+              >
+                <BookA className="text-warn" aria-hidden="true" />
+                <span className="group-data-[collapsible=icon]:hidden">
+                  {t("terminology.filter")}
+                </span>
+              </SidebarMenuButton>
+              <SidebarMenuBadge className="text-warn font-mono">
+                {terminologyCount}
+              </SidebarMenuBadge>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarHeader>
 
-        <div className="filters">
-          {filters.map((filter) => (
-            <button
-              type="button"
-              key={filter.id}
-              className={cn(
-                "filt",
-                workspace.filter === filter.id && !workspace.terminologyFilterActive && "on",
-                filter.warn && "warn",
-              )}
-              disabled={filter.disabled}
-              title={collapsed ? `${filter.label} · ${filter.count}` : filter.title}
-              onClick={() => {
-                workspace.setTerminologyFilterActive(false);
-                workspace.setFilter(filter.id);
-                onMobileOpenChange?.(false);
-              }}
-            >
-              <span className="l">
-                <i className={cn("dot", filter.dot)} />
-                <span>{filter.label}</span>
-              </span>
-              <span className="cnt">{filter.count}</span>
-            </button>
-          ))}
-          <button
-            type="button"
-            className={cn("filt warn", workspace.terminologyFilterActive && "on")}
-            title={t("terminology.filterTitle")}
-            onClick={() => {
-              workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive);
-              onMobileOpenChange?.(false);
-            }}
-          >
-            <span className="l">
-              <i className="dot dot-ws" />
-              <span>{t("terminology.filter")}</span>
-            </span>
-            <span className="cnt">{terminologyCount}</span>
-          </button>
-        </div>
+      <SidebarSeparator className="mx-0 group-data-[collapsible=icon]:hidden" />
 
-        <div className="block">
-          <div className="lbl">{t("side.sections")}</div>
-        </div>
+      <SidebarContent>
+        {/* Section names have no icon to shrink to, and a 48px rail cannot show
+            enough of one to be worth keeping. The whole list stands down. */}
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel className="text-[10px] tracking-[0.16em] uppercase">
+            {t("side.sections")}
+          </SidebarGroupLabel>
+          <SidebarMenu>
+            {sections.map((section) => (
+              <SidebarMenuItem key={section.name}>
+                <SidebarMenuButton
+                  size="sm"
+                  className="font-mono"
+                  tooltip={sectionLabel(section.name)}
+                  onClick={() => {
+                    setOpenMobile(false);
+                    requestEditorScroll({ type: "section", name: section.name });
+                  }}
+                >
+                  <span className="ltr-isolate">{sectionLabel(section.name)}</span>
+                </SidebarMenuButton>
+                <SidebarMenuBadge className="font-mono">{section.count}</SidebarMenuBadge>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
 
-        <div className="sections">
-          {sections.map((section) => (
-            <button
-              type="button"
-              key={section.name}
-              className="sec-jump"
-              onClick={() => {
-                onMobileOpenChange?.(false);
-                requestEditorScroll({ type: "section", name: section.name });
-              }}
-            >
-              <span className="sn ltr-isolate">{sectionLabel(section.name)}</span>
-              <span className="sc">{section.count}</span>
-            </button>
-          ))}
-        </div>
-      </aside>
-    </>
+      <SidebarRail />
+    </Sidebar>
   );
 }
 
-export function EditorView({ onOpenFilters }: { onOpenFilters?: () => void } = {}) {
+export function EditorView() {
   const { t } = useI18n();
   const workspace = useWorkspace();
   // Keep cards that were opened for editing in the list until the user leaves
@@ -517,15 +528,7 @@ export function EditorView({ onOpenFilters }: { onOpenFilters?: () => void } = {
   return (
     <>
       <div className="toolbar">
-        <button
-          type="button"
-          className="qbtn filters-trigger"
-          aria-label={t("menu.filters")}
-          title={t("menu.filters")}
-          onClick={onOpenFilters}
-        >
-          <SlidersHorizontal size={14} aria-hidden="true" />
-        </button>
+        <SidebarTrigger title={t("menu.filters")} aria-label={t("menu.filters")} />
         <div className="search">
           <Search className="ic" size={14} aria-hidden="true" />
           <input

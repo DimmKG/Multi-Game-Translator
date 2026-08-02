@@ -4,6 +4,7 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { CompactBar } from "@/components/layout/CompactBar";
 import { RecoveryBanner } from "@/components/layout/RecoveryBanner";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { CompareView } from "@/features/compare/CompareView";
@@ -37,6 +38,17 @@ function Footnote() {
   return <div className="footnote app-chrome ltr-isolate">{text}</div>;
 }
 
+/** Kept from before the shadcn Sidebar landed: "1" means collapsed. */
+const RAIL_STORAGE_KEY = "necesse-translator.sidebar-collapsed.v1";
+
+function loadRailOpen() {
+  try {
+    return localStorage.getItem(RAIL_STORAGE_KEY) !== "1";
+  } catch {
+    return true;
+  }
+}
+
 function WorkspaceShell({
   theme,
   mode,
@@ -51,7 +63,16 @@ function WorkspaceShell({
   const { t } = useI18n();
   const workspace = useWorkspace();
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  // The rail's expanded/collapsed state outlives the session, so SidebarProvider
+  // runs controlled rather than on its own cookie.
+  const [railOpen, setRailOpen] = useState(loadRailOpen);
+  useEffect(() => {
+    try {
+      localStorage.setItem(RAIL_STORAGE_KEY, railOpen ? "0" : "1");
+    } catch {
+      /* private mode, or storage full — the rail just forgets */
+    }
+  }, [railOpen]);
 
   const reviewCount = workspace.items.filter(
     (item) => item.type === "entry" && item.touched,
@@ -78,40 +99,45 @@ function WorkspaceShell({
         <TabsPrimitive.Root
           value={workspace.view}
           onValueChange={(value) => workspace.setView(value as "editor" | "review" | "diff")}
-          className="workspace-main"
+          className="flex min-h-0 flex-1"
           asChild
         >
-          <main>
-            {workspace.view === "editor" && (
-              <EditorSidebar mobileOpen={filtersOpen} onMobileOpenChange={setFiltersOpen} />
-            )}
-            <section className="work">
-              <TabsPrimitive.List className="tabs">
-                <TabsPrimitive.Trigger className="tab" value="editor">
-                  {t("tab.editor")}
-                </TabsPrimitive.Trigger>
-                <TabsPrimitive.Trigger className="tab" value="review">
-                  {t("tab.review")}
-                  <span className="tcount">{reviewCount}</span>
-                </TabsPrimitive.Trigger>
-                <TabsPrimitive.Trigger className="tab" value="diff">
-                  {t("tab.diff")}
-                </TabsPrimitive.Trigger>
-              </TabsPrimitive.List>
+          {/* Not a <main> — SidebarInset below is the one, and it may not nest. */}
+          <div>
+            <SidebarProvider open={railOpen} onOpenChange={setRailOpen}>
+              {/* Only the editor has anything to filter, so the rail comes and
+                  goes with the tab; the inset takes the whole width without it.
+                  Unmounting is also how compact view drops it — hiding the panel
+                  in CSS would leave its width reserved by the layout gap. */}
+              {workspace.view === "editor" && !workspace.compactView && <EditorSidebar />}
+              <SidebarInset className="min-h-0 min-w-0">
+                <TabsPrimitive.List className="tabs">
+                  <TabsPrimitive.Trigger className="tab" value="editor">
+                    {t("tab.editor")}
+                  </TabsPrimitive.Trigger>
+                  <TabsPrimitive.Trigger className="tab" value="review">
+                    {t("tab.review")}
+                    <span className="tcount">{reviewCount}</span>
+                  </TabsPrimitive.Trigger>
+                  <TabsPrimitive.Trigger className="tab" value="diff">
+                    {t("tab.diff")}
+                  </TabsPrimitive.Trigger>
+                </TabsPrimitive.List>
 
-              <TabsPrimitive.Content value="editor" className="work" tabIndex={-1}>
-                <EditorView onOpenFilters={() => setFiltersOpen(true)} />
-              </TabsPrimitive.Content>
-              <TabsPrimitive.Content value="review" className="work" tabIndex={-1}>
-                <ReviewView />
-              </TabsPrimitive.Content>
-              <TabsPrimitive.Content value="diff" className="work" tabIndex={-1}>
-                <CompareView />
-              </TabsPrimitive.Content>
+                <TabsPrimitive.Content value="editor" className="work" tabIndex={-1}>
+                  <EditorView />
+                </TabsPrimitive.Content>
+                <TabsPrimitive.Content value="review" className="work" tabIndex={-1}>
+                  <ReviewView />
+                </TabsPrimitive.Content>
+                <TabsPrimitive.Content value="diff" className="work" tabIndex={-1}>
+                  <CompareView />
+                </TabsPrimitive.Content>
 
-              <Footnote />
-            </section>
-          </main>
+                <Footnote />
+              </SidebarInset>
+            </SidebarProvider>
+          </div>
         </TabsPrimitive.Root>
       )}
 
