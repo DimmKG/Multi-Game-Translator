@@ -18,8 +18,10 @@ function localAssetPath(url) {
 
 let html = await readFile(sourceHtmlPath, "utf8");
 
-const stylesheetPattern = /<link\s+[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/g;
-const scriptPattern = /<script\s+[^>]*type=["']module["'][^>]*src=["']([^"']+)["'][^>]*><\/script>/g;
+const stylesheetPattern =
+  /<link\s+[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*>/g;
+const scriptPattern =
+  /<script\s+[^>]*type=["']module["'][^>]*src=["']([^"']+)["'][^>]*><\/script>/g;
 
 const stylesheetMatches = [...html.matchAll(stylesheetPattern)];
 const scriptMatches = [...html.matchAll(scriptPattern)];
