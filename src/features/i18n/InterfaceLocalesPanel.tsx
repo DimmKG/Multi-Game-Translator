@@ -5,13 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "./I18nProvider";
 
 export function InterfaceLocalesPanel() {
-  const {
-    t,
-    installedLocales,
-    installLocaleFile,
-    removeInstalledLocale,
-    downloadLocaleTemplate,
-  } = useI18n();
+  const { t, installedLocales, installLocaleFile, removeInstalledLocale, downloadLocaleTemplate } =
+    useI18n();
 
   const importLocale = () => {
     const input = document.createElement("input");

@@ -127,10 +127,7 @@ export function installInterfaceLocale(
   return { locales: next, replaced };
 }
 
-export function uninstallInterfaceLocale(
-  locales: readonly InterfaceLocalePackage[],
-  code: string,
-) {
+export function uninstallInterfaceLocale(locales: readonly InterfaceLocalePackage[], code: string) {
   const next = locales.filter((locale) => locale.code !== code);
   removeInstallableLocale(code);
   saveInstalled(next);
