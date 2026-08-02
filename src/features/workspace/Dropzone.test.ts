@@ -38,6 +38,7 @@ describe("dropzone empty state (matches original card)", () => {
     expect(dropzoneSource).toContain('className="empty"');
     expect(dropzoneSource).toContain('cn("drop", dragging && "over")');
     expect(dropzoneSource).toContain('className="lg"');
-    expect(dropzoneSource).toContain('className="btn primary"');
+    expect(dropzoneSource).toContain('id="btnPick"');
+    expect(dropzoneSource).toContain("<Button");
   });
 });

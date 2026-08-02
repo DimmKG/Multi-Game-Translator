@@ -10,6 +10,8 @@ import {
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import {
   calibrateCardMetrics,
   CardHeightCache,
@@ -79,7 +81,13 @@ function whitespaceLabels(entry: TranslationEntry, t: (key: string) => string) {
   return labels;
 }
 
-const EntryCard = memo(function EntryCard({ entry }: { entry: TranslationEntry }) {
+const EntryCard = memo(function EntryCard({
+  entry,
+  onPin,
+}: {
+  entry: TranslationEntry;
+  onPin: (entryId: number) => void;
+}) {
   const { t } = useI18n();
   const workspace = useWorkspace();
   const status = statusOf(entry);
@@ -91,7 +99,11 @@ const EntryCard = memo(function EntryCard({ entry }: { entry: TranslationEntry }
   const badge = STATUS_BADGE[status];
 
   return (
-    <article className={cn("card", `st-${status}`)} data-key={entry.key}>
+    <article
+      className={cn("card", `st-${status}`)}
+      data-key={entry.key}
+      onFocusCapture={() => onPin(entry.id)}
+    >
       <div className="row1">
         <button
           type="button"
@@ -101,9 +113,9 @@ const EntryCard = memo(function EntryCard({ entry }: { entry: TranslationEntry }
         >
           {entry.key}
         </button>
-        <span className={cn("badge", badge.className)}>{t(badge.labelKey)}</span>
-        {entry.mtDraft && <span className="badge b-mt">{t("badge.mt")}</span>}
-        {whitespace.any && <span className="badge b-ws">{t("filter.ws")}</span>}
+        <Badge className={cn("entry-badge", badge.className)}>{t(badge.labelKey)}</Badge>
+        {entry.mtDraft && <Badge className="entry-badge b-mt">{t("badge.mt")}</Badge>}
+        {whitespace.any && <Badge className="entry-badge b-ws">{t("filter.ws")}</Badge>}
         <span className="spacer" />
       </div>
 
@@ -117,7 +129,7 @@ const EntryCard = memo(function EntryCard({ entry }: { entry: TranslationEntry }
       )}
 
       <div className="tawrap">
-        <textarea
+        <Textarea
           value={entry.value}
           spellCheck={workspace.spellcheck}
           onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
@@ -382,9 +394,26 @@ export function EditorSidebar({
 export function EditorView({ onOpenFilters }: { onOpenFilters?: () => void } = {}) {
   const { t } = useI18n();
   const workspace = useWorkspace();
+  // Keep cards that were opened for editing in the list until the user leaves
+  // this view — otherwise a "missing"/search filter drops the row mid-typing.
+  const [stickyIds, setStickyIds] = useState<ReadonlySet<number>>(() => new Set());
+
+  const pinEntry = useCallback((entryId: number) => {
+    setStickyIds((current) => {
+      if (current.has(entryId)) return current;
+      const next = new Set(current);
+      next.add(entryId);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    setStickyIds(new Set());
+  }, [workspace.view]);
 
   const rows = useMemo(() => {
     const visible = new Set(workspace.filteredEntries.map((entry) => entry.id));
+    for (const entryId of stickyIds) visible.add(entryId);
     const out: Array<
       { kind: "section"; name: string } | { kind: "entry"; entry: TranslationEntry }
     > = [];
@@ -401,7 +430,7 @@ export function EditorView({ onOpenFilters }: { onOpenFilters?: () => void } = {
       }
     }
     return out;
-  }, [workspace.items, workspace.filteredEntries]);
+  }, [workspace.items, workspace.filteredEntries, stickyIds]);
 
   const terminologyCount = useMemo(
     () =>
@@ -580,7 +609,7 @@ export function EditorView({ onOpenFilters }: { onOpenFilters?: () => void } = {
               {sectionLabel(row.name)}
             </div>
           ) : (
-            <EntryCard entry={row.entry} />
+            <EntryCard entry={row.entry} onPin={pinEntry} />
           )
         }
       />

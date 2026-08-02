@@ -13,6 +13,15 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -20,11 +29,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
 import { LANGUAGE_OPTIONS } from "@/core/mt/target-language";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
 import { isDarkOnly, THEME_OPTIONS, type ThemeMode } from "@/themes/themes";
 import { cn } from "@/lib/utils";
+
+const NO_LANGUAGE = "__none__";
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -121,11 +133,12 @@ export function WorkspaceMenu({
         <div className="menu-body">
           {workspace.isOpen && (
             <Section title={t("menu.file")}>
-              <label className="menu-field">
-                <span>{t("fname.label")}</span>
-                <input
+              <div className="menu-field">
+                <Label htmlFor="menu-filename">{t("fname.label")}</Label>
+                <Input
+                  id="menu-filename"
                   type="text"
-                  className="ltr-isolate"
+                  className="ltr-isolate font-mono"
                   spellCheck={false}
                   placeholder="*.lang"
                   value={filenameDraft}
@@ -137,7 +150,7 @@ export function WorkspaceMenu({
                   }}
                   onBlur={() => workspace.setFilename(filenameDraft)}
                 />
-              </label>
+              </div>
               <button type="button" className="menu-item" onClick={run(workspace.exportLang)}>
                 <Download size={15} />
                 {t("btn.export")}
@@ -197,88 +210,109 @@ export function WorkspaceMenu({
 
           {workspace.isOpen && (
             <Section title={t("menu.editing")}>
-              <button
-                type="button"
-                className="menu-item"
-                aria-pressed={workspace.spellcheck}
-                title={t("toggle.spellTitle")}
-                onClick={() => workspace.setSpellcheck(!workspace.spellcheck)}
-              >
-                <span className={cn("tk", workspace.spellcheck && "on")} aria-hidden="true" />
-                {t("toggle.spell")}
-              </button>
-              <button
-                type="button"
-                className="menu-item"
-                aria-pressed={workspace.autocompleteEnabled}
-                title={t("toggle.acTitle")}
-                onClick={() => workspace.setAutocompleteEnabled(!workspace.autocompleteEnabled)}
-              >
-                <span
-                  className={cn("tk", workspace.autocompleteEnabled && "on")}
-                  aria-hidden="true"
+              <div className="menu-item menu-switch">
+                <Label htmlFor="menu-spellcheck" className="flex-1 cursor-pointer font-normal">
+                  {t("toggle.spell")}
+                </Label>
+                <Switch
+                  id="menu-spellcheck"
+                  size="sm"
+                  checked={workspace.spellcheck}
+                  title={t("toggle.spellTitle")}
+                  onCheckedChange={(checked) => workspace.setSpellcheck(checked)}
                 />
-                {t("toggle.ac")}
-              </button>
+              </div>
+              <div className="menu-item menu-switch">
+                <Label htmlFor="menu-autocomplete" className="flex-1 cursor-pointer font-normal">
+                  {t("toggle.ac")}
+                </Label>
+                <Switch
+                  id="menu-autocomplete"
+                  size="sm"
+                  checked={workspace.autocompleteEnabled}
+                  title={t("toggle.acTitle")}
+                  onCheckedChange={(checked) => workspace.setAutocompleteEnabled(checked)}
+                />
+              </div>
             </Section>
           )}
 
           {workspace.isOpen && (
             <Section title={t("menu.translation")}>
-              <label className="menu-field">
-                <span>{t("mt.label")}</span>
-                <select
+              <div className="menu-field">
+                <Label>{t("mt.label")}</Label>
+                <Select
                   value={workspace.mtProvider}
-                  title={t("mt.providerTitle")}
-                  onChange={(event) => workspace.setMtProvider(event.target.value)}
+                  onValueChange={(value) => workspace.setMtProvider(value)}
                 >
-                  {workspace.providers.map((provider) => (
-                    <option key={provider.id} value={provider.id}>
-                      {provider.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="menu-field">
-                <span>{t("mt.langLabel")}</span>
-                <select
-                  value={workspace.targetLanguage}
-                  title={t("mt.langTitle")}
-                  onChange={(event) => workspace.setTargetLanguage(event.target.value)}
+                  <SelectTrigger className="w-full font-mono" title={t("mt.providerTitle")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper">
+                    {workspace.providers.map((provider) => (
+                      <SelectItem key={provider.id} value={provider.id}>
+                        {provider.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="menu-field">
+                <Label>{t("mt.langLabel")}</Label>
+                <Select
+                  value={workspace.targetLanguage || NO_LANGUAGE}
+                  onValueChange={(value) =>
+                    workspace.setTargetLanguage(value === NO_LANGUAGE ? "" : value)
+                  }
                 >
-                  <option value="">—</option>
-                  {LANGUAGE_OPTIONS.map(([code, label]) => (
-                    <option key={code} value={code}>
-                      {label} ({code})
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  <SelectTrigger className="w-full font-mono" title={t("mt.langTitle")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="max-h-72">
+                    <SelectItem value={NO_LANGUAGE}>—</SelectItem>
+                    {LANGUAGE_OPTIONS.map(([code, label]) => (
+                      <SelectItem key={code} value={code}>
+                        {label} ({code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="menu-note">{t("mt.perLineHint")}</p>
             </Section>
           )}
 
           <Section title={t("menu.view")}>
-            <label className="menu-field">
-              <span>{t("menu.uiLang")}</span>
-              <select value={language} onChange={(event) => setLanguage(event.target.value)}>
-                {locales.map((locale) => (
-                  <option key={locale.code} value={locale.code}>
-                    {locale.nativeName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="menu-field">
-              <span>{t("menu.theme")}</span>
-              <select value={theme} onChange={(event) => onThemeChange(event.target.value)}>
-                {THEME_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="menu-field">
+              <Label>{t("menu.uiLang")}</Label>
+              <Select value={language} onValueChange={setLanguage}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper" className="max-h-72">
+                  {locales.map((locale) => (
+                    <SelectItem key={locale.code} value={locale.code}>
+                      {locale.nativeName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="menu-field">
+              <Label>{t("menu.theme")}</Label>
+              <Select value={theme} onValueChange={onThemeChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  {THEME_OPTIONS.map((option) => (
+                    <SelectItem key={option.id} value={option.id}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <button
               type="button"
               className="menu-item"

@@ -4,6 +4,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList } from "@/components/layout/VirtualList";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 import { compareEntryPair, diffRows, summarizeRows } from "@/core/compare/token-aware-diff";
 import type { DiffSegment } from "@/core/compare/token-aware-diff";
@@ -136,20 +138,18 @@ export function CompareView() {
   return (
     <>
       <div className="diffbar">
-        <button type="button" className="btn" onClick={() => inputRef.current?.click()}>
+        <Button type="button" variant="secondary" onClick={() => inputRef.current?.click()}>
           {t("diff.loadFile")}
-        </button>
+        </Button>
         <BarOptions>
-          <button
-            type="button"
-            className={cn("toggle", workspace.diffOnly && "on")}
-            title={t("diff.onlyDiffTitle")}
-            aria-pressed={workspace.diffOnly}
-            onClick={() => workspace.setDiffOnly(!workspace.diffOnly)}
-          >
-            <span className="tk" />
+          <label className="toggle" title={t("diff.onlyDiffTitle")}>
+            <Switch
+              size="sm"
+              checked={workspace.diffOnly}
+              onCheckedChange={(checked) => workspace.setDiffOnly(checked)}
+            />
             <span>{t("diff.onlyDiff")}</span>
-          </button>
+          </label>
           <div className="diff-mode" role="group" aria-label={t("diff.inlineMode")}>
             <button
               type="button"

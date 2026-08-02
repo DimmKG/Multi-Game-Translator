@@ -1,6 +1,7 @@
 import { FileType2 } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
@@ -53,23 +54,18 @@ export function Dropzone() {
         <p dangerouslySetInnerHTML={{ __html: t("drop.text") }} />
 
         <div className="actions">
-          <button
-            type="button"
-            id="btnPick"
-            className="btn primary"
-            onClick={() => inputRef.current?.click()}
-          >
+          <Button type="button" id="btnPick" onClick={() => inputRef.current?.click()}>
             {t("drop.pick")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn ghost"
+            variant="ghost"
             data-new-translation-button=""
             title={t("btn.newTranslationTitle")}
             onClick={() => newRef.current?.click()}
           >
             {t("btn.newTranslation")}
-          </button>
+          </Button>
         </div>
 
         <div className="legend" data-testid="dropzone-legend">

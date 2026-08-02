@@ -2,6 +2,7 @@ import { Download, Menu } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { WorkspaceMenu } from "@/components/layout/WorkspaceMenu";
+import { Button } from "@/components/ui/button";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { SettingsDialog } from "@/features/settings/SettingsDialog";
 import { GlossaryDialog } from "@/features/glossary/GlossaryDialog";
@@ -91,26 +92,28 @@ export function AppHeader({
       {/* Export and menu stay paired at the trailing edge, not adrift mid-bar. */}
       <div className="header-actions">
         {workspace.isOpen && (
-          <button
+          <Button
             type="button"
-            className="btn primary icon"
+            size="icon"
             aria-label={t("btn.export")}
             title={t("btn.export")}
             onClick={workspace.exportLang}
           >
-            <Download size={16} />
-          </button>
+            <Download />
+          </Button>
         )}
-        <button
+        <Button
           type="button"
-          className="btn ghost icon menu-trigger"
+          variant="ghost"
+          size="icon"
+          className="menu-trigger"
           aria-label={t("menu.open")}
           title={t("menu.open")}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen(true)}
         >
-          <Menu size={16} />
-        </button>
+          <Menu />
+        </Button>
       </div>
 
       <WorkspaceMenu

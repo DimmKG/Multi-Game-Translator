@@ -121,18 +121,14 @@ function WorkspaceShell({
 }
 
 export default function App() {
-  const [theme, setTheme] = useState("dungeon");
-  const [mode, setMode] = useState<ThemeMode>("dark");
+  const [theme, setTheme] = useState(loadStoredTheme);
+  const [mode, setMode] = useState(loadStoredMode);
 
   useKeyboardInset();
 
   useEffect(() => {
-    const storedTheme = loadStoredTheme();
-    const storedMode = loadStoredMode();
-    applyTheme(storedTheme, storedMode);
-    setTheme(storedTheme);
-    setMode(storedMode);
-  }, []);
+    applyTheme(theme, mode);
+  }, [theme, mode]);
 
   return (
     <TooltipProvider>

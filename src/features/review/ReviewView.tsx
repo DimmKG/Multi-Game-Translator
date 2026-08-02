@@ -1,8 +1,9 @@
 import { Search } from "lucide-react";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { VirtualList } from "@/components/layout/VirtualList";
+import { Textarea } from "@/components/ui/textarea";
 
 import type { ReviewFilter } from "@/core/lang/markers";
 import { statusOf, type TranslationEntry } from "@/core/lang/status";
@@ -30,6 +31,20 @@ function whitespaceLabels(entry: TranslationEntry, t: (key: string) => string) {
 export function ReviewView() {
   const { t } = useI18n();
   const workspace = useWorkspace();
+  const [stickyIds, setStickyIds] = useState<ReadonlySet<number>>(() => new Set());
+
+  const pinEntry = useCallback((entryId: number) => {
+    setStickyIds((current) => {
+      if (current.has(entryId)) return current;
+      const next = new Set(current);
+      next.add(entryId);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    setStickyIds(new Set());
+  }, [workspace.view]);
 
   const touched = useMemo(
     () =>
@@ -59,7 +74,7 @@ export function ReviewView() {
 
   const rows = useMemo(() => {
     const query = workspace.reviewQuery.trim().toLowerCase();
-    return touched.filter((entry) => {
+    const matched = touched.filter((entry) => {
       const hasIssues =
         missingTokens(entry).length > 0 ||
         scanWhitespace(entry).any ||
@@ -73,7 +88,11 @@ export function ReviewView() {
       }
       return true;
     });
-  }, [touched, workspace]);
+    if (!stickyIds.size) return matched;
+    const seen = new Set(matched.map((entry) => entry.id));
+    const keep = new Set([...seen, ...stickyIds]);
+    return touched.filter((entry) => keep.has(entry.id));
+  }, [touched, workspace, stickyIds]);
 
   // Stable identity — see the note in EditorView.
   const estimateSize = useCallback(
@@ -156,7 +175,10 @@ export function ReviewView() {
           const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
 
           return (
-            <div className={cn("rrow", flagged && "flag", !flagged && entry.mtDraft && "mt")}>
+            <div
+              className={cn("rrow", flagged && "flag", !flagged && entry.mtDraft && "mt")}
+              onFocusCapture={() => pinEntry(entry.id)}
+            >
               <div className="rmeta">
                 <button
                   type="button"
@@ -200,7 +222,7 @@ export function ReviewView() {
               <div className="rcol rru">
                 <span className="rlabel">{t("review.trLabel")}</span>
                 <div className="tawrap rv">
-                  <textarea
+                  <Textarea
                     value={entry.value}
                     spellCheck={workspace.spellcheck}
                     onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}

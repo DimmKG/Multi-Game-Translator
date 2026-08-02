@@ -1,5 +1,6 @@
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
+import { Button } from "@/components/ui/button";
 
 export function CompactBar() {
   const { t } = useI18n();
@@ -30,14 +31,14 @@ export function CompactBar() {
       <div className="compact-progress">{t("compact.progress", progress)}</div>
       <div className="compact-save">{saveLabel}</div>
       <div className="compact-spacer" />
-      <button
+      <Button
         type="button"
-        className="btn ghost"
+        variant="ghost"
         title={t("compact.exitTitle")}
         onClick={() => setCompactView(false)}
       >
         {t("compact.exit")}
-      </button>
+      </Button>
     </div>
   );
 }

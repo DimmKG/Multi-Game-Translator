@@ -322,7 +322,10 @@ html.compact-view .app-chrome {
    ========================================================================== */
 
 /* ---------- top bar ---------- */
+/* Keep chrome LTR even when the UI language is RTL: the workspace menu is a
+   physical `side="right"` sheet, so the trigger must stay on that same edge. */
 .app-header {
+  direction: ltr;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -356,58 +359,6 @@ html.compact-view .app-chrome {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
-}
-
-.btn {
-  border: 1px solid var(--border);
-  background: var(--secondary);
-  color: var(--foreground);
-  font-family: inherit;
-  cursor: pointer;
-  padding: 7px 13px;
-  border-radius: 7px;
-  font-size: 13px;
-  line-height: 1.25;
-  transition: 0.15s;
-  text-align: center;
-  white-space: nowrap;
-  min-height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-.btn:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--foreground);
-}
-.btn.primary {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-foreground);
-  font-weight: 600;
-}
-.btn.primary:hover:not(:disabled) {
-  background: color-mix(in oklab, var(--primary) 85%, var(--primary-foreground));
-  color: var(--primary-foreground);
-}
-.btn.ghost {
-  background: transparent;
-}
-.btn.icon {
-  padding: 7px 9px;
-  min-width: 34px;
-}
-.btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  border-color: var(--border) !important;
-  color: var(--muted-foreground) !important;
-}
-.btn:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
 }
 
 /* ---------- progress meter ---------- */
@@ -528,21 +479,23 @@ html.compact-view .app-chrome {
   flex: 1;
   min-width: 0;
 }
-.restore button {
+.restore [data-slot="button"] {
   font-family: inherit;
-  cursor: pointer;
   font-size: 12px;
-  padding: 5px 11px;
-  border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--success) 40%, var(--success-soft));
   background: transparent;
   color: inherit;
+  box-shadow: none;
 }
-.restore button.p {
+.restore [data-slot="button"][data-variant="default"] {
   background: var(--success);
   color: var(--success-soft);
   border-color: var(--success);
   font-weight: 600;
+}
+.restore [data-slot="button"][data-variant="outline"] {
+  background: transparent;
+  color: inherit;
 }
 
 /* ---------- compact bar ---------- */
@@ -833,15 +786,15 @@ html.compact-view .app-chrome {
 
 /* ---------- toolbar ---------- */
 /* Controls in a bar share one height; they are a single row of peers. */
-.toolbar > .btn,
+.toolbar > [data-slot="button"],
 .toolbar > .qbtn,
 .toolbar > .termpill,
 .toolbar > .search,
-.reviewbar > .btn,
+.reviewbar > [data-slot="button"],
 .reviewbar > .qbtn,
 .reviewbar > .search,
 .reviewbar > .rchips > .rchip,
-.diffbar > .btn,
+.diffbar > [data-slot="button"],
 .diffbar > .qbtn,
 .diffbar > .toggle,
 .diffbar > .diff-mode,
@@ -994,35 +947,6 @@ html.compact-view .app-chrome {
   color: var(--foreground);
   font-size: 12px;
 }
-.toggle .tk {
-  width: 34px;
-  height: 19px;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--muted-foreground) 25%, var(--secondary));
-  border: 1px solid var(--border);
-  position: relative;
-  transition: 0.15s;
-  flex: 0 0 auto;
-}
-.toggle .tk::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  inset-inline-start: 2px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--muted-foreground);
-  transition: 0.15s;
-}
-.toggle.on .tk {
-  background: var(--accent);
-  border-color: var(--primary);
-}
-.toggle.on .tk::after {
-  inset-inline-start: 16px;
-  background: var(--primary);
-}
 
 /* ---------- entry list ---------- */
 /* No `scroll-behavior: smooth` here, unlike the original: these lists are
@@ -1103,7 +1027,8 @@ html.compact-view .app-chrome {
   border-color: var(--primary);
   color: var(--primary);
 }
-.badge {
+.badge,
+.entry-badge {
   font-size: 10px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1111,6 +1036,8 @@ html.compact-view .app-chrome {
   border-radius: 5px;
   font-family: var(--font-mono);
   white-space: nowrap;
+  height: auto;
+  border-color: transparent;
 }
 .b-missing {
   background: var(--accent);
@@ -1178,7 +1105,8 @@ html.compact-view .app-chrome {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
 }
-.tawrap > textarea {
+.tawrap > textarea,
+.tawrap > [data-slot="textarea"] {
   display: block;
   width: 100%;
   font-family: var(--font-sans);
@@ -1196,8 +1124,17 @@ html.compact-view .app-chrome {
   resize: vertical;
   min-height: 42px;
   outline: none;
+  box-shadow: none;
+  border-radius: 0;
+  field-sizing: content;
 }
-.tawrap.rv > textarea {
+.tawrap > [data-slot="textarea"]:focus-visible {
+  border: 0;
+  box-shadow: none;
+  outline: none;
+}
+.tawrap.rv > textarea,
+.tawrap.rv > [data-slot="textarea"] {
   font-size: 13.5px;
   padding: 8px 10px;
   min-height: 38px;
@@ -1841,26 +1778,22 @@ html.compact-view .app-chrome {
   font-size: 12px;
   color: var(--muted-foreground);
 }
-.menu-field > span {
+.menu-field > label,
+.menu-field > [data-slot="label"] {
   flex: 0 0 auto;
 }
-.menu-field input,
-.menu-field select {
+.menu-field [data-slot="input"],
+.menu-field [data-slot="select-trigger"] {
   flex: 1 1 auto;
   min-width: 0;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  color: var(--foreground);
-  font-family: var(--font-mono);
-  font-size: 12.5px;
-  padding: 7px 9px;
-  outline: none;
+  width: 100%;
 }
-.menu-field input:focus,
-.menu-field select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 12%, transparent);
+.menu-item.menu-switch {
+  cursor: default;
+}
+.menu-item.menu-switch:hover {
+  background: transparent;
+  color: inherit;
 }
 /* ---------- per-view options panel (phones) ----------
    Hangs under its bar with no overlay, so search and the list behind it stay
@@ -1896,7 +1829,7 @@ html.compact-view .app-chrome {
   font-size: 13px;
 }
 .options-body .qbtn,
-.options-body .btn,
+.options-body [data-slot="button"],
 .options-body .toggle,
 .options-body .termpill,
 .options-body .diff-mode {
@@ -1933,42 +1866,16 @@ html.compact-view .app-chrome {
   font-size: 11.5px;
   color: var(--muted-foreground);
 }
-/* Reuse the prototype's toggle knob inside menu rows. */
-.menu-item .tk {
-  width: 30px;
-  height: 17px;
-  border-radius: 10px;
-  background: color-mix(in oklab, var(--muted-foreground) 25%, var(--secondary));
-  border: 1px solid var(--border);
-  position: relative;
-  transition: 0.15s;
-  flex: 0 0 auto;
-}
-.menu-item .tk::after {
-  content: "";
-  position: absolute;
-  top: 2px;
-  inset-inline-start: 2px;
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: var(--muted-foreground);
-  transition: 0.15s;
-}
-.menu-item .tk.on {
-  background: var(--accent);
-  border-color: var(--primary);
-}
-.menu-item .tk.on::after {
-  inset-inline-start: 15px;
-  background: var(--primary);
-}
 .header-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
   margin-inline-start: auto;
+}
+.header-actions > [data-slot="button"][data-size="icon"] {
+  width: 34px;
+  height: 34px;
 }
 
 /* ---------- responsive ---------- */
@@ -1984,7 +1891,10 @@ html.compact-view .app-chrome {
   .side {
     position: fixed;
     inset-block: 0;
-    inset-inline-start: 0;
+    /* Physical left, not inline-start: filters slide in left→right even in RTL,
+       while the workspace menu sheet stays on the physical right. */
+    left: 0;
+    right: auto;
     z-index: 60;
     flex-basis: auto;
     width: min(280px, 84vw);
@@ -1992,12 +1902,8 @@ html.compact-view .app-chrome {
     transition: transform 0.18s ease;
     box-shadow: 0 0 40px var(--shadow-strong);
   }
-  html[dir="rtl"] .side {
-    transform: translateX(102%);
-  }
-  .side.mobile-open,
-  html[dir="rtl"] .side.mobile-open {
-    transform: none;
+  .side.mobile-open {
+    transform: translateX(0);
   }
   .side.collapsed {
     width: min(280px, 84vw);
@@ -2058,14 +1964,12 @@ html.compact-view .app-chrome {
   /* Which file you are comparing against belongs in the bar, not behind a
      button; the line count is in the summary strip right below. */
   /* The compare tab's primary action keeps its place but yields width. */
-  .diffbar > .btn {
+  .diffbar > [data-slot="button"] {
     flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    display: block;
-    line-height: 34px;
   }
   .toolbar .hint,
   .reviewbar .hint {
@@ -2119,9 +2023,6 @@ html.compact-view .app-chrome {
   }
   .brand .sub {
     display: none;
-  }
-  .app-header > .btn {
-    padding: 6px 9px;
   }
 }
 @media (max-width: 480px) {
