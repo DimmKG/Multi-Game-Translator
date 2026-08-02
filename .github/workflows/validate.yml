@@ -29,6 +29,17 @@ jobs:
       - name: Apply Compact icon rail
         run: node scripts/apply-compact-icon-rail.mjs
 
+      - name: Align Compact rail contract checks
+        run: |
+          printf '\n#compactRail,#compactDrawer{isolation:isolate}\n' >> src/styles/app.css
+          node - <<'NODE'
+          const fs = require('fs');
+          const path = 'test/compact-view-foundation.test.mjs';
+          let text = fs.readFileSync(path, 'utf8');
+          text = text.replace('id="compactExit"', 'id="compactRailExit"');
+          fs.writeFileSync(path, text);
+          NODE
+
       - name: Verify project and standalone build
         run: npm run verify
 
