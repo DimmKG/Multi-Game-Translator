@@ -260,6 +260,14 @@
     "compact.drawerTitle": "Navigation",
     "compact.closeDrawer": "Close",
     "compact.noSections": "No sections available.",
-    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage."
+    "compact.moreComing": "File and machine-translation actions will move here in the next Compact view stage.",
+    "compact.actions": "Actions",
+    "compact.fileActions": "File actions",
+    "compact.translationTools": "Translation tools",
+    "compact.referenceFile": "Load reference file",
+    "compact.saveProgress": "Save progress",
+    "compact.loadProgress": "Load progress",
+    "compact.newFile": "New file",
+    "compact.exportFile": "Export translation"
   }
 }
