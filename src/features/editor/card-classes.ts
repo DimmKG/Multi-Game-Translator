@@ -17,11 +17,21 @@ import { cn } from "@/lib/utils";
 export const ORIG_INLINE_PADDING = 11;
 
 export const CARD_CLASS = cn(
-  "bg-card border-border-soft mb-2.5 rounded-[10px] border px-3.5 py-3",
+  "bg-card border-border-soft rounded-[10px] border px-3.5 py-3",
   "border-s-[3px] transition-[border-color] duration-150",
   "focus-within:bg-secondary focus-within:border-s-primary",
   "max-[860px]:px-[11px] max-[860px]:py-2.5",
 );
+
+/**
+ * Gap under each card / section row. Must live *inside* the virtual row's
+ * border box (padding), never as margin on the card — TanStack measures
+ * getBoundingClientRect (no margins) and `contain: paint` clips overflowing
+ * margins, so a `mb-*` gap collapses and the next row climbs onto the card.
+ */
+export const CARD_ROW_GAP_CLASS = "pb-2.5";
+/** Keep in sync with `pb-2.5` above (10px). */
+export const CARD_ROW_GAP = 10;
 
 /** Status shows as the colour of the card's leading edge. */
 export const CARD_STATUS_CLASS: Record<string, string> = {

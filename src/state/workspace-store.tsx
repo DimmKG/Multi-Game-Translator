@@ -50,6 +50,7 @@ import {
 } from "@/core/mt/providers";
 import { resolveProviderSettings } from "@/core/mt/provider-settings";
 import { sourceText } from "@/core/lang/status";
+import { validateEnglishReferenceFile } from "@/core/lang/reference-validation";
 import { countWhitespaceIssues, scanWhitespace } from "@/core/tokens/whitespace";
 import {
   downloadBlob,
@@ -120,7 +121,12 @@ interface WorkspaceState {
 interface WorkspaceContextValue extends WorkspaceState {
   openWorkspaceFromText: (
     text: string,
-    options?: { filename?: string; referenceFilename?: string; targetLang?: string },
+    options?: {
+      filename?: string;
+      referenceFilename?: string;
+      referenceSourceText?: string;
+      targetLang?: string;
+    },
   ) => void;
   openLangFile: (file: File) => Promise<void>;
   createFromReferenceFile: (file: File) => Promise<void>;
@@ -334,9 +340,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const openWorkspaceFromText = useCallback(
     (
       text: string,
-      options: { filename?: string; referenceFilename?: string; targetLang?: string } = {},
+      options: {
+        filename?: string;
+        referenceFilename?: string;
+        /** Original English reference body — applied so SAME_TRANSLATION works immediately. */
+        referenceSourceText?: string;
+        targetLang?: string;
+      } = {},
     ) => {
       const parsed = parseLangFile(String(text ?? ""));
+      if (options.referenceSourceText) {
+        applyReferenceMap(parsed.items, parseReferenceLang(options.referenceSourceText));
+      }
       const filename = options.filename ? cleanLangFilename(options.filename) : "";
       dismissPendingRecovery();
       setState((current) => ({
@@ -376,19 +391,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const createFromReferenceFile = useCallback(
     async (file: File) => {
       const text = await readFileAsText(file);
-      const result = createTranslationFromReference(text, file.name);
+      const validation = validateEnglishReferenceFile(file.name, text);
+      if (!validation.ok) {
+        toast.error(t(validation.messageKey));
+        return;
+      }
+      const result = createTranslationFromReference(text, validation.filename);
       if (!result.entryCount) {
         toast.error(t("err.newTranslationNoEntries"));
         return;
       }
+      // Apply the same English body as the live reference so SAME_TRANSLATION
+      // and the reminder button settle in one frame — no pulse flash.
       openWorkspaceFromText(result.text, {
         filename: "",
-        referenceFilename: result.referenceFilename,
+        referenceFilename: validation.filename,
+        referenceSourceText: text,
         targetLang: "",
       });
       toast.success(
         t("toast.newTranslationCreated", {
-          file: result.referenceFilename,
+          file: validation.filename,
           n: result.entryCount,
         }),
       );
@@ -399,14 +422,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const loadReferenceFile = useCallback(
     async (file: File) => {
       const text = await readFileAsText(file);
+      const validation = validateEnglishReferenceFile(file.name, text);
+      if (!validation.ok) {
+        toast.error(t(validation.messageKey));
+        return;
+      }
       const map = parseReferenceLang(text);
       // Applied outside the updater: how many entries matched is worth telling
       // the user, and a toast fired from inside would be repeated every time
       // React re-ran the updater — three times, in practice.
       const items = stateRef.current.items.map((item) => ({ ...item }));
       const matched = applyReferenceMap(items, map);
-      setState((current) => ({ ...current, items, referenceFilename: file.name }));
-      toast.success(t("btn.enRefLoaded", { file: file.name, n: matched }));
+      setState((current) => ({
+        ...current,
+        items,
+        referenceFilename: validation.filename,
+      }));
+      toast.success(t("btn.enRefLoaded", { file: validation.filename, n: matched }));
       scheduleSave();
     },
     [scheduleSave, t],

@@ -35,6 +35,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   CARD_CLASS,
+  CARD_ROW_GAP_CLASS,
   CARD_STATUS_CLASS,
   ENTRY_BADGE_CLASS,
   GUIDE_CLASS,
@@ -77,9 +78,10 @@ const STATUS_BADGE: Record<string, { className: string; labelKey: string }> = {
   same: { className: "bg-same-soft text-same", labelKey: "badge.same" },
 };
 
-/** Section rule: the label, then a line that fades out across the rest of the row. */
-const SECTION_HEAD_CLASS = cn(
-  "text-primary mt-[22px] mb-3 flex scroll-mt-3 items-center gap-3 first:mt-1",
+/** Section rule: the label, then a line that fades out across the rest of the row.
+ * Spacing is padding inside the measured virtual row (see CARD_ROW_GAP_CLASS). */
+const SECTION_HEAD_INNER_CLASS = cn(
+  "text-primary flex scroll-mt-3 items-center gap-3 pt-[22px] pb-3",
   "font-mono text-xs tracking-[0.12em] uppercase",
   "after:h-px after:flex-1 after:bg-linear-to-r after:from-border after:to-transparent after:content-['']",
 );
@@ -154,128 +156,138 @@ const EntryCard = memo(function EntryCard({
   const badge = STATUS_BADGE[status];
 
   return (
-    <article
-      // use-keyboard-inset finds the focused card by this slot, not by a class.
-      data-slot="entry-card"
-      className={cn(CARD_CLASS, CARD_STATUS_CLASS[status])}
-      data-key={entry.key}
-      onFocusCapture={() => onPin(entry.id)}
-    >
-      <div className={ROW1_CLASS}>
-        <button
-          type="button"
-          className={cn(KEY_CLASS, "ltr-isolate")}
-          title={t("card.copyKey")}
-          onClick={() => void navigator.clipboard?.writeText(entry.key)}
-        >
-          {entry.key}
-        </button>
-        <Badge className={cn(ENTRY_BADGE_CLASS, badge.className)}>{t(badge.labelKey)}</Badge>
-        {entry.mtDraft && (
-          <Badge className={cn(ENTRY_BADGE_CLASS, "bg-mt-soft text-mt-ink")}>{t("badge.mt")}</Badge>
-        )}
-        {whitespace.any && (
-          <Badge className={cn(ENTRY_BADGE_CLASS, "bg-warn-soft text-warn")}>
-            {t("filter.ws")}
-          </Badge>
-        )}
-        <span className="flex-1" />
-      </div>
-
-      {guidance && <div className={GUIDE_CLASS}>ⓘ {t(guidance.messageKey)}</div>}
-
-      {reference != null && (
-        <div className={ORIG_CLASS}>
-          <span className={OLABEL_CLASS}>{t("card.referenceText")}</span>
-          <span className="ltr-isolate">{renderTokenized(reference)}</span>
+    <div className={CARD_ROW_GAP_CLASS}>
+      <article
+        // use-keyboard-inset finds the focused card by this slot, not by a class.
+        data-slot="entry-card"
+        className={cn(CARD_CLASS, CARD_STATUS_CLASS[status])}
+        data-key={entry.key}
+        onFocusCapture={() => onPin(entry.id)}
+      >
+        <div className={ROW1_CLASS}>
+          <button
+            type="button"
+            className={cn(KEY_CLASS, "ltr-isolate")}
+            title={t("card.copyKey")}
+            onClick={() => void navigator.clipboard?.writeText(entry.key)}
+          >
+            {entry.key}
+          </button>
+          <Badge className={cn(ENTRY_BADGE_CLASS, badge.className)}>{t(badge.labelKey)}</Badge>
+          {entry.mtDraft && (
+            <Badge className={cn(ENTRY_BADGE_CLASS, "bg-mt-soft text-mt-ink")}>
+              {t("badge.mt")}
+            </Badge>
+          )}
+          {whitespace.any && (
+            <Badge className={cn(ENTRY_BADGE_CLASS, "bg-warn-soft text-warn")}>
+              {t("filter.ws")}
+            </Badge>
+          )}
+          <span className="flex-1" />
         </div>
-      )}
 
-      <Textarea
-        className={TEXTAREA_CLASS}
-        value={entry.value}
-        spellCheck={workspace.spellcheck}
-        onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
-        onKeyDown={(event) => {
-          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-            event.preventDefault();
-            const entries = workspace.filteredEntries;
-            const index = entries.findIndex((item) => item.id === entry.id);
-            const next = entries.slice(index + 1).find((item) => statusOf(item) === "missing");
-            if (next) requestEditorScroll({ type: "key", key: next.key });
-          }
-        }}
-      />
+        {guidance && <div className={GUIDE_CLASS}>ⓘ {t(guidance.messageKey)}</div>}
 
-      <div className={ROW3_CLASS}>
-        {missing.length > 0 && (
-          <span className="text-foreground-faint me-0.5 text-[11px]">{t("tokens.label")}</span>
+        {reference != null && (
+          <div className={ORIG_CLASS}>
+            <span className={OLABEL_CLASS}>{t("card.referenceText")}</span>
+            <span className="ltr-isolate">{renderTokenized(reference)}</span>
+          </div>
         )}
-        {missing.map((token) => (
+
+        <Textarea
+          className={TEXTAREA_CLASS}
+          value={entry.value}
+          spellCheck={workspace.spellcheck}
+          onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+              event.preventDefault();
+              const entries = workspace.filteredEntries;
+              const index = entries.findIndex((item) => item.id === entry.id);
+              const next = entries.slice(index + 1).find((item) => statusOf(item) === "missing");
+              if (next) requestEditorScroll({ type: "key", key: next.key });
+            }
+          }}
+        />
+
+        <div className={ROW3_CLASS}>
+          {missing.length > 0 && (
+            <span className="text-foreground-faint me-0.5 text-[11px]">{t("tokens.label")}</span>
+          )}
+          {missing.map((token) => (
+            <Button
+              type="button"
+              key={token}
+              variant="outline"
+              size="xs"
+              className={cn(
+                "border-warn bg-warn-soft text-warn font-mono",
+                "hover:bg-warn-soft/70",
+              )}
+              title={t("tokens.insertMissing")}
+              onClick={() => workspace.updateEntryValue(entry.id, `${entry.value}${token}`)}
+            >
+              ⚠ {token}
+            </Button>
+          ))}
+          {whitespace.any && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className={cn(
+                "border-warn bg-warn-soft text-warn font-mono",
+                "hover:bg-warn-soft/70",
+              )}
+              title={t("review.wsFixTitle", { list: whitespaceLabels(entry, t).join(", ") })}
+              onClick={() => workspace.updateEntryValue(entry.id, fixWhitespace(entry))}
+            >
+              {t("review.wsFix")}
+            </Button>
+          )}
           <Button
             type="button"
-            key={token}
             variant="outline"
             size="xs"
-            className={cn("border-warn bg-warn-soft text-warn font-mono", "hover:bg-warn-soft/70")}
-            title={t("tokens.insertMissing")}
-            onClick={() => workspace.updateEntryValue(entry.id, `${entry.value}${token}`)}
+            className="border-tok-ref text-tok-ref hover:bg-tok-ref/10 font-mono"
+            title={t("mt.btnTitle")}
+            disabled={!workspace.targetLanguage}
+            onClick={() => void workspace.translateEntry(entry.id)}
           >
-            ⚠ {token}
+            {t("mt.btn")}
           </Button>
+          {entry.ref != null && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={cn(
+                "hover:border-same hover:text-same ms-auto",
+                entry.markedSame && "border-same bg-same-soft text-same",
+              )}
+              title={t("same.title")}
+              onClick={() => workspace.toggleMarkedSame(entry.id)}
+            >
+              {t(entry.markedSame ? "same.on" : "same.off")}
+            </Button>
+          )}
+        </div>
+
+        {terminology.map((issue, index) => (
+          <div className={WARNLINE_CLASS} key={`${issue.type}-${index}`}>
+            <TriangleAlert size={13} aria-hidden="true" className="shrink-0" />
+            {issue.type === "forbidden"
+              ? t("terminology.forbidden", {
+                  found: issue.found ?? issue.source,
+                  preferred: issue.preferred,
+                })
+              : t("terminology.missing", { source: issue.source, preferred: issue.preferred })}
+          </div>
         ))}
-        {whitespace.any && (
-          <Button
-            type="button"
-            variant="outline"
-            size="xs"
-            className={cn("border-warn bg-warn-soft text-warn font-mono", "hover:bg-warn-soft/70")}
-            title={t("review.wsFixTitle", { list: whitespaceLabels(entry, t).join(", ") })}
-            onClick={() => workspace.updateEntryValue(entry.id, fixWhitespace(entry))}
-          >
-            {t("review.wsFix")}
-          </Button>
-        )}
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          className="border-tok-ref text-tok-ref hover:bg-tok-ref/10 font-mono"
-          title={t("mt.btnTitle")}
-          disabled={!workspace.targetLanguage}
-          onClick={() => void workspace.translateEntry(entry.id)}
-        >
-          {t("mt.btn")}
-        </Button>
-        {entry.ref != null && (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={cn(
-              "hover:border-same hover:text-same ms-auto",
-              entry.markedSame && "border-same bg-same-soft text-same",
-            )}
-            title={t("same.title")}
-            onClick={() => workspace.toggleMarkedSame(entry.id)}
-          >
-            {t(entry.markedSame ? "same.on" : "same.off")}
-          </Button>
-        )}
-      </div>
-
-      {terminology.map((issue, index) => (
-        <div className={WARNLINE_CLASS} key={`${issue.type}-${index}`}>
-          <TriangleAlert size={13} aria-hidden="true" className="shrink-0" />
-          {issue.type === "forbidden"
-            ? t("terminology.forbidden", {
-                found: issue.found ?? issue.source,
-                preferred: issue.preferred,
-              })
-            : t("terminology.missing", { source: issue.source, preferred: issue.preferred })}
-        </div>
-      ))}
-    </article>
+      </article>
+    </div>
   );
 });
 
@@ -516,7 +528,10 @@ export function EditorView() {
   // height is derived from it — so the virtual list knows the full scroll
   // extent up front instead of discovering it mid-fling.
   const [metrics, setMetrics] = useState<CardMetrics | null>(null);
-  const heights = useMemo(() => (metrics ? new CardHeightCache(metrics) : null), [metrics]);
+  const heights = useMemo(
+    () => (metrics ? new CardHeightCache(metrics, t) : null),
+    [metrics, t],
+  );
 
   useEffect(() => {
     const list = listApi.current?.getScrollElement();
@@ -666,8 +681,10 @@ export function EditorView() {
         }
         renderItem={(row) =>
           row.kind === "section" ? (
-            <div className={SECTION_HEAD_CLASS} data-section={row.name}>
-              {sectionLabel(row.name)}
+            <div className={CARD_ROW_GAP_CLASS}>
+              <div className={SECTION_HEAD_INNER_CLASS} data-section={row.name}>
+                {sectionLabel(row.name)}
+              </div>
             </div>
           ) : (
             <EntryCard entry={row.entry} onPin={pinEntry} />

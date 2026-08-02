@@ -81,7 +81,14 @@ export function VirtualList<T>({
   useLayoutEffect(() => {
     if (prevEstimateRef.current === estimateSize) return;
     prevEstimateRef.current = estimateSize;
+    // Clears cached sizes back to estimates. Mounted rows do not remount, so
+    // ResizeObserver will not re-fire — remeasure visible nodes in the same pass.
     virtualizer.measure();
+    const root = scrollRef.current;
+    if (!root) return;
+    for (const el of root.querySelectorAll<HTMLElement>("[data-index]")) {
+      virtualizer.measureElement(el);
+    }
   }, [estimateSize, virtualizer]);
 
   useEffect(() => {
