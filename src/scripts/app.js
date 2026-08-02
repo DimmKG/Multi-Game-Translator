@@ -1159,7 +1159,19 @@ function targetFromName(name){
   }
 
   // ---------- UI wiring ----------
+  let pendingRecovery = null;
+  function dismissPendingRecovery({discardStored = false} = {}){
+    pendingRecovery = null;
+    const banner = $("restore");
+    if (banner) banner.style.display = "none";
+    if (discardStored){
+      try{ localStorage.removeItem(LS_KEY); }catch(e){}
+    }
+  }
+
   function openWorkspace(){
+    // Any workspace that becomes active supersedes the startup recovery offer.
+    dismissPendingRecovery();
     $("empty").style.display = "none";
     $("side").style.display = "flex";
     $("toolbar").style.display = "flex";
@@ -1435,15 +1447,18 @@ function targetFromName(name){
   function tryRestore(){
     let data; try{ data = JSON.parse(localStorage.getItem(LS_KEY)); }catch(e){ data=null; }
     if (!data || !(data.i || data.items)) return;
+    pendingRecovery = data;
     $("restore").style.display = "flex";
-    $("restoreName").textContent = data.f || data.filename || "ru.lang";
+    $("restoreName").textContent = data.f || data.filename || "translation.lang";
     const d = new Date(data.s || data.savedAt || Date.now());
-    $("restoreWhen").textContent = d.toLocaleString("ru-RU");
+    $("restoreWhen").textContent = d.toLocaleString(UI);
     $("restoreYes").onclick = () => {
-      try { deserialize(data); $("restore").style.display="none"; setFilter("missing",true); openWorkspace(); }
+      const recovery = pendingRecovery;
+      if (!recovery) return;
+      try { deserialize(recovery); setFilter("missing",true); openWorkspace(); }
       catch(err){ toast(t("err.restoreFailed")); }
     };
-    $("restoreNo").onclick = () => { localStorage.removeItem(LS_KEY); $("restore").style.display="none"; };
+    $("restoreNo").onclick = () => dismissPendingRecovery({discardStored:true});
   }
 
   // warn before leaving with unsaved-to-file changes
