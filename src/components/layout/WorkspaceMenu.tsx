@@ -40,11 +40,10 @@ import { cn } from "@/lib/utils";
 
 const NO_LANGUAGE = "__none__";
 
-/** A row of the menu: full-width, icon then label, quiet until hovered. */
+/** A row of the menu: full-width, icon then label; ghost + accent hover from Button. */
 const MENU_ITEM = cn(
   "h-auto w-full justify-start gap-2.5 px-2.5 py-2 text-[13px] font-normal",
-  "border border-transparent hover:border-border",
-  "[&_svg]:text-muted-foreground hover:[&_svg]:text-primary",
+  "[&_svg]:text-muted-foreground hover:[&_svg]:text-accent-foreground",
   "disabled:opacity-45",
 );
 

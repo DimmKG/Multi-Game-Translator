@@ -219,3 +219,46 @@ export function buildSyntheticTargetTranslation(): string {
 export function countSyntheticEntries(): number {
   return syntheticCatalog().reduce((sum, section) => sum + section.entries.length, 0);
 }
+
+/**
+ * A multi-thousand-line synthetic document for alignment / virtual-list stress
+ * tests. Shape mirrors a real Necesse file (header, sections, keys) without
+ * copying any game strings — so CI never needs `test/locals/`.
+ */
+export function buildSyntheticLargeLangFile(entryCount = 6500): string {
+  const count = Math.max(100, entryCount);
+  const chunks: string[] = [
+    "// Synthetic large localization fixture for Necesse-Lang-Translator tests.",
+    "// Not an official game file. Safe to commit; regenerate via buildSyntheticLargeLangFile().",
+    "",
+    "[lang]",
+    "localname=Synthetic",
+    "engname=Synthetic",
+    "credits=Fixture authors",
+    "",
+  ];
+
+  const sectionSize = 250;
+  let remaining = count - 3; // localname/engname/credits already emitted
+  let section = 0;
+  while (remaining > 0) {
+    const take = Math.min(sectionSize, remaining);
+    section += 1;
+    chunks.push(`[pad${section}]`);
+    for (let i = 1; i <= take; i++) {
+      const id = (section - 1) * sectionSize + i;
+      // Mix lengths and a few tokens so wrap/diff paths stay interesting.
+      if (id % 17 === 0) {
+        chunks.push(`pad${id}=Label ${id} with <token> and [item/input=use]`);
+      } else if (id % 11 === 0) {
+        chunks.push(`pad${id}=Short ${id}`);
+      } else {
+        chunks.push(`pad${id}=Synthetic entry number ${id} for alignment stress tests`);
+      }
+    }
+    chunks.push("");
+    remaining -= take;
+  }
+
+  return chunks.join("\n").trimEnd() + "\n";
+}

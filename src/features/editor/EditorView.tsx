@@ -595,7 +595,7 @@ export function EditorView() {
         <BarOptions>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             className="font-mono"
             title={t("btn.findDblTitle")}
             onClick={() => workspace.setQuery("  ")}
@@ -604,7 +604,7 @@ export function EditorView() {
           </Button>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             className="font-mono"
             title={t("btn.findTabTitle")}
             onClick={() => workspace.setQuery("\t")}

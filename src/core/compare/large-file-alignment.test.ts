@@ -5,7 +5,11 @@ import { buildLangFile } from "@/core/lang/export";
 import { parseLangFile } from "@/core/lang/parse";
 import { diffRows, summarizeRows } from "./token-aware-diff";
 
-const raw = readFileSync(new URL("../../../test/locals/ru.lang", import.meta.url), "utf8");
+// Committed synthetic fixture — not a copyrighted game localization file.
+const raw = readFileSync(
+  new URL("../../../test/fixtures/synthetic-large.lang", import.meta.url),
+  "utf8",
+);
 const lines = raw.split(/\r\n|\n/);
 
 /**
