@@ -31,7 +31,8 @@ The project began with a minimal standalone HTML editor created by **DimmKG** an
 - detect preferred, alternative and forbidden terminology;
 - preserve placeholders and formatting tokens;
 - use built-in or installable interface languages;
-- switch visual themes (Dungeon default, Dark, Light, Zinc);
+- switch visual themes (Dungeon default, plus eight shadcn palettes in light or dark);
+- work on a phone: chrome folds into one menu, and the editor keeps the card you are typing in above the on-screen keyboard;
 - build a static SPA for hosting or offline preview.
 
 Files are processed in the browser. The application does not upload localization files to a server.
@@ -66,7 +67,9 @@ This runs lint, Prettier check, unit tests, locale/glossary validators and a pro
 
 ## Themes
 
-The default theme is the original warm dungeon/torch palette. Additional shadcn-based themes are available from the header theme menu: Dark, Light and Zinc. The choice is stored in `localStorage`.
+The default theme is the original warm dungeon/torch palette, a dark-only design of the app's own. Eight neutral palettes from [shadcn-theme-switcher](https://github.com/nimone/shadcn-theme-switcher) sit alongside it — shadcn, Modern Minimal, Graphite, Mono, Cosmic Night, Catppuccin, Perpetuity and Amethyst Haze — each with a light and a dark mode.
+
+Both live under **Appearance** in the workspace menu (the ☰ button in the header). The theme and the mode are stored separately in `localStorage`; for a dark-only palette the mode toggle is disabled.
 
 ## Glossaries and interface locales
 
