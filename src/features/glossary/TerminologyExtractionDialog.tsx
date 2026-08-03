@@ -36,7 +36,10 @@ function downloadJson(filename: string, value: unknown) {
   URL.revokeObjectURL(url);
 }
 
-async function readCorpusFile(file: File, languageCode: string): Promise<LoadedCorpusFile> {
+async function readCorpusFile(
+  file: File,
+  languageCode: string,
+): Promise<LoadedCorpusFile> {
   return {
     id: crypto.randomUUID(),
     languageCode: languageCode.trim(),
@@ -115,8 +118,8 @@ export function TerminologyExtractionDialog({
         <DialogHeader>
           <DialogTitle>{t("terminology.title")}</DialogTitle>
           <DialogDescription>
-            Align existing .lang translations by key and generate reviewable terminology candidates.
-            Files stay in this browser and are not uploaded.
+            Align existing .lang translations by key and generate reviewable terminology
+            candidates. Files stay in this browser and are not uploaded.
           </DialogDescription>
         </DialogHeader>
 
@@ -158,7 +161,10 @@ export function TerminologyExtractionDialog({
                 <p className="text-muted-foreground text-sm">No translated files selected.</p>
               )}
               {translatedFiles.map((file) => (
-                <div key={file.id} className="grid grid-cols-[6rem_1fr_auto] items-center gap-2">
+                <div
+                  key={file.id}
+                  className="grid grid-cols-[6rem_1fr_auto] items-center gap-2"
+                >
                   <input
                     aria-label={`Language code for ${file.filename}`}
                     className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
@@ -205,7 +211,9 @@ export function TerminologyExtractionDialog({
               max={100}
               className="border-input bg-background h-9 w-28 rounded-md border px-3"
               value={minimumFrequency}
-              onChange={(event) => setMinimumFrequency(Math.max(1, Number(event.target.value) || 1))}
+              onChange={(event) =>
+                setMinimumFrequency(Math.max(1, Number(event.target.value) || 1))
+              }
             />
           </label>
           <Button
@@ -260,7 +268,10 @@ export function TerminologyExtractionDialog({
               </p>
             )}
             {candidates.map((candidate) => (
-              <article key={candidate.source} className="border-border grid gap-2 rounded-lg border p-3">
+              <article
+                key={candidate.source}
+                className="border-border grid gap-2 rounded-lg border p-3"
+              >
                 <div className="flex flex-wrap items-center gap-2">
                   <strong>{candidate.source}</strong>
                   <Badge variant="outline">{candidate.sourceFrequency} keys</Badge>
@@ -275,11 +286,18 @@ export function TerminologyExtractionDialog({
                 </p>
                 <div className="grid gap-2 md:grid-cols-2">
                   {candidate.languages.map((language) => (
-                    <div key={`${candidate.source}:${language.languageCode}`} className="bg-muted rounded-md p-2">
+                    <div
+                      key={`${candidate.source}:${language.languageCode}`}
+                      className="bg-muted rounded-md p-2"
+                    >
                       <div className="flex items-center gap-2 text-sm">
                         <strong>{language.languageCode}</strong>
-                        <span className="text-muted-foreground">{language.matchedCount} matches</span>
-                        {language.hasConflict && <Badge variant="destructive">conflict</Badge>}
+                        <span className="text-muted-foreground">
+                          {language.matchedCount} matches
+                        </span>
+                        {language.hasConflict && (
+                          <Badge variant="destructive">conflict</Badge>
+                        )}
                       </div>
                       <div className="mt-1 grid gap-1 text-sm">
                         {language.variants.map((variant) => (
