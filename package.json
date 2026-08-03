@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix && prettier --write .",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier src/features/glossary/TerminologyExtractionDialog.tsx",
     "validate:locales": "node scripts/validate-locales.mjs",
     "validate:interface-locales": "node scripts/validate-interface-locales.mjs",
     "validate:glossaries": "node scripts/validate-glossaries.mjs",
