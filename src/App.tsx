@@ -12,7 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { CompareView } from "@/features/compare/CompareView";
 import { EditorSidebar, EditorView } from "@/features/editor/EditorView";
-import { TerminologyView } from "@/features/glossary/TerminologyExtractionDialog";
+import { TerminologyWorkspace } from "@/features/glossary/TerminologyWorkspace";
 import { I18nProvider, useI18n } from "@/features/i18n/I18nProvider";
 import { ReviewView } from "@/features/review/ReviewView";
 import { Dropzone } from "@/features/workspace/Dropzone";
@@ -154,7 +154,7 @@ function WorkspaceShell({
                   <CompareView />
                 </TabsContent>
                 <TabsContent value="terminology" className={TAB_PANE} tabIndex={-1}>
-                  <TerminologyView />
+                  <TerminologyWorkspace />
                 </TabsContent>
 
                 <Footnote />
