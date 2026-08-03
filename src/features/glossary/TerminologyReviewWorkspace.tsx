@@ -15,15 +15,13 @@ import { cn } from "@/lib/utils";
 
 type DecisionFilter = "all" | TerminologyReviewDecision;
 
-const DECISION_VARIANT: Record<
-  TerminologyReviewDecision,
-  "outline" | "secondary" | "destructive"
-> = {
-  pending: "outline",
-  accepted: "secondary",
-  rejected: "destructive",
-  "needs-review": "destructive",
-};
+const DECISION_VARIANT: Record<TerminologyReviewDecision, "outline" | "secondary" | "destructive"> =
+  {
+    pending: "outline",
+    accepted: "secondary",
+    rejected: "destructive",
+    "needs-review": "destructive",
+  };
 
 export function TerminologyReviewWorkspace({
   candidates,
