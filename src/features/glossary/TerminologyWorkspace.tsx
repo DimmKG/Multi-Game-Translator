@@ -133,9 +133,7 @@ export function TerminologyWorkspace() {
         {candidates.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{candidates.length}</Badge>
-            <Badge variant={conflictCount > 0 ? "destructive" : "secondary"}>
-              {conflictCount}
-            </Badge>
+            <Badge variant={conflictCount > 0 ? "destructive" : "secondary"}>{conflictCount}</Badge>
           </div>
         )}
       </header>
