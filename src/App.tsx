@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { CompareView } from "@/features/compare/CompareView";
 import { EditorSidebar, EditorView } from "@/features/editor/EditorView";
+import { TerminologyView } from "@/features/glossary/TerminologyExtractionDialog";
 import { I18nProvider, useI18n } from "@/features/i18n/I18nProvider";
 import { ReviewView } from "@/features/review/ReviewView";
 import { Dropzone } from "@/features/workspace/Dropzone";
@@ -80,8 +81,6 @@ function WorkspaceShell({
   const { t } = useI18n();
   const workspace = useWorkspace();
 
-  // The rail's expanded/collapsed state outlives the session, so SidebarProvider
-  // runs controlled rather than on its own cookie.
   const [railOpen, setRailOpen] = useState(loadRailOpen);
   useEffect(() => {
     try {
@@ -115,19 +114,12 @@ function WorkspaceShell({
       ) : (
         <TabsPrimitive.Root
           value={workspace.view}
-          onValueChange={(value) => workspace.setView(value as "editor" | "review" | "diff")}
-          // `group/tabs` is what TabsList and TabsTrigger key their layout off;
-          // shadcn's own Tabs root supplies it, and we replace that root here.
+          onValueChange={(value) => workspace.setView(value as typeof workspace.view)}
           className="group/tabs flex min-h-0 flex-1"
           asChild
         >
-          {/* Not a <main> — SidebarInset below is the one, and it may not nest. */}
           <div>
             <SidebarProvider open={railOpen} onOpenChange={setRailOpen}>
-              {/* Only the editor has anything to filter, so the rail comes and
-                  goes with the tab; the inset takes the whole width without it.
-                  Unmounting is also how compact view drops it — hiding the panel
-                  in CSS would leave its width reserved by the layout gap. */}
               {workspace.view === "editor" && !workspace.compactView && <EditorSidebar />}
               <SidebarInset className="min-h-0 min-w-0">
                 <div
@@ -148,6 +140,7 @@ function WorkspaceShell({
                       </Badge>
                     </TabsTrigger>
                     <TabsTrigger value="diff">{t("tab.diff")}</TabsTrigger>
+                    <TabsTrigger value="terminology">{t("terminology.title")}</TabsTrigger>
                   </TabsList>
                 </div>
 
@@ -159,6 +152,9 @@ function WorkspaceShell({
                 </TabsContent>
                 <TabsContent value="diff" className={TAB_PANE} tabIndex={-1}>
                   <CompareView />
+                </TabsContent>
+                <TabsContent value="terminology" className={TAB_PANE} tabIndex={-1}>
+                  <TerminologyView />
                 </TabsContent>
 
                 <Footnote />
