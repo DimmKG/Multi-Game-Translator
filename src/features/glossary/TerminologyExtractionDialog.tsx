@@ -36,10 +36,7 @@ function downloadJson(filename: string, value: unknown) {
   URL.revokeObjectURL(url);
 }
 
-async function readCorpusFile(
-  file: File,
-  languageCode: string,
-): Promise<LoadedCorpusFile> {
+async function readCorpusFile(file: File, languageCode: string): Promise<LoadedCorpusFile> {
   return {
     id: crypto.randomUUID(),
     languageCode: languageCode.trim(),
@@ -118,8 +115,8 @@ export function TerminologyExtractionDialog({
         <DialogHeader>
           <DialogTitle>{t("terminology.title")}</DialogTitle>
           <DialogDescription>
-            Align existing .lang translations by key and generate reviewable terminology
-            candidates. Files stay in this browser and are not uploaded.
+            Align existing .lang translations by key and generate reviewable terminology candidates.
+            Files stay in this browser and are not uploaded.
           </DialogDescription>
         </DialogHeader>
 
@@ -161,10 +158,7 @@ export function TerminologyExtractionDialog({
                 <p className="text-muted-foreground text-sm">No translated files selected.</p>
               )}
               {translatedFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="grid grid-cols-[6rem_1fr_auto] items-center gap-2"
-                >
+                <div key={file.id} className="grid grid-cols-[6rem_1fr_auto] items-center gap-2">
                   <input
                     aria-label={`Language code for ${file.filename}`}
                     className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
@@ -281,7 +275,7 @@ export function TerminologyExtractionDialog({
                     </Badge>
                   ))}
                 </div>
-                <p className="ltr-isolate text-muted-foreground break-all text-xs">
+                <p className="ltr-isolate text-muted-foreground text-xs break-all">
                   {candidate.sourceKeys.join(", ")}
                 </p>
                 <div className="grid gap-2 md:grid-cols-2">
@@ -295,9 +289,7 @@ export function TerminologyExtractionDialog({
                         <span className="text-muted-foreground">
                           {language.matchedCount} matches
                         </span>
-                        {language.hasConflict && (
-                          <Badge variant="destructive">conflict</Badge>
-                        )}
+                        {language.hasConflict && <Badge variant="destructive">conflict</Badge>}
                       </div>
                       <div className="mt-1 grid gap-1 text-sm">
                         {language.variants.map((variant) => (
