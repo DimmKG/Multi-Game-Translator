@@ -15,7 +15,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix && prettier --write .",
     "format": "prettier --write .",
-    "format:check": "prettier src/features/glossary/TerminologyWorkspace.tsx",
+    "format:check": "prettier --check .",
     "validate:locales": "node scripts/validate-locales.mjs",
     "validate:interface-locales": "node scripts/validate-interface-locales.mjs",
     "validate:glossaries": "node scripts/validate-glossaries.mjs",
@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
-    "@tailwindcss/vite": "^4.1.11",
+    "@tailwindcss/vite": "^4.7.0",
     "@types/node": "^24.0.15",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
