@@ -8,6 +8,16 @@ import type { TerminologyCandidate } from "@/core/terminology/extract-candidates
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
+type ReviewDecision = "pending" | "accepted" | "rejected" | "needs-review";
+type DecisionFilter = "all" | ReviewDecision;
+
+const DECISION_VARIANT: Record<ReviewDecision, "outline" | "secondary" | "destructive"> = {
+  pending: "outline",
+  accepted: "secondary",
+  rejected: "destructive",
+  "needs-review": "destructive",
+};
+
 export function TerminologyReviewWorkspace({
   candidates,
 }: {
@@ -16,11 +26,41 @@ export function TerminologyReviewWorkspace({
   const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [conflictsOnly, setConflictsOnly] = useState(false);
+  const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>("all");
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
+  const [decisions, setDecisions] = useState<Record<string, ReviewDecision>>({});
+
+  const decisionLabel = (decision: ReviewDecision) => {
+    switch (decision) {
+      case "accepted":
+        return t("review.checked");
+      case "rejected":
+        return t("glossary.disabled");
+      case "needs-review":
+        return t("review.issues");
+      default:
+        return t("badge.missing");
+    }
+  };
+
+  const decisionCounts = useMemo(() => {
+    const counts: Record<ReviewDecision, number> = {
+      pending: 0,
+      accepted: 0,
+      rejected: 0,
+      "needs-review": 0,
+    };
+    for (const candidate of candidates) {
+      counts[decisions[candidate.source] ?? "pending"] += 1;
+    }
+    return counts;
+  }, [candidates, decisions]);
 
   const filteredCandidates = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return candidates.filter((candidate) => {
+      const decision = decisions[candidate.source] ?? "pending";
+      if (decisionFilter !== "all" && decision !== decisionFilter) return false;
       if (conflictsOnly && !candidate.languages.some((language) => language.hasConflict)) {
         return false;
       }
@@ -35,12 +75,22 @@ export function TerminologyReviewWorkspace({
         )
       );
     });
-  }, [candidates, conflictsOnly, query]);
+  }, [candidates, conflictsOnly, decisionFilter, decisions, query]);
 
   const selectedCandidate =
     filteredCandidates.find((candidate) => candidate.source === selectedSource) ??
     filteredCandidates[0] ??
     null;
+  const selectedDecision = selectedCandidate
+    ? (decisions[selectedCandidate.source] ?? "pending")
+    : null;
+
+  const setDecision = (decision: ReviewDecision) => {
+    if (!selectedCandidate) return;
+    setDecisions((current) => ({ ...current, [selectedCandidate.source]: decision }));
+  };
+
+  const filters: DecisionFilter[] = ["all", "pending", "accepted", "rejected", "needs-review"];
 
   return (
     <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
@@ -64,12 +114,31 @@ export function TerminologyReviewWorkspace({
               {filteredCandidates.length} / {candidates.length}
             </span>
           </div>
+          <div className="flex flex-wrap gap-1">
+            {filters.map((filter) => {
+              const count = filter === "all" ? candidates.length : decisionCounts[filter];
+              const label = filter === "all" ? t("review.all") : decisionLabel(filter);
+              return (
+                <Button
+                  key={filter}
+                  size="sm"
+                  variant={decisionFilter === filter ? "secondary" : "ghost"}
+                  onClick={() => setDecisionFilter(filter)}
+                >
+                  {label}
+                  <Badge variant="ghost" className="ms-1 h-4 min-w-4 px-1 text-[10px]">
+                    {count}
+                  </Badge>
+                </Button>
+              );
+            })}
+          </div>
         </div>
 
         <VirtualList
           items={filteredCandidates}
           className="min-h-0 flex-1 overflow-auto p-2"
-          estimateSize={() => 82}
+          estimateSize={() => 94}
           overscan={10}
           getKey={(candidate) => candidate.source}
           empty={
@@ -82,6 +151,7 @@ export function TerminologyReviewWorkspace({
               (language) => language.hasConflict,
             ).length;
             const selected = candidate.source === selectedCandidate?.source;
+            const decision = decisions[candidate.source] ?? "pending";
             return (
               <button
                 type="button"
@@ -96,8 +166,11 @@ export function TerminologyReviewWorkspace({
                   <strong className="truncate">{candidate.source}</strong>
                   <Badge variant="outline">{candidate.sourceFrequency}</Badge>
                 </span>
-                <span className="text-muted-foreground flex min-w-0 items-center gap-2 text-xs">
-                  <span className="truncate">{candidate.sourceKeys.slice(0, 3).join(", ")}</span>
+                <span className="flex min-w-0 items-center gap-2 text-xs">
+                  <Badge variant={DECISION_VARIANT[decision]}>{decisionLabel(decision)}</Badge>
+                  <span className="text-muted-foreground truncate">
+                    {candidate.sourceKeys.slice(0, 3).join(", ")}
+                  </span>
                   {conflictCount > 0 && (
                     <Badge variant="destructive" className="ms-auto shrink-0">
                       {conflictCount}
@@ -111,7 +184,7 @@ export function TerminologyReviewWorkspace({
       </section>
 
       <section className="border-border min-h-0 overflow-auto rounded-lg border p-4">
-        {!selectedCandidate ? (
+        {!selectedCandidate || !selectedDecision ? (
           <p className="text-muted-foreground text-sm">{t("empty.generic")}</p>
         ) : (
           <div className="grid gap-4">
@@ -119,6 +192,9 @@ export function TerminologyReviewWorkspace({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-semibold">{selectedCandidate.source}</h3>
                 <Badge variant="outline">{selectedCandidate.sourceFrequency}</Badge>
+                <Badge variant={DECISION_VARIANT[selectedDecision]}>
+                  {decisionLabel(selectedDecision)}
+                </Badge>
               </div>
               <div className="flex flex-wrap gap-1">
                 {selectedCandidate.sections.filter(Boolean).map((section) => (
@@ -131,6 +207,37 @@ export function TerminologyReviewWorkspace({
                 {selectedCandidate.sourceKeys.join(", ")}
               </p>
             </header>
+
+            <div className="border-border flex flex-wrap gap-2 rounded-lg border p-3">
+              <Button
+                size="sm"
+                variant={selectedDecision === "accepted" ? "secondary" : "outline"}
+                onClick={() => setDecision("accepted")}
+              >
+                {t("review.checked")}
+              </Button>
+              <Button
+                size="sm"
+                variant={selectedDecision === "needs-review" ? "secondary" : "outline"}
+                onClick={() => setDecision("needs-review")}
+              >
+                {t("review.issues")}
+              </Button>
+              <Button
+                size="sm"
+                variant={selectedDecision === "rejected" ? "destructive" : "outline"}
+                onClick={() => setDecision("rejected")}
+              >
+                {t("glossary.disabled")}
+              </Button>
+              <Button
+                size="sm"
+                variant={selectedDecision === "pending" ? "secondary" : "ghost"}
+                onClick={() => setDecision("pending")}
+              >
+                {t("badge.missing")}
+              </Button>
+            </div>
 
             <div className="grid gap-3">
               {selectedCandidate.languages.map((language) => (
