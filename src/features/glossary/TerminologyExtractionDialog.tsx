@@ -1,0 +1,314 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  buildTerminologyCandidateExport,
+  extractTerminologyCandidates,
+  type TerminologyCandidate,
+  type TerminologyCorpusFile,
+} from "@/core/terminology/extract-candidates";
+import { useI18n } from "@/features/i18n/I18nProvider";
+
+interface LoadedCorpusFile extends TerminologyCorpusFile {
+  id: string;
+}
+
+function downloadJson(filename: string, value: unknown) {
+  const blob = new Blob([JSON.stringify(value, null, 2) + "\n"], {
+    type: "application/json;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function readCorpusFile(file: File, languageCode: string): Promise<LoadedCorpusFile> {
+  return {
+    id: crypto.randomUUID(),
+    languageCode: languageCode.trim(),
+    filename: file.name,
+    text: await file.text(),
+  };
+}
+
+export function TerminologyExtractionDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { t } = useI18n();
+  const [sourceLanguageCode, setSourceLanguageCode] = useState("en");
+  const [sourceFile, setSourceFile] = useState<LoadedCorpusFile | null>(null);
+  const [translatedFiles, setTranslatedFiles] = useState<LoadedCorpusFile[]>([]);
+  const [minimumFrequency, setMinimumFrequency] = useState(2);
+  const [candidates, setCandidates] = useState<TerminologyCandidate[]>([]);
+
+  const conflictCount = useMemo(
+    () =>
+      candidates.reduce(
+        (total, candidate) =>
+          total + candidate.languages.filter((language) => language.hasConflict).length,
+        0,
+      ),
+    [candidates],
+  );
+
+  const pickSource = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".lang,text/plain";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      void readCorpusFile(file, sourceLanguageCode)
+        .then((loaded) => {
+          setSourceFile(loaded);
+          setCandidates([]);
+        })
+        .catch((error: Error) => toast.error(t("err.readFile", { msg: error.message })));
+    };
+    input.click();
+  };
+
+  const pickTranslations = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".lang,text/plain";
+    input.multiple = true;
+    input.onchange = () => {
+      const files = [...(input.files ?? [])];
+      void Promise.all(files.map((file) => readCorpusFile(file, "")))
+        .then((loaded) => {
+          setTranslatedFiles((current) => [...current, ...loaded]);
+          setCandidates([]);
+        })
+        .catch((error: Error) => toast.error(t("err.readFile", { msg: error.message })));
+    };
+    input.click();
+  };
+
+  const canExtract =
+    sourceFile != null &&
+    sourceLanguageCode.trim() !== "" &&
+    translatedFiles.length > 0 &&
+    translatedFiles.every((file) => file.languageCode.trim() !== "");
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{t("terminology.title")}</DialogTitle>
+          <DialogDescription>
+            Align existing .lang translations by key and generate reviewable terminology candidates.
+            Files stay in this browser and are not uploaded.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <section className="border-border grid gap-3 rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <strong>Source file</strong>
+              <Button size="sm" variant="outline" onClick={pickSource}>
+                {t("drop.pick")}
+              </Button>
+            </div>
+            <label className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">Language code</span>
+              <input
+                className="border-input bg-background h-9 rounded-md border px-3"
+                value={sourceLanguageCode}
+                onChange={(event) => {
+                  setSourceLanguageCode(event.target.value);
+                  setSourceFile((current) =>
+                    current ? { ...current, languageCode: event.target.value } : current,
+                  );
+                }}
+              />
+            </label>
+            <p className="ltr-isolate text-muted-foreground truncate text-sm">
+              {sourceFile?.filename ?? t("reference.notLoaded")}
+            </p>
+          </section>
+
+          <section className="border-border grid gap-3 rounded-lg border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <strong>Translated files</strong>
+              <Button size="sm" variant="outline" onClick={pickTranslations}>
+                Add .lang files
+              </Button>
+            </div>
+            <div className="grid gap-2">
+              {translatedFiles.length === 0 && (
+                <p className="text-muted-foreground text-sm">No translated files selected.</p>
+              )}
+              {translatedFiles.map((file) => (
+                <div key={file.id} className="grid grid-cols-[6rem_1fr_auto] items-center gap-2">
+                  <input
+                    aria-label={`Language code for ${file.filename}`}
+                    className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
+                    placeholder="bg"
+                    value={file.languageCode}
+                    onChange={(event) => {
+                      setTranslatedFiles((current) =>
+                        current.map((item) =>
+                          item.id === file.id
+                            ? { ...item, languageCode: event.target.value }
+                            : item,
+                        ),
+                      );
+                      setCandidates([]);
+                    }}
+                  />
+                  <span className="ltr-isolate truncate text-sm" title={file.filename}>
+                    {file.filename}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setTranslatedFiles((current) =>
+                        current.filter((item) => item.id !== file.id),
+                      );
+                      setCandidates([]);
+                    }}
+                  >
+                    {t("glossary.remove")}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid gap-1 text-sm">
+            <span className="text-muted-foreground">Minimum repeated source text</span>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              className="border-input bg-background h-9 w-28 rounded-md border px-3"
+              value={minimumFrequency}
+              onChange={(event) =>
+                setMinimumFrequency(Math.max(1, Number(event.target.value) || 1))
+              }
+            />
+          </label>
+          <Button
+            disabled={!canExtract}
+            onClick={() => {
+              if (!sourceFile) return;
+              const next = extractTerminologyCandidates(
+                { ...sourceFile, languageCode: sourceLanguageCode.trim() },
+                translatedFiles.map((file) => ({
+                  ...file,
+                  languageCode: file.languageCode.trim(),
+                })),
+                {
+                  minimumSourceFrequency: minimumFrequency,
+                  includeSingleOccurrences: minimumFrequency === 1,
+                },
+              );
+              setCandidates(next);
+            }}
+          >
+            Generate candidates
+          </Button>
+          <Button
+            variant="outline"
+            disabled={!sourceFile || candidates.length === 0}
+            onClick={() => {
+              if (!sourceFile) return;
+              const exported = buildTerminologyCandidateExport(
+                { ...sourceFile, languageCode: sourceLanguageCode.trim() },
+                candidates,
+              );
+              downloadJson("necesse-terminology-candidates.json", exported);
+            }}
+          >
+            {t("btn.export")}
+          </Button>
+          {candidates.length > 0 && (
+            <div className="text-muted-foreground flex flex-wrap gap-2 text-sm">
+              <Badge variant="secondary">{candidates.length} candidates</Badge>
+              <Badge variant={conflictCount > 0 ? "destructive" : "secondary"}>
+                {conflictCount} conflicts
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        <ScrollArea className="border-border h-[42vh] rounded-lg border">
+          <div className="grid gap-2 p-3">
+            {candidates.length === 0 && (
+              <p className="text-muted-foreground text-sm">
+                Select files, enter every language code explicitly, and generate candidates.
+              </p>
+            )}
+            {candidates.map((candidate) => (
+              <article
+                key={candidate.source}
+                className="border-border grid gap-2 rounded-lg border p-3"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <strong>{candidate.source}</strong>
+                  <Badge variant="outline">{candidate.sourceFrequency} keys</Badge>
+                  {candidate.sections.filter(Boolean).map((section) => (
+                    <Badge key={section} variant="secondary">
+                      {section}
+                    </Badge>
+                  ))}
+                </div>
+                <p className="ltr-isolate text-muted-foreground text-xs break-all">
+                  {candidate.sourceKeys.join(", ")}
+                </p>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {candidate.languages.map((language) => (
+                    <div
+                      key={`${candidate.source}:${language.languageCode}`}
+                      className="bg-muted rounded-md p-2"
+                    >
+                      <div className="flex items-center gap-2 text-sm">
+                        <strong>{language.languageCode}</strong>
+                        <span className="text-muted-foreground">
+                          {language.matchedCount} matches
+                        </span>
+                        {language.hasConflict && <Badge variant="destructive">conflict</Badge>}
+                      </div>
+                      <div className="mt-1 grid gap-1 text-sm">
+                        {language.variants.map((variant) => (
+                          <div key={variant.value} className="flex justify-between gap-3">
+                            <span>{variant.value}</span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {variant.count} · {Math.round(variant.ratio * 100)}%
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
