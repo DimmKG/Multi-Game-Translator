@@ -6,7 +6,7 @@ export const PROTECTED_TOKEN_PATTERN = /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|
 
 export type EntryStatus = "missing" | "done" | "same";
 export type FilterMode = "missing" | "done" | "same" | "all" | "ws";
-export type WorkspaceView = "editor" | "review" | "diff";
+export type WorkspaceView = "editor" | "review" | "diff" | "terminology";
 export type ReviewFilter = "all" | "mt" | "issues" | "same";
 export type DiffMode = "word" | "character";
 
