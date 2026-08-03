@@ -76,7 +76,7 @@ function collectOccurrences(file: TerminologyCorpusFile): SourceOccurrence[] {
   const parsed = parseLangFile(file.text);
   return parsed.items.flatMap((item) => {
     if (item.type !== "entry" || item.wasMissing || !isMeaningfulCandidate(item.value)) return [];
-    return [{ key: item.key, section: item.section, source: item.value }];
+    return [{ key: item.key, section: item.section ?? "", source: item.value }];
   });
 }
 
