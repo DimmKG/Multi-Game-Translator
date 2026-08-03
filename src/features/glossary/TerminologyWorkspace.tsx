@@ -136,13 +136,7 @@ export function TerminologyWorkspace() {
   return (
     <section className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4">
       <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">{t("terminology.title")}</h2>
-          <p className="text-muted-foreground text-sm">
-            Align existing .lang translations by key and generate reviewable terminology candidates.
-            Files stay in this browser and are not uploaded.
-          </p>
-        </div>
+        <h2 className="text-lg font-semibold">{t("terminology.title")}</h2>
         {candidates.length > 0 && (
           <div className="flex flex-wrap gap-2">
             <Badge variant="secondary">{candidates.length}</Badge>
@@ -184,13 +178,13 @@ export function TerminologyWorkspace() {
             <div className="grid gap-4 md:grid-cols-2">
               <section className="border-border grid gap-3 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <strong>Source file</strong>
+                  <strong>{t("btn.enRef")}</strong>
                   <Button size="sm" variant="outline" onClick={pickSource}>
                     {t("drop.pick")}
                   </Button>
                 </div>
                 <label className="grid gap-1 text-sm">
-                  <span className="text-muted-foreground">Language code</span>
+                  <span className="text-muted-foreground">{t("mt.langLabel")}</span>
                   <input
                     className="border-input bg-background h-9 rounded-md border px-3"
                     value={sourceLanguageCode}
@@ -209,14 +203,14 @@ export function TerminologyWorkspace() {
 
               <section className="border-border grid gap-3 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <strong>Translated files</strong>
+                  <strong>{t("review.trLabel")}</strong>
                   <Button size="sm" variant="outline" onClick={pickTranslations}>
-                    Add .lang files
+                    {t("drop.pick")}
                   </Button>
                 </div>
                 <div className="grid gap-2">
                   {translatedFiles.length === 0 && (
-                    <p className="text-muted-foreground text-sm">No translated files selected.</p>
+                    <p className="text-muted-foreground text-sm">{t("empty.generic")}</p>
                   )}
                   {translatedFiles.map((file) => (
                     <div
@@ -224,7 +218,7 @@ export function TerminologyWorkspace() {
                       className="grid grid-cols-[6rem_1fr_auto] items-center gap-2"
                     >
                       <input
-                        aria-label={`Language code for ${file.filename}`}
+                        aria-label={`${t("mt.langLabel")}: ${file.filename}`}
                         className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
                         placeholder="bg"
                         value={file.languageCode}
@@ -262,7 +256,7 @@ export function TerminologyWorkspace() {
 
             <div className="flex flex-wrap items-end gap-3">
               <label className="grid gap-1 text-sm">
-                <span className="text-muted-foreground">Minimum repeated source text</span>
+                <span className="text-muted-foreground">{t("terminology.filter")}</span>
                 <input
                   type="number"
                   min={1}
@@ -275,7 +269,7 @@ export function TerminologyWorkspace() {
                 />
               </label>
               <Button disabled={!canExtract} onClick={generateCandidates}>
-                Generate candidates
+                {t("terminology.title")}
               </Button>
               <Button
                 variant="outline"
