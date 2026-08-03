@@ -10,6 +10,7 @@ import {
   type TerminologyCandidate,
   type TerminologyCorpusFile,
 } from "@/core/terminology/extract-candidates";
+import { buildTerminologyReviewSessionId } from "@/core/terminology/review-persistence";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,18 @@ export function TerminologyWorkspace() {
       ),
     [candidates],
   );
+
+  const reviewSessionId = useMemo(() => {
+    if (!sourceFile) return "empty";
+    return buildTerminologyReviewSessionId(
+      { ...sourceFile, languageCode: sourceLanguageCode.trim() },
+      translatedFiles.map((file) => ({
+        ...file,
+        languageCode: file.languageCode.trim(),
+      })),
+      minimumFrequency,
+    );
+  }, [minimumFrequency, sourceFile, sourceLanguageCode, translatedFiles]);
 
   const pickSource = () => {
     const input = document.createElement("input");
@@ -282,7 +295,11 @@ export function TerminologyWorkspace() {
           </div>
         </div>
       ) : (
-        <TerminologyReviewWorkspace candidates={candidates} />
+        <TerminologyReviewWorkspace
+          key={reviewSessionId}
+          candidates={candidates}
+          sessionId={reviewSessionId}
+        />
       )}
     </section>
   );

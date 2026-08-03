@@ -1,36 +1,53 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { VirtualList } from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
+import {
+  loadTerminologyReviewDecisions,
+  saveTerminologyReviewDecisions,
+  type TerminologyReviewDecision,
+} from "@/core/terminology/review-persistence";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
-type ReviewDecision = "pending" | "accepted" | "rejected" | "needs-review";
-type DecisionFilter = "all" | ReviewDecision;
+type DecisionFilter = "all" | TerminologyReviewDecision;
 
-const DECISION_VARIANT: Record<ReviewDecision, "outline" | "secondary" | "destructive"> = {
-  pending: "outline",
-  accepted: "secondary",
-  rejected: "destructive",
-  "needs-review": "destructive",
-};
+const DECISION_VARIANT: Record<TerminologyReviewDecision, "outline" | "secondary" | "destructive"> =
+  {
+    pending: "outline",
+    accepted: "secondary",
+    rejected: "destructive",
+    "needs-review": "destructive",
+  };
 
 export function TerminologyReviewWorkspace({
   candidates,
+  sessionId,
 }: {
   candidates: readonly TerminologyCandidate[];
+  sessionId: string;
 }) {
   const { t } = useI18n();
+  const validSources = useMemo(
+    () => new Set(candidates.map((candidate) => candidate.source)),
+    [candidates],
+  );
   const [query, setQuery] = useState("");
   const [conflictsOnly, setConflictsOnly] = useState(false);
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>("all");
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
-  const [decisions, setDecisions] = useState<Record<string, ReviewDecision>>({});
+  const [decisions, setDecisions] = useState<Record<string, TerminologyReviewDecision>>(() =>
+    loadTerminologyReviewDecisions(sessionId, validSources),
+  );
 
-  const decisionLabel = (decision: ReviewDecision) => {
+  useEffect(() => {
+    saveTerminologyReviewDecisions(sessionId, decisions);
+  }, [decisions, sessionId]);
+
+  const decisionLabel = (decision: TerminologyReviewDecision) => {
     switch (decision) {
       case "accepted":
         return t("review.checked");
@@ -44,7 +61,7 @@ export function TerminologyReviewWorkspace({
   };
 
   const decisionCounts = useMemo(() => {
-    const counts: Record<ReviewDecision, number> = {
+    const counts: Record<TerminologyReviewDecision, number> = {
       pending: 0,
       accepted: 0,
       rejected: 0,
@@ -85,9 +102,16 @@ export function TerminologyReviewWorkspace({
     ? (decisions[selectedCandidate.source] ?? "pending")
     : null;
 
-  const setDecision = (decision: ReviewDecision) => {
+  const setDecision = (decision: TerminologyReviewDecision) => {
     if (!selectedCandidate) return;
-    setDecisions((current) => ({ ...current, [selectedCandidate.source]: decision }));
+    setDecisions((current) => {
+      if (decision === "pending") {
+        const next = { ...current };
+        delete next[selectedCandidate.source];
+        return next;
+      }
+      return { ...current, [selectedCandidate.source]: decision };
+    });
   };
 
   const filters: DecisionFilter[] = ["all", "pending", "accepted", "rejected", "needs-review"];
