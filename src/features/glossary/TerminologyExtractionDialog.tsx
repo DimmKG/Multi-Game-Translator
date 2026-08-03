@@ -153,9 +153,7 @@ export function TerminologyView() {
                   onChange={(event) => {
                     setTranslatedFiles((current) =>
                       current.map((item) =>
-                        item.id === file.id
-                          ? { ...item, languageCode: event.target.value }
-                          : item,
+                        item.id === file.id ? { ...item, languageCode: event.target.value } : item,
                       ),
                     );
                     setCandidates([]);
@@ -168,9 +166,7 @@ export function TerminologyView() {
                   size="sm"
                   variant="ghost"
                   onClick={() => {
-                    setTranslatedFiles((current) =>
-                      current.filter((item) => item.id !== file.id),
-                    );
+                    setTranslatedFiles((current) => current.filter((item) => item.id !== file.id));
                     setCandidates([]);
                   }}
                 >
@@ -191,9 +187,7 @@ export function TerminologyView() {
             max={100}
             className="border-input bg-background h-9 w-28 rounded-md border px-3"
             value={minimumFrequency}
-            onChange={(event) =>
-              setMinimumFrequency(Math.max(1, Number(event.target.value) || 1))
-            }
+            onChange={(event) => setMinimumFrequency(Math.max(1, Number(event.target.value) || 1))}
           />
         </label>
         <Button
@@ -272,9 +266,7 @@ export function TerminologyView() {
                   >
                     <div className="flex items-center gap-2 text-sm">
                       <strong>{language.languageCode}</strong>
-                      <span className="text-muted-foreground">
-                        {language.matchedCount} matches
-                      </span>
+                      <span className="text-muted-foreground">{language.matchedCount} matches</span>
                       {language.hasConflict && <Badge variant="destructive">conflict</Badge>}
                     </div>
                     <div className="mt-1 grid gap-1 text-sm">
