@@ -90,13 +90,7 @@ export function TerminologyReviewWorkspace({
     setDecisions((current) => ({ ...current, [selectedCandidate.source]: decision }));
   };
 
-  const filters: DecisionFilter[] = [
-    "all",
-    "pending",
-    "accepted",
-    "rejected",
-    "needs-review",
-  ];
+  const filters: DecisionFilter[] = ["all", "pending", "accepted", "rejected", "needs-review"];
 
   return (
     <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(18rem,0.85fr)_minmax(24rem,1.15fr)]">
