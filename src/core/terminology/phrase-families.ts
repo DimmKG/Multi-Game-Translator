@@ -2,6 +2,7 @@
 
 export interface PhraseFamilyRecord {
   key: string;
+  occurrence?: number;
   value: string;
 }
 
@@ -44,6 +45,14 @@ interface PhraseSeed {
 }
 
 const WORD_PATTERN = /\p{L}[\p{L}\p{M}'’-]*/gu;
+
+function recordIdentity(record: PhraseFamilyRecord): string {
+  return `${record.key}\u0000${record.occurrence ?? 0}`;
+}
+
+function familyIdentities(family: PhraseFamily): string[] {
+  return family.members.map(recordIdentity);
+}
 
 function tokenize(value: string): Token[] {
   return [...value.matchAll(WORD_PATTERN)].map((match) => ({
@@ -144,7 +153,7 @@ function distinctModifierParts(family: PhraseFamily): Map<string, string> {
     .map((member) => ({ member, tokens: tokenize(modifierValue(member)) }))
     .filter((item) => item.tokens.length > 0);
   if (modified.length < 2) {
-    return new Map(modified.map(({ member }) => [member.key, modifierValue(member)]));
+    return new Map(modified.map(({ member }) => [recordIdentity(member), modifierValue(member)]));
   }
 
   const tokenLists = modified.map((item) => item.tokens);
@@ -159,15 +168,15 @@ function distinctModifierParts(family: PhraseFamily): Map<string, string> {
         distinct.length > 0
           ? distinct.map((token) => token.value).join(" ")
           : modifierValue(member);
-      return [member.key, value];
+      return [recordIdentity(member), value];
     }),
   );
 }
 
-function sameSupportKeys(left: readonly string[], right: readonly string[]): boolean {
+function sameIdentities(left: readonly string[], right: readonly string[]): boolean {
   if (left.length !== right.length) return false;
   const rightSet = new Set(right);
-  return left.every((key) => rightSet.has(key));
+  return left.every((identity) => rightSet.has(identity));
 }
 
 export function discoverPhraseFamilies(
@@ -217,7 +226,8 @@ export function discoverPhraseFamilies(
           containsSequence(other.seed.normalizedTokens, candidate.seed.normalizedTokens) &&
           other.supporting.every((item) =>
             candidate.supporting.some(
-              (candidateItem) => candidateItem.record.key === item.record.key,
+              (candidateItem) =>
+                recordIdentity(candidateItem.record) === recordIdentity(item.record),
             ),
           ),
       ),
@@ -253,12 +263,13 @@ export function alignPhraseFamily(
   sourceFamily: PhraseFamily,
   targetRecords: readonly PhraseFamilyRecord[],
 ): AlignedPhraseFamily | null {
+  const sourceIdentities = familyIdentities(sourceFamily);
   const alignedTargets = targetRecords.filter((record) =>
-    sourceFamily.supportKeys.includes(record.key),
+    sourceIdentities.includes(recordIdentity(record)),
   );
   const targetFamily = discoverPhraseFamilies(alignedTargets, {
     allowUnanchoredSingleWord: true,
-  }).find((family) => sameSupportKeys(family.supportKeys, sourceFamily.supportKeys));
+  }).find((family) => sameIdentities(familyIdentities(family), sourceIdentities));
   if (!targetFamily) return null;
 
   const base: PhraseFamilyTermPair = {
@@ -274,8 +285,9 @@ export function alignPhraseFamily(
   const sourceModifiers = distinctModifierParts(sourceFamily);
   const targetModifiers = distinctModifierParts(targetFamily);
   const modifiers = sourceFamily.members.flatMap((member) => {
-    const source = sourceModifiers.get(member.key)?.trim() ?? "";
-    const target = targetModifiers.get(member.key)?.trim() ?? "";
+    const identity = recordIdentity(member);
+    const source = sourceModifiers.get(identity)?.trim() ?? "";
+    const target = targetModifiers.get(identity)?.trim() ?? "";
     if (!source || !target) return [];
     return [{ source, target, evidenceKeys: [member.key] }];
   });
