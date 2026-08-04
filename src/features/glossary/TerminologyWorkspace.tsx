@@ -327,11 +327,7 @@ export function TerminologyWorkspace() {
               >
                 {t("btn.export")}
               </Button>
-              <Button
-                variant="outline"
-                disabled={!reviewExport}
-                onClick={exportReviewJson}
-              >
+              <Button variant="outline" disabled={!reviewExport} onClick={exportReviewJson}>
                 {t("tab.review")} · {t("btn.export")}
               </Button>
             </div>
