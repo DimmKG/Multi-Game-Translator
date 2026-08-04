@@ -264,10 +264,7 @@ export function extractTerminologyCandidates(
     });
     if (familyOccurrences.length < minimumSourceFrequency) continue;
 
-    const alignedByLanguage = new Map<
-      string,
-      ReturnType<typeof alignPhraseFamily>
-    >();
+    const alignedByLanguage = new Map<string, ReturnType<typeof alignPhraseFamily>>();
     for (const target of translated) {
       alignedByLanguage.set(
         target.file.languageCode,
