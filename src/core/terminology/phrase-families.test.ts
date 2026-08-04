@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from "vitest";
 
-import { discoverPhraseFamilies } from "./phrase-families";
+import { alignPhraseFamily, discoverPhraseFamilies } from "./phrase-families";
 
 describe("discoverPhraseFamilies", () => {
   it("extracts a repeated subject from sentence-like values", () => {
@@ -106,5 +106,68 @@ describe("discoverPhraseFamilies", () => {
     ]);
 
     expect(families).toEqual([]);
+  });
+});
+
+describe("alignPhraseFamily", () => {
+  it("aligns a repeated sentence subject without promoting sentence tails", () => {
+    const sourceFamily = discoverPhraseFamilies([
+      { key: "heal", value: "Seed Launcher restores health on hit" },
+      { key: "range", value: "Seed Launcher has increased speed and range" },
+    ])[0];
+
+    expect(
+      alignPhraseFamily(sourceFamily, [
+        { key: "heal", value: "Семенострелът възстановява здраве при попадение" },
+        { key: "range", value: "Семенострелът има по-висока скорост и далечина" },
+      ]),
+    ).toEqual({
+      base: {
+        source: "Seed Launcher",
+        target: "Семенострелът",
+        evidenceKeys: ["heal", "range"],
+      },
+      modifiers: [],
+    });
+  });
+
+  it("aligns base names and removes a shared target modifier affix", () => {
+    const sourceFamily = discoverPhraseFamilies([
+      { key: "base", value: "Alchemical Workstation" },
+      { key: "abyssal", value: "Abyssal Alchemical Workstation" },
+      { key: "fallen", value: "Fallen Alchemical Workstation" },
+    ])[0];
+
+    expect(
+      alignPhraseFamily(sourceFamily, [
+        { key: "base", value: "Алхимичен тезгях" },
+        { key: "abyssal", value: "Алхимичен тезгях на Бездната" },
+        { key: "fallen", value: "Алхимичен тезгях на Падналите" },
+      ]),
+    ).toEqual({
+      base: {
+        source: "Alchemical Workstation",
+        target: "Алхимичен тезгях",
+        evidenceKeys: ["base", "abyssal", "fallen"],
+      },
+      modifiers: [
+        { source: "Abyssal", target: "Бездната", evidenceKeys: ["abyssal"] },
+        { source: "Fallen", target: "Падналите", evidenceKeys: ["fallen"] },
+      ],
+    });
+  });
+
+  it("returns null when the aligned target keys do not form a matching family", () => {
+    const sourceFamily = discoverPhraseFamilies([
+      { key: "base", value: "Alchemical Workstation" },
+      { key: "abyssal", value: "Abyssal Alchemical Workstation" },
+    ])[0];
+
+    expect(
+      alignPhraseFamily(sourceFamily, [
+        { key: "base", value: "Алхимичен тезгях" },
+        { key: "abyssal", value: "Съвсем различно име" },
+      ]),
+    ).toBeNull();
   });
 });
