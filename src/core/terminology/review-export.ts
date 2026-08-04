@@ -41,7 +41,9 @@ export interface TerminologyReviewExport {
 function isExplicitDecision(
   decision: TerminologyReviewDecision | undefined,
 ): decision is Exclude<TerminologyReviewDecision, "pending"> {
-  return decision === "accepted" || decision === "rejected" || decision === "needs-review";
+  return (
+    decision === "accepted" || decision === "rejected" || decision === "needs-review"
+  );
 }
 
 function buildReviewedCandidate(
