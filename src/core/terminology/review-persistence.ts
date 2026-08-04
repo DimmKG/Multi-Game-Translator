@@ -178,14 +178,13 @@ export function saveTerminologyReviewDecisions(
   decisions: Readonly<Record<string, TerminologyReviewDecision>>,
   storage: Storage = localStorage,
 ): boolean {
-  const current = loadTerminologyReviewState(
-    sessionId,
-    new Set(Object.keys(decisions)),
-    storage,
-  );
+  const current = loadTerminologyReviewState(sessionId, new Set(Object.keys(decisions)), storage);
   return saveTerminologyReviewState(
     sessionId,
-    { decisions: { ...current.decisions, ...decisions }, preferredVariants: current.preferredVariants },
+    {
+      decisions: { ...current.decisions, ...decisions },
+      preferredVariants: current.preferredVariants,
+    },
     storage,
   );
 }
