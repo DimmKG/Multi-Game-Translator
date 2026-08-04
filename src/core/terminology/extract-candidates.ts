@@ -3,6 +3,12 @@ import { parseLangFile } from "../lang/parse";
 
 export const TERMINOLOGY_CANDIDATE_EXPORT_VERSION = 1 as const;
 
+const MAX_CANDIDATE_LENGTH = 80;
+const MAX_CANDIDATE_WORDS = 6;
+const TOKEN_PATTERN =
+  /<[^>]*>|\$\{[^}]*\}|\{[^}]*\}|%\d*\$?[a-z]|§(?:#[0-9a-f]{6}|[0-9a-fk-or])|\\n/iu;
+const SENTENCE_END_PATTERN = /[.!?…]\s*$/u;
+
 export interface TerminologyCorpusFile {
   languageCode: string;
   filename: string;
@@ -62,14 +68,17 @@ interface SourceOccurrence {
   source: string;
 }
 
+function countWords(value: string): number {
+  return value.match(/\p{L}[\p{L}\p{M}'’\-]*/gu)?.length ?? 0;
+}
+
 function isMeaningfulCandidate(value: string): boolean {
-  const withoutPlaceholders = value
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\{[^}]*\}/g, " ")
-    .replace(/\$\{[^}]*\}/g, " ")
-    .replace(/%\d*\$?[a-z]/gi, " ")
-    .replace(/\\n/g, " ");
-  return /\p{L}/u.test(withoutPlaceholders);
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_CANDIDATE_LENGTH) return false;
+  if (TOKEN_PATTERN.test(trimmed) || SENTENCE_END_PATTERN.test(trimmed)) return false;
+
+  const wordCount = countWords(trimmed);
+  return wordCount > 0 && wordCount <= MAX_CANDIDATE_WORDS;
 }
 
 function collectOccurrences(file: TerminologyCorpusFile): SourceOccurrence[] {
