@@ -5,10 +5,7 @@ import type {
   TerminologyCorpusFile,
   TerminologyEvidence,
 } from "./extract-candidates";
-import type {
-  TerminologyReviewDecision,
-  TerminologyReviewState,
-} from "./review-persistence";
+import type { TerminologyReviewDecision, TerminologyReviewState } from "./review-persistence";
 
 export const TERMINOLOGY_REVIEW_EXPORT_VERSION = 1 as const;
 
@@ -41,9 +38,7 @@ export interface TerminologyReviewExport {
 function isExplicitDecision(
   decision: TerminologyReviewDecision | undefined,
 ): decision is Exclude<TerminologyReviewDecision, "pending"> {
-  return (
-    decision === "accepted" || decision === "rejected" || decision === "needs-review"
-  );
+  return decision === "accepted" || decision === "rejected" || decision === "needs-review";
 }
 
 function buildReviewedCandidate(
