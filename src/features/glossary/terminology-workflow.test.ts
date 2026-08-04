@@ -32,10 +32,19 @@ describe("terminology workflow component wiring", () => {
     expect(workspaceSource).toContain('t("terminology.minimumFrequency")');
   });
 
-  it("auto-selects compatible loaded glossaries and names the additive merge action", () => {
+  it("auto-selects compatible glossaries and applies additions plus classified updates", () => {
     expect(mergeSource).toContain("chooseTerminologyMergeTarget(");
     expect(mergeSource).toContain("compatibleTerminologyGlossaries(");
-    expect(mergeSource).toContain('t("terminology.addNewEntries")');
+    expect(mergeSource).toContain('t("terminology.applyGlossaryChanges")');
+    expect(mergeSource).toContain("plan.updates.length");
     expect(mergeSource).toContain('t("terminology.mergeNeedsAccepted")');
+  });
+
+  it("requires explicit candidate and variant classification in the review UI", () => {
+    expect(reviewSource).toContain("canAcceptTerminologyCandidate(");
+    expect(reviewSource).toContain("updateTerminologyCandidateKind(");
+    expect(reviewSource).toContain("updateTerminologyReviewedSource(");
+    expect(reviewSource).toContain("updateTerminologyVariantClassification(");
+    expect(reviewSource).toContain('t("terminology.sentenceLikeWarning")');
   });
 });

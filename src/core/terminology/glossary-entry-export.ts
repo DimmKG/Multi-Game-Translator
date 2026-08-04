@@ -32,7 +32,14 @@ export function buildTerminologyGlossaryEntryExport(
       if (!target) continue;
 
       const entries = byLanguage.get(language.languageCode) ?? [];
-      entries.push({ source: candidate.source, target });
+      const { forms, alternatives, forbidden } = language.classifiedValues;
+      entries.push({
+        source: candidate.entrySource,
+        target,
+        ...(forms.length > 0 ? { forms } : {}),
+        ...(alternatives.length > 0 ? { alternatives } : {}),
+        ...(forbidden.length > 0 ? { forbidden } : {}),
+      });
       byLanguage.set(language.languageCode, entries);
     }
   }

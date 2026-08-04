@@ -6,12 +6,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
 import type {
+  TerminologyCandidateKind,
   TerminologyReviewDecision,
   TerminologyReviewState,
+  TerminologyVariantClassification,
 } from "@/core/terminology/review-persistence";
 import {
+  canAcceptTerminologyCandidate,
+  effectiveTerminologyReviewedSource,
+  updateTerminologyCandidateKind,
   updateTerminologyPreferredVariant,
+  updateTerminologyReviewedSource,
   updateTerminologyReviewDecision,
+  updateTerminologyVariantClassification,
 } from "@/core/terminology/review-state";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
@@ -25,6 +32,86 @@ const DECISION_VARIANT: Record<TerminologyReviewDecision, "outline" | "secondary
     rejected: "destructive",
     "needs-review": "destructive",
   };
+
+const CANDIDATE_KINDS: TerminologyCandidateKind[] = ["term", "phrase", "sentence-like"];
+const VARIANT_CLASSIFICATIONS: TerminologyVariantClassification[] = [
+  "form",
+  "alternative",
+  "forbidden",
+];
+
+function ManualVariantEditor({
+  classifications,
+  onClassify,
+}: {
+  classifications: Readonly<Record<string, TerminologyVariantClassification>>;
+  onClassify: (value: string, classification: TerminologyVariantClassification | null) => void;
+}) {
+  const { t } = useI18n();
+  const [value, setValue] = useState("");
+  const [classification, setClassification] =
+    useState<TerminologyVariantClassification>("alternative");
+
+  const add = () => {
+    if (!value.trim()) return;
+    onClassify(value, classification);
+    setValue("");
+  };
+
+  return (
+    <div className="grid gap-2">
+      <strong className="text-sm">{t("terminology.classifiedVariants")}</strong>
+      {Object.keys(classifications).length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {Object.entries(classifications).map(([classifiedValue, role]) => (
+            <Button
+              key={classifiedValue}
+              size="sm"
+              variant="secondary"
+              title={t("terminology.removeClassification")}
+              onClick={() => onClassify(classifiedValue, null)}
+            >
+              {classifiedValue} · {t(`terminology.variant.${role}`)} ×
+            </Button>
+          ))}
+        </div>
+      )}
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)_auto]">
+        <input
+          aria-label={t("terminology.manualVariant")}
+          className="border-input bg-background h-9 min-w-0 rounded-md border px-3 text-sm"
+          placeholder={t("terminology.manualVariant")}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              add();
+            }
+          }}
+        />
+        <select
+          aria-label={t("terminology.variantRole")}
+          className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+          value={classification}
+          onChange={(event) =>
+            setClassification(event.target.value as TerminologyVariantClassification)
+          }
+        >
+          {VARIANT_CLASSIFICATIONS.map((role) => (
+            <option key={role} value={role}>
+              {t(`terminology.variant.${role}`)}
+            </option>
+          ))}
+        </select>
+        <Button size="sm" variant="outline" disabled={!value.trim()} onClick={add}>
+          {t("terminology.addVariant")}
+        </Button>
+      </div>
+      <p className="text-muted-foreground text-xs">{t("terminology.manualVariantHint")}</p>
+    </div>
+  );
+}
 
 export function TerminologyReviewWorkspace({
   candidates,
@@ -99,10 +186,21 @@ export function TerminologyReviewWorkspace({
   const selectedPreferredVariants = selectedCandidate
     ? (preferredVariants[selectedCandidate.source] ?? {})
     : {};
+  const selectedCandidateKind = selectedCandidate
+    ? (reviewState.candidateKinds[selectedCandidate.source] ?? null)
+    : null;
+  const selectedReviewedSource = selectedCandidate
+    ? effectiveTerminologyReviewedSource(reviewState, selectedCandidate.source)
+    : "";
+  const selectedClassifications = selectedCandidate
+    ? (reviewState.variantClassifications[selectedCandidate.source] ?? {})
+    : {};
   const canAccept =
     selectedCandidate != null &&
-    selectedCandidate.languages.every(
-      (language) => selectedPreferredVariants[language.languageCode]?.trim() !== "",
+    canAcceptTerminologyCandidate(
+      reviewState,
+      selectedCandidate.source,
+      selectedCandidate.languages.map((language) => language.languageCode),
     );
 
   const setDecision = (decision: TerminologyReviewDecision) => {
@@ -116,6 +214,37 @@ export function TerminologyReviewWorkspace({
     if (!selectedCandidate) return;
     onReviewStateChange(
       updateTerminologyPreferredVariant(reviewState, selectedCandidate.source, languageCode, value),
+    );
+  };
+
+  const setCandidateKind = (kind: TerminologyCandidateKind | null) => {
+    if (!selectedCandidate) return;
+    onReviewStateChange(
+      updateTerminologyCandidateKind(reviewState, selectedCandidate.source, kind),
+    );
+  };
+
+  const setReviewedSource = (value: string) => {
+    if (!selectedCandidate) return;
+    onReviewStateChange(
+      updateTerminologyReviewedSource(reviewState, selectedCandidate.source, value),
+    );
+  };
+
+  const setVariantClassification = (
+    languageCode: string,
+    value: string,
+    classification: TerminologyVariantClassification | null,
+  ) => {
+    if (!selectedCandidate) return;
+    onReviewStateChange(
+      updateTerminologyVariantClassification(
+        reviewState,
+        selectedCandidate.source,
+        languageCode,
+        value,
+        classification,
+      ),
     );
   };
 
@@ -181,6 +310,7 @@ export function TerminologyReviewWorkspace({
             ).length;
             const selected = candidate.source === selectedCandidate?.source;
             const decision = decisions[candidate.source] ?? "pending";
+            const candidateKind = reviewState.candidateKinds[candidate.source];
             return (
               <button
                 type="button"
@@ -197,6 +327,11 @@ export function TerminologyReviewWorkspace({
                 </span>
                 <span className="flex min-w-0 items-center gap-2 text-xs">
                   <Badge variant={DECISION_VARIANT[decision]}>{decisionLabel(decision)}</Badge>
+                  {candidateKind && (
+                    <Badge variant={candidateKind === "sentence-like" ? "destructive" : "outline"}>
+                      {t(`terminology.kind.${candidateKind}`)}
+                    </Badge>
+                  )}
                   <span className="text-muted-foreground truncate">
                     {candidate.sourceKeys.slice(0, 3).join(", ")}
                   </span>
@@ -237,6 +372,52 @@ export function TerminologyReviewWorkspace({
               </p>
             </header>
 
+            <div className="border-border grid gap-3 rounded-lg border p-3 md:grid-cols-2">
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">{t("terminology.entrySource")}</span>
+                <input
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  value={selectedReviewedSource}
+                  onChange={(event) => setReviewedSource(event.target.value)}
+                />
+                <span className="text-muted-foreground text-xs">
+                  {t("terminology.entrySourceHint")}
+                </span>
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium">{t("terminology.candidateKind")}</span>
+                <select
+                  className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                  value={selectedCandidateKind ?? ""}
+                  onChange={(event) =>
+                    setCandidateKind(
+                      event.target.value ? (event.target.value as TerminologyCandidateKind) : null,
+                    )
+                  }
+                >
+                  <option value="">{t("terminology.candidateKindRequired")}</option>
+                  {CANDIDATE_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {t(`terminology.kind.${kind}`)}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-muted-foreground text-xs">
+                  {t("terminology.candidateKindHint")}
+                </span>
+              </label>
+              {selectedCandidateKind === "sentence-like" && (
+                <p className="text-destructive text-sm md:col-span-2">
+                  {t("terminology.sentenceLikeWarning")}
+                </p>
+              )}
+              {!canAccept && selectedCandidateKind !== "sentence-like" && (
+                <p className="text-muted-foreground text-xs md:col-span-2">
+                  {t("terminology.acceptRequirements")}
+                </p>
+              )}
+            </div>
+
             <div className="border-border flex flex-wrap gap-2 rounded-lg border p-3">
               <Button
                 size="sm"
@@ -272,6 +453,7 @@ export function TerminologyReviewWorkspace({
             <div className="grid gap-3">
               {selectedCandidate.languages.map((language) => {
                 const preferred = selectedPreferredVariants[language.languageCode] ?? "";
+                const classifications = selectedClassifications[language.languageCode] ?? {};
                 return (
                   <article
                     key={`${selectedCandidate.source}:${language.languageCode}`}
@@ -306,24 +488,57 @@ export function TerminologyReviewWorkspace({
                         </p>
                       </div>
                       {language.variants.map((variant) => (
-                        <button
+                        <div
                           key={variant.value}
-                          type="button"
-                          className={cn(
-                            "grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border px-3 py-2 text-start text-sm",
-                            preferred === variant.value
-                              ? "border-primary bg-muted"
-                              : "bg-muted hover:border-border border-transparent",
-                          )}
-                          onClick={() => setPreferredVariant(language.languageCode, variant.value)}
+                          className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)]"
                         >
-                          <span>{variant.value}</span>
-                          <span className="text-muted-foreground tabular-nums">
-                            {variant.count} · {Math.round(variant.ratio * 100)}%
-                          </span>
-                        </button>
+                          <button
+                            type="button"
+                            className={cn(
+                              "grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border px-3 py-2 text-start text-sm",
+                              preferred === variant.value
+                                ? "border-primary bg-muted"
+                                : "bg-muted hover:border-border border-transparent",
+                            )}
+                            onClick={() =>
+                              setPreferredVariant(language.languageCode, variant.value)
+                            }
+                          >
+                            <span>{variant.value}</span>
+                            <span className="text-muted-foreground tabular-nums">
+                              {variant.count} · {Math.round(variant.ratio * 100)}%
+                            </span>
+                          </button>
+                          <select
+                            aria-label={`${t("terminology.variantRole")} · ${variant.value}`}
+                            className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+                            value={classifications[variant.value] ?? ""}
+                            onChange={(event) =>
+                              setVariantClassification(
+                                language.languageCode,
+                                variant.value,
+                                event.target.value
+                                  ? (event.target.value as TerminologyVariantClassification)
+                                  : null,
+                              )
+                            }
+                          >
+                            <option value="">{t("terminology.variant.evidence")}</option>
+                            {VARIANT_CLASSIFICATIONS.map((role) => (
+                              <option key={role} value={role}>
+                                {t(`terminology.variant.${role}`)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       ))}
                     </div>
+                    <ManualVariantEditor
+                      classifications={classifications}
+                      onClassify={(value, classification) =>
+                        setVariantClassification(language.languageCode, value, classification)
+                      }
+                    />
                   </article>
                 );
               })}

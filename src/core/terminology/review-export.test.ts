@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import type { TerminologyCandidate } from "./extract-candidates";
 import { buildTerminologyReviewExport } from "./review-export";
+import { emptyTerminologyReviewState } from "./review-state";
 
 const candidate: TerminologyCandidate = {
   source: "Iron Bar",
@@ -49,15 +50,20 @@ describe("terminology review export", () => {
       sourceFile,
       [candidate],
       {
+        ...emptyTerminologyReviewState(),
         decisions: { "Iron Bar": "accepted" },
+        candidateKinds: { "Iron Bar": "phrase" },
         preferredVariants: { "Iron Bar": { bg: "Желязно кюлче" } },
+        variantClassifications: {
+          "Iron Bar": { bg: { "Железен слитък": "alternative" } },
+        },
       },
       "2026-08-04T00:00:00.000Z",
     );
 
     expect(exported).toMatchObject({
       format: "necesse-terminology-review",
-      version: 1,
+      version: 2,
       sourceLanguageCode: "en",
       sourceFilename: "en.lang",
       generatedAt: "2026-08-04T00:00:00.000Z",
@@ -65,6 +71,8 @@ describe("terminology review export", () => {
     expect(exported.candidates).toEqual([
       expect.objectContaining({
         source: "Iron Bar",
+        entrySource: "Iron Bar",
+        candidateKind: "phrase",
         decision: "accepted",
         languages: [
           {
@@ -72,6 +80,11 @@ describe("terminology review export", () => {
             filename: "bg.lang",
             preferredValue: "Желязно кюлче",
             observedVariants: ["Желязно кюлче"],
+            classifiedValues: {
+              forms: [],
+              alternatives: ["Железен слитък"],
+              forbidden: [],
+            },
           },
         ],
       }),
@@ -81,29 +94,47 @@ describe("terminology review export", () => {
   it("omits pending and incomplete accepted candidates", () => {
     expect(
       buildTerminologyReviewExport(sourceFile, [candidate], {
+        ...emptyTerminologyReviewState(),
         decisions: {},
-        preferredVariants: {},
       }).candidates,
     ).toEqual([]);
 
     expect(
       buildTerminologyReviewExport(sourceFile, [candidate], {
+        ...emptyTerminologyReviewState(),
         decisions: { "Iron Bar": "accepted" },
-        preferredVariants: {},
       }).candidates,
     ).toEqual([]);
   });
 
   it("keeps rejected and needs-review candidates even without preferred values", () => {
     const exported = buildTerminologyReviewExport(sourceFile, [candidate], {
+      ...emptyTerminologyReviewState(),
       decisions: { "Iron Bar": "needs-review" },
-      preferredVariants: {},
     });
 
     expect(exported.candidates[0]).toMatchObject({
       source: "Iron Bar",
+      entrySource: "Iron Bar",
+      candidateKind: null,
       decision: "needs-review",
-      languages: [{ preferredValue: null }],
+      languages: [
+        {
+          preferredValue: null,
+          classifiedValues: { forms: [], alternatives: [], forbidden: [] },
+        },
+      ],
     });
+  });
+
+  it("keeps sentence-like evidence but never exports it as an accepted candidate", () => {
+    const exported = buildTerminologyReviewExport(sourceFile, [candidate], {
+      ...emptyTerminologyReviewState(),
+      decisions: { "Iron Bar": "accepted" },
+      candidateKinds: { "Iron Bar": "sentence-like" },
+      preferredVariants: { "Iron Bar": { bg: "Желязно кюлче" } },
+    });
+
+    expect(exported.candidates).toEqual([]);
   });
 });
