@@ -329,11 +329,9 @@ export function TerminologyReviewWorkspace({
                             "grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border px-3 py-2 text-start text-sm",
                             preferred === variant.value
                               ? "border-primary bg-muted"
-                              : "border-transparent bg-muted hover:border-border",
+                              : "bg-muted hover:border-border border-transparent",
                           )}
-                          onClick={() =>
-                            setPreferredVariant(language.languageCode, variant.value)
-                          }
+                          onClick={() => setPreferredVariant(language.languageCode, variant.value)}
                         >
                           <span>{variant.value}</span>
                           <span className="text-muted-foreground tabular-nums">
