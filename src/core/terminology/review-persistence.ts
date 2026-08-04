@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 export type TerminologyReviewDecision = "pending" | "accepted" | "rejected" | "needs-review";
+export type TerminologyCandidateKind = "term" | "phrase" | "sentence-like";
+export type TerminologyVariantClassification = "form" | "alternative" | "forbidden";
 
 export interface TerminologyReviewCorpusFile {
   filename: string;
@@ -10,7 +12,13 @@ export interface TerminologyReviewCorpusFile {
 
 export interface TerminologyReviewState {
   decisions: Record<string, TerminologyReviewDecision>;
+  candidateKinds: Record<string, TerminologyCandidateKind>;
+  reviewedSources: Record<string, string>;
   preferredVariants: Record<string, Record<string, string>>;
+  variantClassifications: Record<
+    string,
+    Record<string, Record<string, TerminologyVariantClassification>>
+  >;
 }
 
 interface StoredReviewSession extends TerminologyReviewState {
@@ -28,6 +36,16 @@ const VALID_DECISIONS = new Set<TerminologyReviewDecision>([
   "accepted",
   "rejected",
   "needs-review",
+]);
+const VALID_CANDIDATE_KINDS = new Set<TerminologyCandidateKind>([
+  "term",
+  "phrase",
+  "sentence-like",
+]);
+const VALID_VARIANT_CLASSIFICATIONS = new Set<TerminologyVariantClassification>([
+  "form",
+  "alternative",
+  "forbidden",
 ]);
 
 function hashString(value: string): string {
@@ -118,6 +136,59 @@ function compactPreferredVariants(
   return compact;
 }
 
+function compactCandidateKinds(
+  candidateKinds: Readonly<Record<string, TerminologyCandidateKind>>,
+  validSources?: ReadonlySet<string>,
+): Record<string, TerminologyCandidateKind> {
+  const compact: Record<string, TerminologyCandidateKind> = {};
+  for (const [source, kind] of Object.entries(candidateKinds)) {
+    if ((!validSources || validSources.has(source)) && VALID_CANDIDATE_KINDS.has(kind)) {
+      compact[source] = kind;
+    }
+  }
+  return compact;
+}
+
+function compactReviewedSources(
+  reviewedSources: Readonly<Record<string, string>>,
+  validSources?: ReadonlySet<string>,
+): Record<string, string> {
+  const compact: Record<string, string> = {};
+  for (const [source, value] of Object.entries(reviewedSources)) {
+    if (validSources && !validSources.has(source)) continue;
+    if (typeof value === "string" && value !== source) compact[source] = value;
+  }
+  return compact;
+}
+
+function compactVariantClassifications(
+  classifications: TerminologyReviewState["variantClassifications"],
+  validSources?: ReadonlySet<string>,
+): TerminologyReviewState["variantClassifications"] {
+  const compact: TerminologyReviewState["variantClassifications"] = {};
+  for (const [source, languages] of Object.entries(classifications)) {
+    if (validSources && !validSources.has(source)) continue;
+    if (!languages || typeof languages !== "object") continue;
+
+    const compactLanguages: Record<string, Record<string, TerminologyVariantClassification>> = {};
+    for (const [languageCode, values] of Object.entries(languages)) {
+      const normalizedCode = languageCode.trim();
+      if (!normalizedCode || !values || typeof values !== "object") continue;
+
+      const compactValues: Record<string, TerminologyVariantClassification> = {};
+      for (const [value, classification] of Object.entries(values)) {
+        const normalizedValue = value.trim();
+        if (normalizedValue && VALID_VARIANT_CLASSIFICATIONS.has(classification)) {
+          compactValues[normalizedValue] = classification;
+        }
+      }
+      if (Object.keys(compactValues).length > 0) compactLanguages[normalizedCode] = compactValues;
+    }
+    if (Object.keys(compactLanguages).length > 0) compact[source] = compactLanguages;
+  }
+  return compact;
+}
+
 export function loadTerminologyReviewState(
   sessionId: string,
   validSources: ReadonlySet<string>,
@@ -125,12 +196,24 @@ export function loadTerminologyReviewState(
 ): TerminologyReviewState {
   const stored = readStore(storage).sessions[sessionId];
   if (!stored || typeof stored !== "object") {
-    return { decisions: {}, preferredVariants: {} };
+    return {
+      decisions: {},
+      candidateKinds: {},
+      reviewedSources: {},
+      preferredVariants: {},
+      variantClassifications: {},
+    };
   }
 
   return {
     decisions: compactDecisions(stored.decisions ?? {}, validSources),
+    candidateKinds: compactCandidateKinds(stored.candidateKinds ?? {}, validSources),
+    reviewedSources: compactReviewedSources(stored.reviewedSources ?? {}, validSources),
     preferredVariants: compactPreferredVariants(stored.preferredVariants ?? {}, validSources),
+    variantClassifications: compactVariantClassifications(
+      stored.variantClassifications ?? {},
+      validSources,
+    ),
   };
 }
 
@@ -141,16 +224,28 @@ export function saveTerminologyReviewState(
 ): boolean {
   try {
     const decisions = compactDecisions(state.decisions);
+    const candidateKinds = compactCandidateKinds(state.candidateKinds);
+    const reviewedSources = compactReviewedSources(state.reviewedSources);
     const preferredVariants = compactPreferredVariants(state.preferredVariants);
+    const variantClassifications = compactVariantClassifications(state.variantClassifications);
     const store = readStore(storage);
 
-    if (Object.keys(decisions).length === 0 && Object.keys(preferredVariants).length === 0) {
+    if (
+      Object.keys(decisions).length === 0 &&
+      Object.keys(candidateKinds).length === 0 &&
+      Object.keys(reviewedSources).length === 0 &&
+      Object.keys(preferredVariants).length === 0 &&
+      Object.keys(variantClassifications).length === 0
+    ) {
       delete store.sessions[sessionId];
     } else {
       store.sessions[sessionId] = {
         updatedAt: Date.now(),
         decisions,
+        candidateKinds,
+        reviewedSources,
         preferredVariants,
+        variantClassifications,
       };
     }
 
@@ -183,7 +278,10 @@ export function saveTerminologyReviewDecisions(
     sessionId,
     {
       decisions: { ...current.decisions, ...decisions },
+      candidateKinds: current.candidateKinds,
+      reviewedSources: current.reviewedSources,
       preferredVariants: current.preferredVariants,
+      variantClassifications: current.variantClassifications,
     },
     storage,
   );

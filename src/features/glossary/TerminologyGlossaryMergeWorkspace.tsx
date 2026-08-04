@@ -67,8 +67,9 @@ export function TerminologyGlossaryMergeWorkspace({
     const merged = applyTerminologyGlossaryMerge(selectedGlossary, plan);
     workspace.upsertGlossary(normalizeGlossary(merged));
     toast.success(
-      t("terminology.mergeAdded", {
-        n: plan.additions.length,
+      t("terminology.mergeApplied", {
+        added: plan.additions.length,
+        updated: plan.updates.length,
         name: selectedGlossary.name,
       }),
     );
@@ -124,6 +125,9 @@ export function TerminologyGlossaryMergeWorkspace({
                 <Badge variant="secondary">
                   +{plan.additions.length} {t("terminology.additions")}
                 </Badge>
+                <Badge variant="secondary">
+                  ~{plan.updates.length} {t("terminology.updates")}
+                </Badge>
                 <Badge variant="outline">
                   ={plan.identical.length} {t("terminology.identical")}
                 </Badge>
@@ -132,16 +136,20 @@ export function TerminologyGlossaryMergeWorkspace({
                 </Badge>
               </div>
 
-              {plan.additions.length === 0 && plan.conflicts.length === 0 && (
-                <p className="text-muted-foreground text-sm">
-                  {t("terminology.mergeAllIdentical")}
-                </p>
-              )}
-              {plan.additions.length === 0 && plan.conflicts.length > 0 && (
-                <p className="text-muted-foreground text-sm">
-                  {t("terminology.mergeConflictsOnly")}
-                </p>
-              )}
+              {plan.additions.length === 0 &&
+                plan.updates.length === 0 &&
+                plan.conflicts.length === 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    {t("terminology.mergeAllIdentical")}
+                  </p>
+                )}
+              {plan.additions.length === 0 &&
+                plan.updates.length === 0 &&
+                plan.conflicts.length > 0 && (
+                  <p className="text-muted-foreground text-sm">
+                    {t("terminology.mergeConflictsOnly")}
+                  </p>
+                )}
 
               {plan.additions.length > 0 && (
                 <div className="grid gap-1">
@@ -155,6 +163,29 @@ export function TerminologyGlossaryMergeWorkspace({
                       </span>
                       <span className="truncate" title={entry.target}>
                         {entry.target}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {plan.updates.length > 0 && (
+                <div className="grid gap-1">
+                  {plan.updates.map((update) => (
+                    <div
+                      key={`${update.incoming.source}\u0000${update.incoming.target}`}
+                      className="grid grid-cols-2 gap-3 text-sm"
+                    >
+                      <span className="truncate" title={update.incoming.source}>
+                        {update.incoming.source}
+                      </span>
+                      <span className="text-muted-foreground truncate">
+                        {t("terminology.classifiedValueUpdate", {
+                          n:
+                            (update.incoming.forms?.length ?? 0) +
+                            (update.incoming.alternatives?.length ?? 0) +
+                            (update.incoming.forbidden?.length ?? 0),
+                        })}
                       </span>
                     </div>
                   ))}
@@ -177,8 +208,12 @@ export function TerminologyGlossaryMergeWorkspace({
             )}
 
             <div className="flex justify-end">
-              <Button disabled={plan.additions.length === 0} onClick={applyMerge}>
-                {t("terminology.addNewEntries")} · +{plan.additions.length}
+              <Button
+                disabled={plan.additions.length === 0 && plan.updates.length === 0}
+                onClick={applyMerge}
+              >
+                {t("terminology.applyGlossaryChanges")} ·{" "}
+                {plan.additions.length + plan.updates.length}
               </Button>
             </div>
           </>

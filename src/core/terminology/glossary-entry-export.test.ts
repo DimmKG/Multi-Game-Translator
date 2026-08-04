@@ -6,13 +6,15 @@ import { buildTerminologyGlossaryEntryExport } from "./glossary-entry-export";
 
 const review: TerminologyReviewExport = {
   format: "necesse-terminology-review",
-  version: 1,
+  version: 2,
   sourceLanguageCode: "en",
   sourceFilename: "en.lang",
   generatedAt: "2026-08-04T00:00:00.000Z",
   candidates: [
     {
       source: "Damage",
+      entrySource: "Damage",
+      candidateKind: "term",
       decision: "accepted",
       sourceFrequency: 3,
       sourceKeys: ["a", "b", "c"],
@@ -23,18 +25,26 @@ const review: TerminologyReviewExport = {
           filename: "bg.lang",
           preferredValue: " Щети ",
           observedVariants: ["Щети", "Поражения"],
+          classifiedValues: {
+            forms: ["Щетите"],
+            alternatives: ["Поражения"],
+            forbidden: ["Демидж"],
+          },
         },
         {
           languageCode: "de",
           filename: "de.lang",
           preferredValue: "Schaden",
           observedVariants: ["Schaden"],
+          classifiedValues: { forms: [], alternatives: [], forbidden: [] },
         },
       ],
       evidence: [],
     },
     {
       source: "Armor",
+      entrySource: "Armour",
+      candidateKind: "term",
       decision: "accepted",
       sourceFrequency: 2,
       sourceKeys: ["d", "e"],
@@ -45,12 +55,15 @@ const review: TerminologyReviewExport = {
           filename: "bg.lang",
           preferredValue: "Броня",
           observedVariants: ["Броня"],
+          classifiedValues: { forms: [], alternatives: [], forbidden: [] },
         },
       ],
       evidence: [],
     },
     {
       source: "Health",
+      entrySource: "Health",
+      candidateKind: "term",
       decision: "needs-review",
       sourceFrequency: 2,
       sourceKeys: ["f", "g"],
@@ -61,12 +74,15 @@ const review: TerminologyReviewExport = {
           filename: "bg.lang",
           preferredValue: "Здраве",
           observedVariants: ["Здраве"],
+          classifiedValues: { forms: [], alternatives: [], forbidden: [] },
         },
       ],
       evidence: [],
     },
     {
       source: "Mana",
+      entrySource: "Mana",
+      candidateKind: "term",
       decision: "rejected",
       sourceFrequency: 2,
       sourceKeys: ["h", "i"],
@@ -77,6 +93,7 @@ const review: TerminologyReviewExport = {
           filename: "bg.lang",
           preferredValue: "Мана",
           observedVariants: ["Мана"],
+          classifiedValues: { forms: [], alternatives: [], forbidden: [] },
         },
       ],
       evidence: [],
@@ -85,7 +102,7 @@ const review: TerminologyReviewExport = {
 };
 
 describe("buildTerminologyGlossaryEntryExport", () => {
-  it("converts only accepted reviewed candidates into minimal glossary entries", () => {
+  it("converts only accepted reviewed candidates into classified glossary entries", () => {
     expect(buildTerminologyGlossaryEntryExport(review, "2026-08-04T01:00:00.000Z")).toEqual({
       format: "necesse-glossary-entries",
       version: 1,
@@ -95,8 +112,14 @@ describe("buildTerminologyGlossaryEntryExport", () => {
         {
           targetLanguage: "bg",
           entries: [
-            { source: "Armor", target: "Броня" },
-            { source: "Damage", target: "Щети" },
+            { source: "Armour", target: "Броня" },
+            {
+              source: "Damage",
+              target: "Щети",
+              forms: ["Щетите"],
+              alternatives: ["Поражения"],
+              forbidden: ["Демидж"],
+            },
           ],
         },
         {
@@ -119,6 +142,7 @@ describe("buildTerminologyGlossaryEntryExport", () => {
               filename: "bg.lang",
               preferredValue: "   ",
               observedVariants: ["Щети"],
+              classifiedValues: { forms: [], alternatives: [], forbidden: [] },
             },
           ],
         },

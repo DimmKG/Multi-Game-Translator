@@ -31,9 +31,16 @@ export interface TerminologyGlossaryMergeConflict {
   existing: readonly GlossaryEntry[];
 }
 
+export interface TerminologyGlossaryMergeUpdate {
+  incoming: GlossaryEntry;
+  existing: GlossaryEntry;
+  merged: GlossaryEntry;
+}
+
 export interface TerminologyGlossaryMergePlan {
   compatibility: TerminologyGlossaryMergeCompatibility;
   additions: readonly GlossaryEntry[];
+  updates: readonly TerminologyGlossaryMergeUpdate[];
   identical: readonly GlossaryEntry[];
   conflicts: readonly TerminologyGlossaryMergeConflict[];
 }
@@ -58,6 +65,54 @@ function hasSamePreferredTarget(left: GlossaryEntry, right: GlossaryEntry): bool
   return left.target === right.target;
 }
 
+const CLASSIFIED_FIELDS = ["forms", "alternatives", "forbidden"] as const;
+
+function mergeValues(
+  existing: readonly string[] | undefined,
+  incoming: readonly string[] | undefined,
+): readonly string[] | undefined {
+  const merged = [...(existing ?? [])];
+  const seen = new Set(merged);
+  for (const value of incoming ?? []) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      merged.push(value);
+    }
+  }
+  return merged.length > 0 ? merged : undefined;
+}
+
+function mergeAdditiveValues(existing: GlossaryEntry, incoming: GlossaryEntry): GlossaryEntry {
+  const merged: GlossaryEntry = { ...existing };
+  for (const field of CLASSIFIED_FIELDS) {
+    const values = mergeValues(existing[field], incoming[field]);
+    if (values) merged[field] = values;
+  }
+  return merged;
+}
+
+function hasSameClassifiedValues(left: GlossaryEntry, right: GlossaryEntry): boolean {
+  return CLASSIFIED_FIELDS.every((field) => {
+    const leftValues = left[field] ?? [];
+    const rightValues = right[field] ?? [];
+    return (
+      leftValues.length === rightValues.length &&
+      leftValues.every((value, index) => value === rightValues[index])
+    );
+  });
+}
+
+function hasClassificationConflict(existing: GlossaryEntry, incoming: GlossaryEntry): boolean {
+  return CLASSIFIED_FIELDS.some((incomingField) =>
+    (incoming[incomingField] ?? []).some((value) =>
+      CLASSIFIED_FIELDS.some(
+        (existingField) =>
+          existingField !== incomingField && (existing[existingField] ?? []).includes(value),
+      ),
+    ),
+  );
+}
+
 export function planTerminologyGlossaryMerge(
   glossary: Readonly<MergeableGlossaryDocument>,
   incoming: Readonly<TerminologyGlossaryLanguageEntries>,
@@ -72,6 +127,7 @@ export function planTerminologyGlossaryMerge(
         actual: sourceLanguage,
       },
       additions: [],
+      updates: [],
       identical: [],
       conflicts: [],
     };
@@ -86,12 +142,14 @@ export function planTerminologyGlossaryMerge(
         actual: incoming.targetLanguage,
       },
       additions: [],
+      updates: [],
       identical: [],
       conflicts: [],
     };
   }
 
   const additions: GlossaryEntry[] = [];
+  const updates: TerminologyGlossaryMergeUpdate[] = [];
   const identical: GlossaryEntry[] = [];
   const conflicts: TerminologyGlossaryMergeConflict[] = [];
 
@@ -102,8 +160,15 @@ export function planTerminologyGlossaryMerge(
       continue;
     }
 
-    if (matching.some((existing) => hasSamePreferredTarget(existing, entry))) {
-      identical.push(entry);
+    const samePreferred = matching.find((existing) => hasSamePreferredTarget(existing, entry));
+    if (samePreferred) {
+      if (hasClassificationConflict(samePreferred, entry)) {
+        conflicts.push({ incoming: entry, existing: matching });
+        continue;
+      }
+      const merged = mergeAdditiveValues(samePreferred, entry);
+      if (hasSameClassifiedValues(samePreferred, merged)) identical.push(entry);
+      else updates.push({ incoming: entry, existing: samePreferred, merged });
       continue;
     }
 
@@ -113,6 +178,7 @@ export function planTerminologyGlossaryMerge(
   return {
     compatibility: { compatible: true },
     additions,
+    updates,
     identical,
     conflicts,
   };
@@ -122,10 +188,17 @@ export function applyTerminologyGlossaryMerge<T extends MergeableGlossaryDocumen
   glossary: Readonly<T>,
   plan: Readonly<TerminologyGlossaryMergePlan>,
 ): T {
-  if (!plan.compatibility.compatible || plan.additions.length === 0) return { ...glossary };
+  if (
+    !plan.compatibility.compatible ||
+    (plan.additions.length === 0 && plan.updates.length === 0)
+  ) {
+    return { ...glossary };
+  }
+
+  const updates = new Map(plan.updates.map((update) => [update.existing, update.merged]));
 
   return {
     ...glossary,
-    entries: [...glossary.entries, ...plan.additions],
+    entries: [...glossary.entries.map((entry) => updates.get(entry) ?? entry), ...plan.additions],
   } as T;
 }

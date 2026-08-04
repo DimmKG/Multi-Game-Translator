@@ -38,6 +38,7 @@ describe("planTerminologyGlossaryMerge", () => {
     expect(plan).toEqual({
       compatibility: { compatible: true },
       additions: [{ source: "Health", target: "Здраве" }],
+      updates: [],
       identical: [{ source: "Damage", target: "Щети" }],
       conflicts: [
         {
@@ -59,8 +60,81 @@ describe("planTerminologyGlossaryMerge", () => {
     );
 
     expect(plan.additions).toEqual([{ source: "Armor", target: "Броня" }]);
+    expect(plan.updates).toEqual([]);
     expect(plan.identical).toEqual([]);
     expect(plan.conflicts).toEqual([]);
+  });
+
+  it("plans additive classified-value updates without overwriting entry metadata", () => {
+    const plan = planTerminologyGlossaryMerge(
+      glossary,
+      {
+        targetLanguage: "bg",
+        entries: [
+          {
+            source: "Damage",
+            target: "Щети",
+            forms: ["Щетите"],
+            alternatives: ["Поражения"],
+            forbidden: ["Демидж"],
+          },
+        ],
+      },
+      "en",
+    );
+
+    expect(plan.additions).toEqual([]);
+    expect(plan.identical).toEqual([]);
+    expect(plan.conflicts).toEqual([]);
+    expect(plan.updates).toEqual([
+      {
+        incoming: {
+          source: "Damage",
+          target: "Щети",
+          forms: ["Щетите"],
+          alternatives: ["Поражения"],
+          forbidden: ["Демидж"],
+        },
+        existing: { source: "Damage", target: "Щети", note: "Keep metadata" },
+        merged: {
+          source: "Damage",
+          target: "Щети",
+          note: "Keep metadata",
+          forms: ["Щетите"],
+          alternatives: ["Поражения"],
+          forbidden: ["Демидж"],
+        },
+      },
+    ]);
+  });
+
+  it("does not merge a value into incompatible classification groups", () => {
+    const plan = planTerminologyGlossaryMerge(
+      {
+        ...glossary,
+        entries: [
+          {
+            source: "Damage",
+            target: "Щети",
+            alternatives: ["Поражения"],
+          },
+        ],
+      },
+      {
+        targetLanguage: "bg",
+        entries: [
+          {
+            source: "Damage",
+            target: "Щети",
+            forbidden: ["Поражения"],
+          },
+        ],
+      },
+      "en",
+    );
+
+    expect(plan.updates).toEqual([]);
+    expect(plan.conflicts).toHaveLength(1);
   });
 
   it("rejects source and target language mismatches", () => {
@@ -124,5 +198,30 @@ describe("applyTerminologyGlossaryMerge", () => {
     );
 
     expect(applyTerminologyGlossaryMerge(glossary, plan)).toEqual(glossary);
+  });
+
+  it("applies additions and additive classified-value updates together", () => {
+    const plan = planTerminologyGlossaryMerge(
+      glossary,
+      {
+        targetLanguage: "bg",
+        entries: [
+          { source: "Damage", target: "Щети", alternatives: ["Поражения"] },
+          { source: "Health", target: "Здраве" },
+        ],
+      },
+      "en",
+    );
+
+    expect(applyTerminologyGlossaryMerge(glossary, plan).entries).toEqual([
+      {
+        source: "Damage",
+        target: "Щети",
+        note: "Keep metadata",
+        alternatives: ["Поражения"],
+      },
+      { source: "Armor", target: "Броня", wholeWord: false },
+      { source: "Health", target: "Здраве" },
+    ]);
   });
 });

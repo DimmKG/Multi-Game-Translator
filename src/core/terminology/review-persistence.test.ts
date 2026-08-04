@@ -93,9 +93,14 @@ describe("terminology review persistence", () => {
         sessionId,
         {
           decisions: { "Iron Bar": "accepted" },
+          candidateKinds: { "Iron Bar": "phrase" },
+          reviewedSources: { "Iron Bar": "Iron ingot" },
           preferredVariants: {
             "Iron Bar": { bg: " Желязно кюлче ", de: "" },
             "Copper Bar": { bg: "Медно кюлче" },
+          },
+          variantClassifications: {
+            "Iron Bar": { bg: { "Желязно кюлче": "form", "": "forbidden" } },
           },
         },
         storage,
@@ -104,7 +109,10 @@ describe("terminology review persistence", () => {
 
     expect(loadTerminologyReviewState(sessionId, new Set(["Iron Bar"]), storage)).toEqual({
       decisions: { "Iron Bar": "accepted" },
+      candidateKinds: { "Iron Bar": "phrase" },
+      reviewedSources: { "Iron Bar": "Iron ingot" },
       preferredVariants: { "Iron Bar": { bg: "Желязно кюлче" } },
+      variantClassifications: { "Iron Bar": { bg: { "Желязно кюлче": "form" } } },
     });
   });
 
@@ -114,7 +122,10 @@ describe("terminology review persistence", () => {
 
     expect(loadTerminologyReviewState("missing", new Set(["Iron Bar"]), storage)).toEqual({
       decisions: {},
+      candidateKinds: {},
+      reviewedSources: {},
       preferredVariants: {},
+      variantClassifications: {},
     });
   });
 });
