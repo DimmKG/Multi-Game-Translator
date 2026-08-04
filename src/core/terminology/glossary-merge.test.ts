@@ -122,7 +122,10 @@ describe("applyTerminologyGlossaryMerge", () => {
   it("does not mutate an incompatible glossary", () => {
     const plan = planTerminologyGlossaryMerge(
       glossary,
-      { targetLanguage: "de", entries: [{ source: "Health", target: "Gesundheit" }] },
+      {
+        targetLanguage: "de",
+        entries: [{ source: "Health", target: "Gesundheit" }],
+      },
       "en",
     );
 
