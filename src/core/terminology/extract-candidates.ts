@@ -116,7 +116,9 @@ function collectOccurrences(file: TerminologyCorpusFile): CorpusOccurrence[] {
   });
 }
 
-function buildOccurrenceMap(entries: readonly CorpusOccurrence[]): Map<string, CorpusOccurrence> {
+function buildOccurrenceMap(
+  entries: readonly CorpusOccurrence[],
+): Map<string, CorpusOccurrence> {
   return new Map(entries.map((entry) => [entry.identity, entry]));
 }
 
@@ -139,7 +141,9 @@ function upsertSeed(seeds: Map<string, CandidateSeed>, seed: CandidateSeed): voi
     if (!identities.has(occurrence.identity)) existing.sourceOccurrences.push(occurrence);
   }
   for (const [languageCode, translation] of seed.translations) {
-    if (!existing.translations.has(languageCode)) existing.translations.set(languageCode, translation);
+    if (!existing.translations.has(languageCode)) {
+      existing.translations.set(languageCode, translation);
+    }
   }
 }
 
@@ -237,7 +241,11 @@ export function extractTerminologyCandidates(
   }
   for (const [source, occurrences] of exactGroups) {
     if (occurrences.length < minimumSourceFrequency) continue;
-    upsertSeed(seeds, { source, sourceOccurrences: [...occurrences], translations: new Map() });
+    upsertSeed(seeds, {
+      source,
+      sourceOccurrences: [...occurrences],
+      translations: new Map(),
+    });
   }
 
   const sourceFamilies = discoverPhraseFamilies(
@@ -256,7 +264,10 @@ export function extractTerminologyCandidates(
     });
     if (familyOccurrences.length < minimumSourceFrequency) continue;
 
-    const alignedByLanguage = new Map<string, ReturnType<typeof alignPhraseFamily>>();
+    const alignedByLanguage = new Map<
+      string,
+      ReturnType<typeof alignPhraseFamily>
+    >();
     for (const target of translated) {
       alignedByLanguage.set(
         target.file.languageCode,
@@ -292,7 +303,9 @@ export function extractTerminologyCandidates(
       const translations = new Map<string, PhraseFamilyTermPair>();
       let modifierOccurrences: CorpusOccurrence[] = [];
       for (const [languageCode, aligned] of alignedByLanguage) {
-        const modifier = aligned?.modifiers.find((item) => item.source === modifierSource);
+        const modifier = aligned?.modifiers.find(
+          (item) => item.source === modifierSource,
+        );
         if (!modifier) continue;
         translations.set(languageCode, modifier);
         if (modifierOccurrences.length === 0) {
