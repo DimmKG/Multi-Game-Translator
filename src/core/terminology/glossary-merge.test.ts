@@ -65,11 +65,8 @@ describe("planTerminologyGlossaryMerge", () => {
 
   it("rejects source and target language mismatches", () => {
     expect(
-      planTerminologyGlossaryMerge(
-        glossary,
-        { targetLanguage: "bg", entries: [] },
-        "de",
-      ).compatibility,
+      planTerminologyGlossaryMerge(glossary, { targetLanguage: "bg", entries: [] }, "de")
+        .compatibility,
     ).toEqual({
       compatible: false,
       reason: "source-language",
@@ -78,11 +75,8 @@ describe("planTerminologyGlossaryMerge", () => {
     });
 
     expect(
-      planTerminologyGlossaryMerge(
-        glossary,
-        { targetLanguage: "de", entries: [] },
-        "en",
-      ).compatibility,
+      planTerminologyGlossaryMerge(glossary, { targetLanguage: "de", entries: [] }, "en")
+        .compatibility,
     ).toEqual({
       compatible: false,
       reason: "target-language",
