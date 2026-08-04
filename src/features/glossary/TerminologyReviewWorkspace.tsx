@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
 import {
-  loadTerminologyReviewDecisions,
-  saveTerminologyReviewDecisions,
+  loadTerminologyReviewState,
+  saveTerminologyReviewState,
   type TerminologyReviewDecision,
+  type TerminologyReviewState,
 } from "@/core/terminology/review-persistence";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
@@ -39,13 +40,15 @@ export function TerminologyReviewWorkspace({
   const [conflictsOnly, setConflictsOnly] = useState(false);
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>("all");
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
-  const [decisions, setDecisions] = useState<Record<string, TerminologyReviewDecision>>(() =>
-    loadTerminologyReviewDecisions(sessionId, validSources),
+  const [reviewState, setReviewState] = useState<TerminologyReviewState>(() =>
+    loadTerminologyReviewState(sessionId, validSources),
   );
 
+  const { decisions, preferredVariants } = reviewState;
+
   useEffect(() => {
-    saveTerminologyReviewDecisions(sessionId, decisions);
-  }, [decisions, sessionId]);
+    saveTerminologyReviewState(sessionId, reviewState);
+  }, [reviewState, sessionId]);
 
   const decisionLabel = (decision: TerminologyReviewDecision) => {
     switch (decision) {
@@ -101,16 +104,46 @@ export function TerminologyReviewWorkspace({
   const selectedDecision = selectedCandidate
     ? (decisions[selectedCandidate.source] ?? "pending")
     : null;
+  const selectedPreferredVariants = selectedCandidate
+    ? (preferredVariants[selectedCandidate.source] ?? {})
+    : {};
+  const canAccept =
+    selectedCandidate != null &&
+    selectedCandidate.languages.every(
+      (language) => selectedPreferredVariants[language.languageCode]?.trim() !== "",
+    );
 
   const setDecision = (decision: TerminologyReviewDecision) => {
+    if (!selectedCandidate || (decision === "accepted" && !canAccept)) return;
+    setReviewState((current) => {
+      const nextDecisions = { ...current.decisions };
+      if (decision === "pending") delete nextDecisions[selectedCandidate.source];
+      else nextDecisions[selectedCandidate.source] = decision;
+      return { ...current, decisions: nextDecisions };
+    });
+  };
+
+  const setPreferredVariant = (languageCode: string, value: string) => {
     if (!selectedCandidate) return;
-    setDecisions((current) => {
-      if (decision === "pending") {
-        const next = { ...current };
-        delete next[selectedCandidate.source];
-        return next;
+    setReviewState((current) => {
+      const source = selectedCandidate.source;
+      const nextForSource = { ...(current.preferredVariants[source] ?? {}) };
+      if (value.trim()) nextForSource[languageCode] = value;
+      else delete nextForSource[languageCode];
+
+      const nextPreferredVariants = { ...current.preferredVariants };
+      if (Object.keys(nextForSource).length > 0) nextPreferredVariants[source] = nextForSource;
+      else delete nextPreferredVariants[source];
+
+      const nextDecisions = { ...current.decisions };
+      if (!value.trim() && nextDecisions[source] === "accepted") {
+        nextDecisions[source] = "needs-review";
       }
-      return { ...current, [selectedCandidate.source]: decision };
+
+      return {
+        decisions: nextDecisions,
+        preferredVariants: nextPreferredVariants,
+      };
     });
   };
 
@@ -235,6 +268,7 @@ export function TerminologyReviewWorkspace({
             <div className="border-border flex flex-wrap gap-2 rounded-lg border p-3">
               <Button
                 size="sm"
+                disabled={!canAccept}
                 variant={selectedDecision === "accepted" ? "secondary" : "outline"}
                 onClick={() => setDecision("accepted")}
               >
@@ -264,33 +298,51 @@ export function TerminologyReviewWorkspace({
             </div>
 
             <div className="grid gap-3">
-              {selectedCandidate.languages.map((language) => (
-                <article
-                  key={`${selectedCandidate.source}:${language.languageCode}`}
-                  className="border-border grid gap-2 rounded-lg border p-3"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <strong>{language.languageCode}</strong>
-                    <Badge variant="outline">{language.matchedCount}</Badge>
-                    {language.hasConflict && (
-                      <Badge variant="destructive">{t("review.issues")}</Badge>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    {language.variants.map((variant) => (
-                      <div
-                        key={variant.value}
-                        className="bg-muted grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md px-3 py-2 text-sm"
-                      >
-                        <span>{variant.value}</span>
-                        <span className="text-muted-foreground tabular-nums">
-                          {variant.count} · {Math.round(variant.ratio * 100)}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
+              {selectedCandidate.languages.map((language) => {
+                const preferred = selectedPreferredVariants[language.languageCode] ?? "";
+                return (
+                  <article
+                    key={`${selectedCandidate.source}:${language.languageCode}`}
+                    className="border-border grid gap-3 rounded-lg border p-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <strong>{language.languageCode}</strong>
+                      <Badge variant="outline">{language.matchedCount}</Badge>
+                      {language.hasConflict && (
+                        <Badge variant="destructive">{t("review.issues")}</Badge>
+                      )}
+                    </div>
+                    <input
+                      aria-label={`${t("review.trLabel")} · ${language.languageCode}`}
+                      className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                      value={preferred}
+                      onChange={(event) =>
+                        setPreferredVariant(language.languageCode, event.target.value)
+                      }
+                    />
+                    <div className="grid gap-2">
+                      {language.variants.map((variant) => (
+                        <button
+                          key={variant.value}
+                          type="button"
+                          className={cn(
+                            "grid grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-md border px-3 py-2 text-start text-sm",
+                            preferred === variant.value
+                              ? "border-primary bg-muted"
+                              : "bg-muted hover:border-border border-transparent",
+                          )}
+                          onClick={() => setPreferredVariant(language.languageCode, variant.value)}
+                        >
+                          <span>{variant.value}</span>
+                          <span className="text-muted-foreground tabular-nums">
+                            {variant.count} · {Math.round(variant.ratio * 100)}%
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </div>
         )}

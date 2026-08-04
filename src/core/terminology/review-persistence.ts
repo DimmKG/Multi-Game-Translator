@@ -8,9 +8,13 @@ export interface TerminologyReviewCorpusFile {
   text: string;
 }
 
-interface StoredReviewSession {
-  updatedAt: number;
+export interface TerminologyReviewState {
   decisions: Record<string, TerminologyReviewDecision>;
+  preferredVariants: Record<string, Record<string, string>>;
+}
+
+interface StoredReviewSession extends TerminologyReviewState {
+  updatedAt: number;
 }
 
 interface StoredReviewSessions {
@@ -81,39 +85,73 @@ function readStore(storage: Storage): StoredReviewSessions {
   }
 }
 
-export function loadTerminologyReviewDecisions(
+function compactDecisions(
+  decisions: Readonly<Record<string, TerminologyReviewDecision>>,
+  validSources?: ReadonlySet<string>,
+): Record<string, TerminologyReviewDecision> {
+  const compact: Record<string, TerminologyReviewDecision> = {};
+  for (const [source, decision] of Object.entries(decisions)) {
+    if ((!validSources || validSources.has(source)) && VALID_DECISIONS.has(decision)) {
+      compact[source] = decision;
+    }
+  }
+  return compact;
+}
+
+function compactPreferredVariants(
+  preferredVariants: Readonly<Record<string, Readonly<Record<string, string>>>>,
+  validSources?: ReadonlySet<string>,
+): Record<string, Record<string, string>> {
+  const compact: Record<string, Record<string, string>> = {};
+  for (const [source, languages] of Object.entries(preferredVariants)) {
+    if (validSources && !validSources.has(source)) continue;
+    if (!languages || typeof languages !== "object") continue;
+
+    const preferredByLanguage: Record<string, string> = {};
+    for (const [languageCode, value] of Object.entries(languages)) {
+      const normalizedCode = languageCode.trim();
+      const normalizedValue = typeof value === "string" ? value.trim() : "";
+      if (normalizedCode && normalizedValue) preferredByLanguage[normalizedCode] = normalizedValue;
+    }
+    if (Object.keys(preferredByLanguage).length > 0) compact[source] = preferredByLanguage;
+  }
+  return compact;
+}
+
+export function loadTerminologyReviewState(
   sessionId: string,
   validSources: ReadonlySet<string>,
   storage: Storage = localStorage,
-): Record<string, TerminologyReviewDecision> {
-  const stored = readStore(storage).sessions[sessionId]?.decisions;
-  if (!stored || typeof stored !== "object") return {};
-
-  const decisions: Record<string, TerminologyReviewDecision> = {};
-  for (const [source, decision] of Object.entries(stored)) {
-    if (validSources.has(source) && VALID_DECISIONS.has(decision)) {
-      decisions[source] = decision;
-    }
+): TerminologyReviewState {
+  const stored = readStore(storage).sessions[sessionId];
+  if (!stored || typeof stored !== "object") {
+    return { decisions: {}, preferredVariants: {} };
   }
-  return decisions;
+
+  return {
+    decisions: compactDecisions(stored.decisions ?? {}, validSources),
+    preferredVariants: compactPreferredVariants(stored.preferredVariants ?? {}, validSources),
+  };
 }
 
-export function saveTerminologyReviewDecisions(
+export function saveTerminologyReviewState(
   sessionId: string,
-  decisions: Readonly<Record<string, TerminologyReviewDecision>>,
+  state: Readonly<TerminologyReviewState>,
   storage: Storage = localStorage,
 ): boolean {
   try {
-    const compact: Record<string, TerminologyReviewDecision> = {};
-    for (const [source, decision] of Object.entries(decisions)) {
-      if (VALID_DECISIONS.has(decision)) compact[source] = decision;
-    }
-
+    const decisions = compactDecisions(state.decisions);
+    const preferredVariants = compactPreferredVariants(state.preferredVariants);
     const store = readStore(storage);
-    if (Object.keys(compact).length === 0) {
+
+    if (Object.keys(decisions).length === 0 && Object.keys(preferredVariants).length === 0) {
       delete store.sessions[sessionId];
     } else {
-      store.sessions[sessionId] = { updatedAt: Date.now(), decisions: compact };
+      store.sessions[sessionId] = {
+        updatedAt: Date.now(),
+        decisions,
+        preferredVariants,
+      };
     }
 
     const retained = Object.entries(store.sessions)
@@ -125,4 +163,28 @@ export function saveTerminologyReviewDecisions(
   } catch {
     return false;
   }
+}
+
+export function loadTerminologyReviewDecisions(
+  sessionId: string,
+  validSources: ReadonlySet<string>,
+  storage: Storage = localStorage,
+): Record<string, TerminologyReviewDecision> {
+  return loadTerminologyReviewState(sessionId, validSources, storage).decisions;
+}
+
+export function saveTerminologyReviewDecisions(
+  sessionId: string,
+  decisions: Readonly<Record<string, TerminologyReviewDecision>>,
+  storage: Storage = localStorage,
+): boolean {
+  const current = loadTerminologyReviewState(sessionId, new Set(Object.keys(decisions)), storage);
+  return saveTerminologyReviewState(
+    sessionId,
+    {
+      decisions: { ...current.decisions, ...decisions },
+      preferredVariants: current.preferredVariants,
+    },
+    storage,
+  );
 }
