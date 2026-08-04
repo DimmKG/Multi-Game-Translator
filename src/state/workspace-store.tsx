@@ -42,6 +42,14 @@ import {
 } from "@/core/persistence/serialize";
 import { inspectTerminology, type TerminologyIssue } from "@/core/glossary/matcher";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
+import {
+  loadGlossaryLibrary,
+  removeFromGlossaryLibrary,
+  saveGlossaryLibrary,
+  setGlossaryLibraryEnabled,
+  upsertGlossaryLibrary,
+  type StoredGlossary,
+} from "@/core/glossary/library-persistence";
 import { codeFromFilename, normalizeProjectCode } from "@/core/mt/target-language";
 import {
   getAllProviders,
@@ -66,14 +74,9 @@ import { useI18n } from "@/features/i18n/I18nProvider";
 
 setSettingsResolver(resolveProviderSettings);
 
-const GLOSSARY_STORAGE_KEY = "necesse-translator.glossaries.v1";
 const SETTINGS_STORAGE_KEY = "necesse-translator.settings.v1";
 const FONT_STORAGE_KEY = "necesse-translator.font-settings.v1";
 const PREFERRED_PROVIDER_KEY = "necesse-translator.preferred-mt-provider.v1";
-
-export interface StoredGlossary extends NormalizedGlossary {
-  enabled: boolean;
-}
 
 export interface AppSettings {
   referenceReminder: boolean;
@@ -171,15 +174,6 @@ interface WorkspaceContextValue extends WorkspaceState {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
-function loadGlossaries(): StoredGlossary[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(GLOSSARY_STORAGE_KEY) || "[]");
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
-}
-
 function loadSettings(): AppSettings {
   try {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) || "{}");
@@ -265,7 +259,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     diffOnly: true,
     diffMode: "word",
     pendingRecovery: loadProgressFromLocalStorage(),
-    glossaries: loadGlossaries(),
+    glossaries: loadGlossaryLibrary(),
     settings: loadSettings(),
     fonts: loadFonts(),
     terminologyFilterActive: false,
@@ -730,31 +724,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     terminologyIssuesFor,
     setGlossaryEnabled: (id, enabled) => {
       setState((current) => {
-        const glossaries = current.glossaries.map((glossary) =>
-          glossary.id === id ? { ...glossary, enabled } : glossary,
-        );
-        localStorage.setItem(GLOSSARY_STORAGE_KEY, JSON.stringify(glossaries));
+        const glossaries = setGlossaryLibraryEnabled(current.glossaries, id, enabled);
+        saveGlossaryLibrary(glossaries);
         return { ...current, glossaries };
       });
     },
     upsertGlossary: (glossary) => {
       setState((current) => {
-        const existing = current.glossaries.find((item) => item.id === glossary.id);
-        const next: StoredGlossary = {
-          ...glossary,
-          enabled: existing?.enabled ?? true,
-        };
-        const glossaries = existing
-          ? current.glossaries.map((item) => (item.id === glossary.id ? next : item))
-          : [...current.glossaries, next];
-        localStorage.setItem(GLOSSARY_STORAGE_KEY, JSON.stringify(glossaries));
+        const glossaries = upsertGlossaryLibrary(current.glossaries, glossary);
+        saveGlossaryLibrary(glossaries);
         return { ...current, glossaries };
       });
     },
     removeGlossary: (id) => {
       setState((current) => {
-        const glossaries = current.glossaries.filter((glossary) => glossary.id !== id);
-        localStorage.setItem(GLOSSARY_STORAGE_KEY, JSON.stringify(glossaries));
+        const glossaries = removeFromGlossaryLibrary(current.glossaries, id);
+        saveGlossaryLibrary(glossaries);
         return { ...current, glossaries };
       });
     },
