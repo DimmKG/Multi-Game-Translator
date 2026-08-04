@@ -151,7 +151,10 @@ function distinctModifierParts(family: PhraseFamily): Map<string, string> {
     modified.map(({ member, tokens }) => {
       const end = tokens.length - suffixLength;
       const distinct = tokens.slice(prefixLength, end);
-      const value = distinct.length > 0 ? distinct.map((token) => token.value).join(" ") : modifierValue(member);
+      const value =
+        distinct.length > 0
+          ? distinct.map((token) => token.value).join(" ")
+          : modifierValue(member);
       return [member.key, value];
     }),
   );
@@ -243,7 +246,9 @@ export function alignPhraseFamily(
   sourceFamily: PhraseFamily,
   targetRecords: readonly PhraseFamilyRecord[],
 ): AlignedPhraseFamily | null {
-  const alignedTargets = targetRecords.filter((record) => sourceFamily.supportKeys.includes(record.key));
+  const alignedTargets = targetRecords.filter((record) =>
+    sourceFamily.supportKeys.includes(record.key),
+  );
   const targetFamily = discoverPhraseFamilies(alignedTargets).find((family) =>
     sameSupportKeys(family.supportKeys, sourceFamily.supportKeys),
   );
