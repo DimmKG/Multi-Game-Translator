@@ -50,9 +50,7 @@ describe("validateTerminologyInputs", () => {
   });
 
   it("reports targets with no aligned entries", () => {
-    expect(
-      validateTerminologyInputs(source, [corpus("bg", "bg.lang", ["other=Друго"])]),
-    ).toEqual([
+    expect(validateTerminologyInputs(source, [corpus("bg", "bg.lang", ["other=Друго"])])).toEqual([
       {
         code: "no-aligned-entries",
         filename: "bg.lang",

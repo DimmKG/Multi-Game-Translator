@@ -11,11 +11,18 @@ import {
   type TerminologyCorpusFile,
 } from "@/core/terminology/extract-candidates";
 import { suggestLanguageCodeFromFilename } from "@/core/terminology/language-code";
+import {
+  validateTerminologyInputs,
+  type TerminologyInputProblem,
+} from "@/core/terminology/input-validation";
 import { buildTerminologyReviewExport } from "@/core/terminology/review-export";
 import {
   buildTerminologyReviewSessionId,
   loadTerminologyReviewState,
+  saveTerminologyReviewState,
+  type TerminologyReviewState,
 } from "@/core/terminology/review-persistence";
+import { emptyTerminologyReviewState } from "@/core/terminology/review-state";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +64,9 @@ export function TerminologyWorkspace() {
   const [translatedFiles, setTranslatedFiles] = useState<LoadedCorpusFile[]>([]);
   const [minimumFrequency, setMinimumFrequency] = useState(2);
   const [candidates, setCandidates] = useState<TerminologyCandidate[]>([]);
+  const [reviewState, setReviewState] = useState<TerminologyReviewState>(
+    emptyTerminologyReviewState,
+  );
 
   const conflictCount = useMemo(
     () =>
@@ -80,17 +90,36 @@ export function TerminologyWorkspace() {
     );
   }, [minimumFrequency, sourceFile, sourceLanguageCode, translatedFiles]);
 
-  const reviewExport =
-    sourceFile && candidates.length > 0
-      ? buildTerminologyReviewExport(
-          { ...sourceFile, languageCode: sourceLanguageCode.trim() },
-          candidates,
-          loadTerminologyReviewState(
-            reviewSessionId,
-            new Set(candidates.map((candidate) => candidate.source)),
-          ),
-        )
-      : null;
+  const normalizedSource = useMemo(
+    () => (sourceFile ? { ...sourceFile, languageCode: sourceLanguageCode.trim() } : null),
+    [sourceFile, sourceLanguageCode],
+  );
+  const normalizedTranslations = useMemo(
+    () =>
+      translatedFiles.map((file) => ({
+        ...file,
+        languageCode: file.languageCode.trim(),
+      })),
+    [translatedFiles],
+  );
+  const inputProblems = useMemo(
+    () =>
+      normalizedSource ? validateTerminologyInputs(normalizedSource, normalizedTranslations) : [],
+    [normalizedSource, normalizedTranslations],
+  );
+  const reviewExport = useMemo(
+    () =>
+      normalizedSource && candidates.length > 0
+        ? buildTerminologyReviewExport(normalizedSource, candidates, reviewState)
+        : null,
+    [candidates, normalizedSource, reviewState],
+  );
+
+  const clearExtraction = () => {
+    setCandidates([]);
+    setReviewState(emptyTerminologyReviewState());
+    setSection("sources");
+  };
 
   const pickSource = () => {
     const input = document.createElement("input");
@@ -104,8 +133,7 @@ export function TerminologyWorkspace() {
         .then((loaded) => {
           setSourceFile(loaded);
           if (suggested) setSourceLanguageCode(suggested);
-          setCandidates([]);
-          setSection("sources");
+          clearExtraction();
         })
         .catch((error: Error) => toast.error(t("err.readFile", { msg: error.message })));
     };
@@ -122,43 +150,39 @@ export function TerminologyWorkspace() {
       void Promise.all(files.map((file) => readCorpusFile(file)))
         .then((loaded) => {
           setTranslatedFiles((current) => [...current, ...loaded]);
-          setCandidates([]);
-          setSection("sources");
+          clearExtraction();
         })
         .catch((error: Error) => toast.error(t("err.readFile", { msg: error.message })));
     };
     input.click();
   };
 
-  const canExtract =
-    sourceFile != null &&
-    sourceLanguageCode.trim() !== "" &&
-    translatedFiles.length > 0 &&
-    translatedFiles.every((file) => file.languageCode.trim() !== "");
+  const canExtract = sourceFile != null && translatedFiles.length > 0 && inputProblems.length === 0;
+
+  const inputProblemLabel = (problem: TerminologyInputProblem) =>
+    t(`terminology.input.${problem.code}`, {
+      file: problem.filename || "—",
+      language: problem.languageCode || "—",
+    });
 
   const generateCandidates = () => {
-    if (!sourceFile) return;
-    const next = extractTerminologyCandidates(
-      { ...sourceFile, languageCode: sourceLanguageCode.trim() },
-      translatedFiles.map((file) => ({
-        ...file,
-        languageCode: file.languageCode.trim(),
-      })),
-      {
-        minimumSourceFrequency: minimumFrequency,
-        includeSingleOccurrences: minimumFrequency === 1,
-      },
+    if (!normalizedSource || inputProblems.length > 0) return;
+    const next = extractTerminologyCandidates(normalizedSource, normalizedTranslations, {
+      minimumSourceFrequency: minimumFrequency,
+      includeSingleOccurrences: minimumFrequency === 1,
+    });
+    const nextReviewState = loadTerminologyReviewState(
+      reviewSessionId,
+      new Set(next.map((candidate) => candidate.source)),
     );
     setCandidates(next);
+    setReviewState(nextReviewState);
     setSection("review");
   };
 
   const exportCandidateJson = () => {
-    if (!sourceFile) return;
-    const exported = buildTerminologyCandidateExport(
-      { ...sourceFile, languageCode: sourceLanguageCode.trim() },
-      candidates,
-    );
+    if (!normalizedSource) return;
+    const exported = buildTerminologyCandidateExport(normalizedSource, candidates);
     downloadJson("necesse-terminology-candidates.json", exported);
   };
 
@@ -190,7 +214,7 @@ export function TerminologyWorkspace() {
           )}
           onClick={() => setSection("sources")}
         >
-          {t("terminology.title")}
+          {t("terminology.extraction")}
         </button>
         <button
           type="button"
@@ -224,13 +248,13 @@ export function TerminologyWorkspace() {
             <div className="grid gap-4 md:grid-cols-2">
               <section className="border-border grid gap-3 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <strong>{t("btn.enRef")}</strong>
+                  <strong>{t("terminology.sourceFile")}</strong>
                   <Button size="sm" variant="outline" onClick={pickSource}>
                     {t("drop.pick")}
                   </Button>
                 </div>
                 <label className="grid gap-1 text-sm">
-                  <span className="text-muted-foreground">{t("mt.langLabel")}</span>
+                  <span className="text-muted-foreground">{t("terminology.sourceLanguage")}</span>
                   <input
                     className="border-input bg-background h-9 rounded-md border px-3"
                     value={sourceLanguageCode}
@@ -239,6 +263,7 @@ export function TerminologyWorkspace() {
                       setSourceFile((current) =>
                         current ? { ...current, languageCode: event.target.value } : current,
                       );
+                      clearExtraction();
                     }}
                   />
                 </label>
@@ -249,7 +274,7 @@ export function TerminologyWorkspace() {
 
               <section className="border-border grid gap-3 rounded-lg border p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <strong>{t("review.trLabel")}</strong>
+                  <strong>{t("terminology.translationFiles")}</strong>
                   <Button size="sm" variant="outline" onClick={pickTranslations}>
                     {t("drop.pick")} · +
                   </Button>
@@ -264,9 +289,11 @@ export function TerminologyWorkspace() {
                       className="grid grid-cols-[6rem_1fr_auto] items-center gap-2"
                     >
                       <label className="grid min-w-0 gap-1">
-                        <span className="text-muted-foreground text-xs">{t("mt.langLabel")}</span>
+                        <span className="text-muted-foreground text-xs">
+                          {t("terminology.translationLanguage")}
+                        </span>
                         <input
-                          aria-label={`${t("mt.langLabel")}: ${file.filename}`}
+                          aria-label={`${t("terminology.translationLanguage")}: ${file.filename}`}
                           className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
                           placeholder="bg"
                           value={file.languageCode}
@@ -278,7 +305,7 @@ export function TerminologyWorkspace() {
                                   : item,
                               ),
                             );
-                            setCandidates([]);
+                            clearExtraction();
                           }}
                         />
                       </label>
@@ -292,7 +319,7 @@ export function TerminologyWorkspace() {
                           setTranslatedFiles((current) =>
                             current.filter((item) => item.id !== file.id),
                           );
-                          setCandidates([]);
+                          clearExtraction();
                         }}
                       >
                         {t("glossary.remove")}
@@ -303,32 +330,55 @@ export function TerminologyWorkspace() {
               </section>
             </div>
 
+            {inputProblems.length > 0 && (
+              <section className="border-destructive/50 grid gap-2 rounded-lg border p-3">
+                <strong className="text-sm">{t("terminology.inputProblems")}</strong>
+                <ul className="text-destructive grid list-disc gap-1 ps-5 text-sm">
+                  {inputProblems.map((problem, index) => (
+                    <li
+                      key={`${problem.code}:${problem.filename}:${problem.languageCode}:${index}`}
+                    >
+                      {inputProblemLabel(problem)}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
             <div className="flex flex-wrap items-end gap-3">
               <label className="grid gap-1 text-sm">
-                <span className="text-muted-foreground">{t("terminology.filter")}</span>
+                <span className="text-muted-foreground">{t("terminology.minimumFrequency")}</span>
                 <input
                   type="number"
                   min={1}
                   max={100}
                   className="border-input bg-background h-9 w-28 rounded-md border px-3"
                   value={minimumFrequency}
-                  onChange={(event) =>
-                    setMinimumFrequency(Math.max(1, Number(event.target.value) || 1))
-                  }
+                  onChange={(event) => {
+                    setMinimumFrequency(Math.max(1, Number(event.target.value) || 1));
+                    clearExtraction();
+                  }}
                 />
+                <span className="text-muted-foreground max-w-72 text-xs">
+                  {t("terminology.minimumFrequencyHint")}
+                </span>
               </label>
               <Button disabled={!canExtract} onClick={generateCandidates}>
-                {t("terminology.title")}
+                {t("terminology.extractCandidates")}
               </Button>
               <Button
                 variant="outline"
                 disabled={!sourceFile || candidates.length === 0}
                 onClick={exportCandidateJson}
               >
-                {t("btn.export")}
+                {t("terminology.downloadCandidates")}
               </Button>
-              <Button variant="outline" disabled={!reviewExport} onClick={exportReviewJson}>
-                {t("tab.review")} · {t("btn.export")}
+              <Button
+                variant="outline"
+                disabled={!reviewExport || reviewExport.candidates.length === 0}
+                onClick={exportReviewJson}
+              >
+                {t("terminology.downloadReview")}
               </Button>
             </div>
           </div>
@@ -337,7 +387,11 @@ export function TerminologyWorkspace() {
         <TerminologyReviewWorkspace
           key={reviewSessionId}
           candidates={candidates}
-          sessionId={reviewSessionId}
+          reviewState={reviewState}
+          onReviewStateChange={(nextState) => {
+            setReviewState(nextState);
+            saveTerminologyReviewState(reviewSessionId, nextState);
+          }}
         />
       ) : (
         <TerminologyGlossaryMergeWorkspace review={reviewExport} />

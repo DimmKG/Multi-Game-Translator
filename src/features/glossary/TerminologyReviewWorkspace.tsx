@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { VirtualList } from "@/components/layout/VirtualList";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
-import {
-  loadTerminologyReviewState,
-  saveTerminologyReviewState,
-  type TerminologyReviewDecision,
-  type TerminologyReviewState,
+import type {
+  TerminologyReviewDecision,
+  TerminologyReviewState,
 } from "@/core/terminology/review-persistence";
+import {
+  updateTerminologyPreferredVariant,
+  updateTerminologyReviewDecision,
+} from "@/core/terminology/review-state";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
@@ -26,29 +28,19 @@ const DECISION_VARIANT: Record<TerminologyReviewDecision, "outline" | "secondary
 
 export function TerminologyReviewWorkspace({
   candidates,
-  sessionId,
+  reviewState,
+  onReviewStateChange,
 }: {
   candidates: readonly TerminologyCandidate[];
-  sessionId: string;
+  reviewState: TerminologyReviewState;
+  onReviewStateChange: (state: TerminologyReviewState) => void;
 }) {
   const { t } = useI18n();
-  const validSources = useMemo(
-    () => new Set(candidates.map((candidate) => candidate.source)),
-    [candidates],
-  );
   const [query, setQuery] = useState("");
   const [conflictsOnly, setConflictsOnly] = useState(false);
   const [decisionFilter, setDecisionFilter] = useState<DecisionFilter>("all");
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
-  const [reviewState, setReviewState] = useState<TerminologyReviewState>(() =>
-    loadTerminologyReviewState(sessionId, validSources),
-  );
-
   const { decisions, preferredVariants } = reviewState;
-
-  useEffect(() => {
-    saveTerminologyReviewState(sessionId, reviewState);
-  }, [reviewState, sessionId]);
 
   const decisionLabel = (decision: TerminologyReviewDecision) => {
     switch (decision) {
@@ -115,36 +107,16 @@ export function TerminologyReviewWorkspace({
 
   const setDecision = (decision: TerminologyReviewDecision) => {
     if (!selectedCandidate || (decision === "accepted" && !canAccept)) return;
-    setReviewState((current) => {
-      const nextDecisions = { ...current.decisions };
-      if (decision === "pending") delete nextDecisions[selectedCandidate.source];
-      else nextDecisions[selectedCandidate.source] = decision;
-      return { ...current, decisions: nextDecisions };
-    });
+    onReviewStateChange(
+      updateTerminologyReviewDecision(reviewState, selectedCandidate.source, decision, canAccept),
+    );
   };
 
   const setPreferredVariant = (languageCode: string, value: string) => {
     if (!selectedCandidate) return;
-    setReviewState((current) => {
-      const source = selectedCandidate.source;
-      const nextForSource = { ...(current.preferredVariants[source] ?? {}) };
-      if (value.trim()) nextForSource[languageCode] = value;
-      else delete nextForSource[languageCode];
-
-      const nextPreferredVariants = { ...current.preferredVariants };
-      if (Object.keys(nextForSource).length > 0) nextPreferredVariants[source] = nextForSource;
-      else delete nextPreferredVariants[source];
-
-      const nextDecisions = { ...current.decisions };
-      if (!value.trim() && nextDecisions[source] === "accepted") {
-        nextDecisions[source] = "needs-review";
-      }
-
-      return {
-        decisions: nextDecisions,
-        preferredVariants: nextPreferredVariants,
-      };
-    });
+    onReviewStateChange(
+      updateTerminologyPreferredVariant(reviewState, selectedCandidate.source, languageCode, value),
+    );
   };
 
   const filters: DecisionFilter[] = ["all", "pending", "accepted", "rejected", "needs-review"];
@@ -312,15 +284,27 @@ export function TerminologyReviewWorkspace({
                         <Badge variant="destructive">{t("review.issues")}</Badge>
                       )}
                     </div>
-                    <input
-                      aria-label={`${t("review.trLabel")} · ${language.languageCode}`}
-                      className="border-input bg-background h-9 rounded-md border px-3 text-sm"
-                      value={preferred}
-                      onChange={(event) =>
-                        setPreferredVariant(language.languageCode, event.target.value)
-                      }
-                    />
+                    <label className="grid gap-1 text-sm">
+                      <span className="font-medium">{t("terminology.preferredTranslation")}</span>
+                      <input
+                        aria-label={`${t("terminology.preferredTranslation")} · ${language.languageCode}`}
+                        className="border-input bg-background h-9 rounded-md border px-3 text-sm"
+                        value={preferred}
+                        onChange={(event) =>
+                          setPreferredVariant(language.languageCode, event.target.value)
+                        }
+                      />
+                      <span className="text-muted-foreground text-xs">
+                        {t("terminology.preferredTranslationHint")}
+                      </span>
+                    </label>
                     <div className="grid gap-2">
+                      <div className="grid gap-1">
+                        <strong className="text-sm">{t("terminology.observedVariants")}</strong>
+                        <p className="text-muted-foreground text-xs">
+                          {t("terminology.observedVariantsHint")}
+                        </p>
+                      </div>
                       {language.variants.map((variant) => (
                         <button
                           key={variant.value}
