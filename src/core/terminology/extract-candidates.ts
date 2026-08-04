@@ -69,7 +69,7 @@ interface SourceOccurrence {
 }
 
 function countWords(value: string): number {
-  return value.match(/\p{L}[\p{L}\p{M}'’\-]*/gu)?.length ?? 0;
+  return value.match(/\p{L}[\p{L}\p{M}'’-]*/gu)?.length ?? 0;
 }
 
 function isMeaningfulCandidate(value: string): boolean {
