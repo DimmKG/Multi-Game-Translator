@@ -27,5 +27,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Show terminology Prettier diff
+        run: |
+          cp src/core/terminology/extract-candidates.ts /tmp/extract-candidates.before.ts
+          npx prettier --write src/core/terminology/extract-candidates.ts
+          diff -u /tmp/extract-candidates.before.ts src/core/terminology/extract-candidates.ts || true
+
       - name: Verify project
         run: npm run verify
