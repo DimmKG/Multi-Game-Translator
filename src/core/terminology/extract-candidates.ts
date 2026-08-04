@@ -11,8 +11,9 @@ export const TERMINOLOGY_CANDIDATE_EXPORT_VERSION = 1 as const;
 const MAX_CANDIDATE_LENGTH = 80;
 const MAX_CANDIDATE_WORDS = 6;
 const TOKEN_PATTERN =
-  /<[^>]*>|\$\{[^}]*\}|\{[^}]*\}|%\d*\$?[a-z]|§(?:#[0-9a-f]{6}|[0-9a-fk-or])|\\n/iu;
+  /<[^>]*>|\[[^\]]*\]|\$\{[^}]*\}|\{[^}]*\}|%\d*\$?[a-z]|§(?:#[0-9a-f]{6}|[0-9a-fk-or])|\\n/iu;
 const SENTENCE_END_PATTERN = /[.!?…]\s*$/u;
+const WORD_PATTERN = /\p{L}[\p{L}\p{M}'’-]*/gu;
 
 export interface TerminologyCorpusFile {
   languageCode: string;
@@ -78,11 +79,64 @@ interface CorpusOccurrence {
 interface CandidateSeed {
   source: string;
   sourceOccurrences: CorpusOccurrence[];
+  directOccurrences: CorpusOccurrence[];
   translations: Map<string, PhraseFamilyTermPair>;
 }
 
 function countWords(value: string): number {
-  return value.match(/\p{L}[\p{L}\p{M}'’-]*/gu)?.length ?? 0;
+  return value.match(WORD_PATTERN)?.length ?? 0;
+}
+
+function normalizeCandidate(value: string): string {
+  return value.trim().toLocaleLowerCase();
+}
+
+function phraseBoundaries(
+  value: string,
+  phrase: string,
+): { atStart: boolean; atEnd: boolean } | null {
+  const normalizedValue = value.toLocaleLowerCase();
+  const normalizedPhrase = phrase.toLocaleLowerCase();
+  const index = normalizedValue.indexOf(normalizedPhrase);
+  if (index < 0) return null;
+
+  return {
+    atStart: !/\p{L}/u.test(normalizedValue.slice(0, index)),
+    atEnd: !/\p{L}/u.test(normalizedValue.slice(index + normalizedPhrase.length)),
+  };
+}
+
+function hasStableAlignedBoundaries(
+  pair: PhraseFamilyTermPair,
+  sourceByIdentity: ReadonlyMap<string, CorpusOccurrence>,
+  targetByIdentity: ReadonlyMap<string, CorpusOccurrence>,
+): boolean {
+  return pair.evidenceKeys.every((identity) => {
+    const source = sourceByIdentity.get(identity);
+    const target = targetByIdentity.get(identity);
+    if (!source || !target) return false;
+
+    const sourceBoundaries = phraseBoundaries(source.value, pair.source);
+    const targetBoundaries = phraseBoundaries(target.value, pair.target);
+    if (!sourceBoundaries || !targetBoundaries) return false;
+    if (!sourceBoundaries.atStart && !sourceBoundaries.atEnd) return false;
+    if (!targetBoundaries.atStart && !targetBoundaries.atEnd) return false;
+
+    return (
+      sourceBoundaries.atStart === targetBoundaries.atStart &&
+      sourceBoundaries.atEnd === targetBoundaries.atEnd
+    );
+  });
+}
+
+function isTitleCasedMultiWordCandidate(value: string): boolean {
+  const words = value.match(WORD_PATTERN) ?? [];
+  if (words.length < 2) return false;
+
+  return words.every((word) => {
+    const initial = word[0];
+    return initial === initial.toLocaleUpperCase() && initial !== initial.toLocaleLowerCase();
+  });
 }
 
 function isMeaningfulCandidate(value: string): boolean {
@@ -137,6 +191,10 @@ function upsertSeed(seeds: Map<string, CandidateSeed>, seed: CandidateSeed): voi
   const identities = new Set(existing.sourceOccurrences.map((entry) => entry.identity));
   for (const occurrence of seed.sourceOccurrences) {
     if (!identities.has(occurrence.identity)) existing.sourceOccurrences.push(occurrence);
+  }
+  const directIdentities = new Set(existing.directOccurrences.map((entry) => entry.identity));
+  for (const occurrence of seed.directOccurrences) {
+    if (!directIdentities.has(occurrence.identity)) existing.directOccurrences.push(occurrence);
   }
   for (const [languageCode, translation] of seed.translations) {
     if (!existing.translations.has(languageCode)) {
@@ -224,6 +282,9 @@ export function extractTerminologyCandidates(
     : Math.max(2, options.minimumSourceFrequency ?? 2);
   const sourceOccurrences = collectOccurrences(sourceFile);
   const sourceByIdentity = buildOccurrenceMap(sourceOccurrences);
+  const exactSourceValues = new Set(
+    sourceOccurrences.map((occurrence) => normalizeCandidate(occurrence.value)),
+  );
   const translated = translatedFiles.map((file) => {
     const occurrences = collectOccurrences(file);
     return { file, occurrences, byIdentity: buildOccurrenceMap(occurrences) };
@@ -242,6 +303,7 @@ export function extractTerminologyCandidates(
     upsertSeed(seeds, {
       source,
       sourceOccurrences: [...occurrences],
+      directOccurrences: [...occurrences],
       translations: new Map(),
     });
   }
@@ -263,6 +325,12 @@ export function extractTerminologyCandidates(
       return occurrence ? [occurrence] : [];
     });
     if (familyOccurrences.length < minimumSourceFrequency) continue;
+    if (familyOccurrences.some((occurrence) => TOKEN_PATTERN.test(occurrence.value))) continue;
+
+    const hasExactSourceValue = familyOccurrences.some(
+      (occurrence) => normalizeCandidate(occurrence.value) === normalizeCandidate(family.base),
+    );
+    if (!hasExactSourceValue && !isTitleCasedMultiWordCandidate(family.base)) continue;
     if (
       !familyOccurrences.some(
         (occurrence) => countWords(occurrence.value) > countWords(family.base),
@@ -288,7 +356,14 @@ export function extractTerminologyCandidates(
 
     const baseTranslations = new Map<string, PhraseFamilyTermPair>();
     for (const [languageCode, aligned] of alignedByLanguage) {
-      if (aligned && isMeaningfulCandidate(aligned.base.target)) {
+      const target = translated.find((item) => item.file.languageCode === languageCode);
+      if (
+        aligned &&
+        target &&
+        isMeaningfulCandidate(aligned.base.target) &&
+        (hasExactSourceValue ||
+          hasStableAlignedBoundaries(aligned.base, sourceByIdentity, target.byIdentity))
+      ) {
         baseTranslations.set(languageCode, aligned.base);
       }
     }
@@ -296,6 +371,7 @@ export function extractTerminologyCandidates(
       upsertSeed(seeds, {
         source: family.base,
         sourceOccurrences: familyOccurrences,
+        directOccurrences: [],
         translations: baseTranslations,
       });
     }
@@ -313,16 +389,31 @@ export function extractTerminologyCandidates(
       ),
     );
     for (const modifierSource of modifierSources) {
+      if (
+        !exactSourceValues.has(normalizeCandidate(modifierSource)) &&
+        !isTitleCasedMultiWordCandidate(modifierSource)
+      ) {
+        continue;
+      }
+
       const translations = new Map<string, PhraseFamilyTermPair>();
       let modifierOccurrences: CorpusOccurrence[] = [];
       for (const [languageCode, aligned] of alignedByLanguage) {
+        const target = translated.find((item) => item.file.languageCode === languageCode);
         const modifier = aligned?.modifiers.find(
           (item) =>
             item.source === modifierSource &&
             isMeaningfulCandidate(item.source) &&
             isMeaningfulCandidate(item.target),
         );
-        if (!modifier) continue;
+        if (
+          !modifier ||
+          !target ||
+          (!exactSourceValues.has(normalizeCandidate(modifierSource)) &&
+            !hasStableAlignedBoundaries(modifier, sourceByIdentity, target.byIdentity))
+        ) {
+          continue;
+        }
         translations.set(languageCode, modifier);
         if (modifierOccurrences.length === 0) {
           modifierOccurrences = modifier.evidenceKeys.flatMap((identity) => {
@@ -335,6 +426,7 @@ export function extractTerminologyCandidates(
         upsertSeed(seeds, {
           source: modifierSource,
           sourceOccurrences: modifierOccurrences,
+          directOccurrences: [],
           translations,
         });
       }
@@ -342,14 +434,16 @@ export function extractTerminologyCandidates(
   }
 
   return [...seeds.values()]
+    .filter((seed) => seed.sourceOccurrences.length >= minimumSourceFrequency)
     .map((seed) => {
       const evidence: TerminologyEvidence[] = [];
       const languages = translated.map((target) => {
+        const derivedPair = seed.translations.get(target.file.languageCode);
         const built = buildLanguageResult(
           target.file,
-          seed.sourceOccurrences,
+          derivedPair ? seed.sourceOccurrences : seed.directOccurrences,
           target.byIdentity,
-          seed.translations.get(target.file.languageCode),
+          derivedPair,
         );
         evidence.push(...built.evidence);
         return built.result;
