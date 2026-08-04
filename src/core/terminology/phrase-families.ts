@@ -27,6 +27,10 @@ export interface AlignedPhraseFamily {
   modifiers: readonly PhraseFamilyTermPair[];
 }
 
+interface DiscoverPhraseFamilyOptions {
+  allowUnanchoredSingleWord?: boolean;
+}
+
 interface Token {
   value: string;
   normalized: string;
@@ -166,7 +170,10 @@ function sameSupportKeys(left: readonly string[], right: readonly string[]): boo
   return left.every((key) => rightSet.has(key));
 }
 
-export function discoverPhraseFamilies(records: readonly PhraseFamilyRecord[]): PhraseFamily[] {
+export function discoverPhraseFamilies(
+  records: readonly PhraseFamilyRecord[],
+  options: DiscoverPhraseFamilyOptions = {},
+): PhraseFamily[] {
   const prepared = records
     .map((record) => ({ record, tokens: tokenize(record.value) }))
     .filter((item) => item.tokens.length > 0);
@@ -196,7 +203,7 @@ export function discoverPhraseFamilies(records: readonly PhraseFamilyRecord[]): 
     })
     .filter(({ seed, supporting }) => {
       if (supporting.length < 2) return false;
-      if (seed.normalizedTokens.length >= 2) return true;
+      if (seed.normalizedTokens.length >= 2 || options.allowUnanchoredSingleWord) return true;
       return supporting.some((item) => isExactValue(item.tokens, seed.normalizedTokens));
     });
 
@@ -249,9 +256,9 @@ export function alignPhraseFamily(
   const alignedTargets = targetRecords.filter((record) =>
     sourceFamily.supportKeys.includes(record.key),
   );
-  const targetFamily = discoverPhraseFamilies(alignedTargets).find((family) =>
-    sameSupportKeys(family.supportKeys, sourceFamily.supportKeys),
-  );
+  const targetFamily = discoverPhraseFamilies(alignedTargets, {
+    allowUnanchoredSingleWord: true,
+  }).find((family) => sameSupportKeys(family.supportKeys, sourceFamily.supportKeys));
   if (!targetFamily) return null;
 
   const base: PhraseFamilyTermPair = {
