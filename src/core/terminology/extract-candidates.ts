@@ -116,9 +116,7 @@ function collectOccurrences(file: TerminologyCorpusFile): CorpusOccurrence[] {
   });
 }
 
-function buildOccurrenceMap(
-  entries: readonly CorpusOccurrence[],
-): Map<string, CorpusOccurrence> {
+function buildOccurrenceMap(entries: readonly CorpusOccurrence[]): Map<string, CorpusOccurrence> {
   return new Map(entries.map((entry) => [entry.identity, entry]));
 }
 
@@ -300,9 +298,7 @@ export function extractTerminologyCandidates(
       const translations = new Map<string, PhraseFamilyTermPair>();
       let modifierOccurrences: CorpusOccurrence[] = [];
       for (const [languageCode, aligned] of alignedByLanguage) {
-        const modifier = aligned?.modifiers.find(
-          (item) => item.source === modifierSource,
-        );
+        const modifier = aligned?.modifiers.find((item) => item.source === modifierSource);
         if (!modifier) continue;
         translations.set(languageCode, modifier);
         if (modifierOccurrences.length === 0) {
