@@ -7,7 +7,6 @@ export interface MergeableGlossaryDocument {
   sourceLanguage: string;
   targetLanguage: string;
   entries: readonly GlossaryEntry[];
-  [key: string]: unknown;
 }
 
 export type TerminologyGlossaryMergeCompatibility =
