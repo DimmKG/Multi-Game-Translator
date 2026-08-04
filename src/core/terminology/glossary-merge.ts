@@ -4,10 +4,17 @@ import type { GlossaryEntry } from "../glossary/matcher";
 import type { TerminologyGlossaryLanguageEntries } from "./glossary-entry-export";
 
 export interface MergeableGlossaryDocument {
+  format?: string;
+  version?: number;
+  id?: string;
+  name?: string;
   sourceLanguage: string;
   targetLanguage: string;
+  game?: string;
+  authors?: readonly string[];
+  updatedAt?: string;
+  enabled?: boolean;
   entries: readonly GlossaryEntry[];
-  [key: string]: unknown;
 }
 
 export type TerminologyGlossaryMergeCompatibility =

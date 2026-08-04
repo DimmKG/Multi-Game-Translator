@@ -10,6 +10,7 @@ import {
   type TerminologyCandidate,
   type TerminologyCorpusFile,
 } from "@/core/terminology/extract-candidates";
+import { suggestLanguageCodeFromFilename } from "@/core/terminology/language-code";
 import { buildTerminologyReviewExport } from "@/core/terminology/review-export";
 import {
   buildTerminologyReviewSessionId,
@@ -18,13 +19,14 @@ import {
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
+import { TerminologyGlossaryMergeWorkspace } from "./TerminologyGlossaryMergeWorkspace";
 import { TerminologyReviewWorkspace } from "./TerminologyReviewWorkspace";
 
 interface LoadedCorpusFile extends TerminologyCorpusFile {
   id: string;
 }
 
-type TerminologySection = "sources" | "review";
+type TerminologySection = "sources" | "review" | "merge";
 
 function downloadJson(filename: string, value: unknown) {
   const blob = new Blob([JSON.stringify(value, null, 2) + "\n"], {
@@ -38,10 +40,10 @@ function downloadJson(filename: string, value: unknown) {
   URL.revokeObjectURL(url);
 }
 
-async function readCorpusFile(file: File, languageCode: string): Promise<LoadedCorpusFile> {
+async function readCorpusFile(file: File, languageCode = ""): Promise<LoadedCorpusFile> {
   return {
     id: crypto.randomUUID(),
-    languageCode: languageCode.trim(),
+    languageCode: languageCode.trim() || suggestLanguageCodeFromFilename(file.name),
     filename: file.name,
     text: await file.text(),
   };
@@ -78,6 +80,18 @@ export function TerminologyWorkspace() {
     );
   }, [minimumFrequency, sourceFile, sourceLanguageCode, translatedFiles]);
 
+  const reviewExport =
+    sourceFile && candidates.length > 0
+      ? buildTerminologyReviewExport(
+          { ...sourceFile, languageCode: sourceLanguageCode.trim() },
+          candidates,
+          loadTerminologyReviewState(
+            reviewSessionId,
+            new Set(candidates.map((candidate) => candidate.source)),
+          ),
+        )
+      : null;
+
   const pickSource = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -85,9 +99,11 @@ export function TerminologyWorkspace() {
     input.onchange = () => {
       const file = input.files?.[0];
       if (!file) return;
-      void readCorpusFile(file, sourceLanguageCode)
+      const suggested = suggestLanguageCodeFromFilename(file.name);
+      void readCorpusFile(file, suggested || sourceLanguageCode)
         .then((loaded) => {
           setSourceFile(loaded);
+          if (suggested) setSourceLanguageCode(suggested);
           setCandidates([]);
           setSection("sources");
         })
@@ -103,7 +119,7 @@ export function TerminologyWorkspace() {
     input.multiple = true;
     input.onchange = () => {
       const files = [...(input.files ?? [])];
-      void Promise.all(files.map((file) => readCorpusFile(file, "")))
+      void Promise.all(files.map((file) => readCorpusFile(file)))
         .then((loaded) => {
           setTranslatedFiles((current) => [...current, ...loaded]);
           setCandidates([]);
@@ -147,15 +163,8 @@ export function TerminologyWorkspace() {
   };
 
   const exportReviewJson = () => {
-    if (!sourceFile) return;
-    const validSources = new Set(candidates.map((candidate) => candidate.source));
-    const reviewState = loadTerminologyReviewState(reviewSessionId, validSources);
-    const exported = buildTerminologyReviewExport(
-      { ...sourceFile, languageCode: sourceLanguageCode.trim() },
-      candidates,
-      reviewState,
-    );
-    downloadJson("necesse-terminology-review.json", exported);
+    if (!reviewExport) return;
+    downloadJson("necesse-terminology-review.json", reviewExport);
   };
 
   return (
@@ -195,6 +204,18 @@ export function TerminologyWorkspace() {
         >
           {t("tab.review")}
         </button>
+        <button
+          type="button"
+          className={cn(
+            "border-primary px-3 py-2 text-sm font-medium",
+            section === "merge"
+              ? "text-foreground border-b-2"
+              : "text-muted-foreground border-b-2 border-transparent",
+          )}
+          onClick={() => setSection("merge")}
+        >
+          {t("glossary.button")}
+        </button>
       </div>
 
       {section === "sources" ? (
@@ -230,7 +251,7 @@ export function TerminologyWorkspace() {
                 <div className="flex items-center justify-between gap-2">
                   <strong>{t("review.trLabel")}</strong>
                   <Button size="sm" variant="outline" onClick={pickTranslations}>
-                    {t("drop.pick")}
+                    {t("drop.pick")} · +
                   </Button>
                 </div>
                 <div className="grid gap-2">
@@ -242,22 +263,25 @@ export function TerminologyWorkspace() {
                       key={file.id}
                       className="grid grid-cols-[6rem_1fr_auto] items-center gap-2"
                     >
-                      <input
-                        aria-label={`${t("mt.langLabel")}: ${file.filename}`}
-                        className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
-                        placeholder="bg"
-                        value={file.languageCode}
-                        onChange={(event) => {
-                          setTranslatedFiles((current) =>
-                            current.map((item) =>
-                              item.id === file.id
-                                ? { ...item, languageCode: event.target.value }
-                                : item,
-                            ),
-                          );
-                          setCandidates([]);
-                        }}
-                      />
+                      <label className="grid min-w-0 gap-1">
+                        <span className="text-muted-foreground text-xs">{t("mt.langLabel")}</span>
+                        <input
+                          aria-label={`${t("mt.langLabel")}: ${file.filename}`}
+                          className="border-input bg-background h-8 min-w-0 rounded-md border px-2 text-sm"
+                          placeholder="bg"
+                          value={file.languageCode}
+                          onChange={(event) => {
+                            setTranslatedFiles((current) =>
+                              current.map((item) =>
+                                item.id === file.id
+                                  ? { ...item, languageCode: event.target.value }
+                                  : item,
+                              ),
+                            );
+                            setCandidates([]);
+                          }}
+                        />
+                      </label>
                       <span className="ltr-isolate truncate text-sm" title={file.filename}>
                         {file.filename}
                       </span>
@@ -303,22 +327,20 @@ export function TerminologyWorkspace() {
               >
                 {t("btn.export")}
               </Button>
-              <Button
-                variant="outline"
-                disabled={!sourceFile || candidates.length === 0}
-                onClick={exportReviewJson}
-              >
+              <Button variant="outline" disabled={!reviewExport} onClick={exportReviewJson}>
                 {t("tab.review")} · {t("btn.export")}
               </Button>
             </div>
           </div>
         </div>
-      ) : (
+      ) : section === "review" ? (
         <TerminologyReviewWorkspace
           key={reviewSessionId}
           candidates={candidates}
           sessionId={reviewSessionId}
         />
+      ) : (
+        <TerminologyGlossaryMergeWorkspace review={reviewExport} />
       )}
     </section>
   );
