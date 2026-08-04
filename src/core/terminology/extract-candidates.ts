@@ -256,11 +256,16 @@ export function extractTerminologyCandidates(
 
   for (const family of sourceFamilies) {
     if (family.supportKeys.length < minimumSourceFrequency) continue;
+    if (!isMeaningfulCandidate(family.base)) continue;
+
     const familyOccurrences = family.supportKeys.flatMap((identity) => {
       const occurrence = sourceByIdentity.get(identity);
       return occurrence ? [occurrence] : [];
     });
     if (familyOccurrences.length < minimumSourceFrequency) continue;
+    if (!familyOccurrences.some((occurrence) => countWords(occurrence.value) > countWords(family.base))) {
+      continue;
+    }
 
     const alignedByLanguage = new Map<string, ReturnType<typeof alignPhraseFamily>>();
     for (const target of translated) {
@@ -279,7 +284,9 @@ export function extractTerminologyCandidates(
 
     const baseTranslations = new Map<string, PhraseFamilyTermPair>();
     for (const [languageCode, aligned] of alignedByLanguage) {
-      if (aligned) baseTranslations.set(languageCode, aligned.base);
+      if (aligned && isMeaningfulCandidate(aligned.base.target)) {
+        baseTranslations.set(languageCode, aligned.base);
+      }
     }
     if (baseTranslations.size > 0) {
       upsertSeed(seeds, {
@@ -291,14 +298,27 @@ export function extractTerminologyCandidates(
 
     const modifierSources = new Set(
       [...alignedByLanguage.values()].flatMap((aligned) =>
-        aligned ? aligned.modifiers.map((modifier) => modifier.source) : [],
+        aligned
+          ? aligned.modifiers
+              .filter(
+                (modifier) =>
+                  isMeaningfulCandidate(modifier.source) &&
+                  isMeaningfulCandidate(modifier.target),
+              )
+              .map((modifier) => modifier.source)
+          : [],
       ),
     );
     for (const modifierSource of modifierSources) {
       const translations = new Map<string, PhraseFamilyTermPair>();
       let modifierOccurrences: CorpusOccurrence[] = [];
       for (const [languageCode, aligned] of alignedByLanguage) {
-        const modifier = aligned?.modifiers.find((item) => item.source === modifierSource);
+        const modifier = aligned?.modifiers.find(
+          (item) =>
+            item.source === modifierSource &&
+            isMeaningfulCandidate(item.source) &&
+            isMeaningfulCandidate(item.target),
+        );
         if (!modifier) continue;
         translations.set(languageCode, modifier);
         if (modifierOccurrences.length === 0) {
