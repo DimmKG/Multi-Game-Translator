@@ -105,6 +105,45 @@ describe("extractTerminologyCandidates", () => {
     expect(candidates.some((candidate) => candidate.source === "123")).toBe(false);
   });
 
+  it("excludes sentences, tokenized values, and overlong phrases", () => {
+    const noisySource: TerminologyCorpusFile = {
+      languageCode: "en",
+      filename: "en.lang",
+      text: [
+        "term_one=Ancient Fossil Fragment",
+        "term_two=Ancient Fossil Fragment",
+        "sentence_one=This is a complete sentence.",
+        "sentence_two=This is a complete sentence.",
+        "placeholder_one=Hello <name>",
+        "placeholder_two=Hello <name>",
+        "format_one=§bDamage",
+        "format_two=§bDamage",
+        "long_one=One two three four five six seven",
+        "long_two=One two three four five six seven",
+      ].join("\n"),
+    };
+    const noisyTarget: TerminologyCorpusFile = {
+      languageCode: "bg",
+      filename: "bg.lang",
+      text: [
+        "term_one=Древен фосилен фрагмент",
+        "term_two=Древен фосилен фрагмент",
+        "sentence_one=Това е цяло изречение.",
+        "sentence_two=Това е цяло изречение.",
+        "placeholder_one=Здравей, <name>",
+        "placeholder_two=Здравей, <name>",
+        "format_one=§bЩети",
+        "format_two=§bЩети",
+        "long_one=Едно две три четири пет шест седем",
+        "long_two=Едно две три четири пет шест седем",
+      ].join("\n"),
+    };
+
+    const candidates = extractTerminologyCandidates(noisySource, [noisyTarget]);
+
+    expect(candidates.map((candidate) => candidate.source)).toEqual(["Ancient Fossil Fragment"]);
+  });
+
   it("builds a stable versioned export envelope", () => {
     const candidates = extractTerminologyCandidates(source, [bulgarian]);
     const exported = buildTerminologyCandidateExport(
