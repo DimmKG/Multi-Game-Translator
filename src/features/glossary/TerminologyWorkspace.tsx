@@ -10,7 +10,11 @@ import {
   type TerminologyCandidate,
   type TerminologyCorpusFile,
 } from "@/core/terminology/extract-candidates";
-import { buildTerminologyReviewSessionId } from "@/core/terminology/review-persistence";
+import { buildTerminologyReviewExport } from "@/core/terminology/review-export";
+import {
+  buildTerminologyReviewSessionId,
+  loadTerminologyReviewState,
+} from "@/core/terminology/review-persistence";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 
@@ -131,6 +135,27 @@ export function TerminologyWorkspace() {
     );
     setCandidates(next);
     setSection("review");
+  };
+
+  const exportCandidateJson = () => {
+    if (!sourceFile) return;
+    const exported = buildTerminologyCandidateExport(
+      { ...sourceFile, languageCode: sourceLanguageCode.trim() },
+      candidates,
+    );
+    downloadJson("necesse-terminology-candidates.json", exported);
+  };
+
+  const exportReviewJson = () => {
+    if (!sourceFile) return;
+    const validSources = new Set(candidates.map((candidate) => candidate.source));
+    const reviewState = loadTerminologyReviewState(reviewSessionId, validSources);
+    const exported = buildTerminologyReviewExport(
+      { ...sourceFile, languageCode: sourceLanguageCode.trim() },
+      candidates,
+      reviewState,
+    );
+    downloadJson("necesse-terminology-review.json", exported);
   };
 
   return (
@@ -274,16 +299,16 @@ export function TerminologyWorkspace() {
               <Button
                 variant="outline"
                 disabled={!sourceFile || candidates.length === 0}
-                onClick={() => {
-                  if (!sourceFile) return;
-                  const exported = buildTerminologyCandidateExport(
-                    { ...sourceFile, languageCode: sourceLanguageCode.trim() },
-                    candidates,
-                  );
-                  downloadJson("necesse-terminology-candidates.json", exported);
-                }}
+                onClick={exportCandidateJson}
               >
                 {t("btn.export")}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!sourceFile || candidates.length === 0}
+                onClick={exportReviewJson}
+              >
+                {t("tab.review")} · {t("btn.export")}
               </Button>
             </div>
           </div>
