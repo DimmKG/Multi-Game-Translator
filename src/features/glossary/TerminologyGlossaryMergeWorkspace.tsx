@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,10 @@ import {
   applyTerminologyGlossaryMerge,
   planTerminologyGlossaryMerge,
 } from "@/core/terminology/glossary-merge";
+import {
+  chooseTerminologyMergeTarget,
+  compatibleTerminologyGlossaries,
+} from "@/core/terminology/merge-selection";
 import type { TerminologyReviewExport } from "@/core/terminology/review-export";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
@@ -27,7 +31,18 @@ export function TerminologyGlossaryMergeWorkspace({
     () => (review ? buildTerminologyGlossaryEntryExport(review) : null),
     [review],
   );
-  const selectedGlossary = workspace.glossaries.find(
+  const compatibleGlossaries = useMemo(
+    () =>
+      entryExport
+        ? compatibleTerminologyGlossaries(
+            workspace.glossaries,
+            entryExport.sourceLanguage,
+            new Set(entryExport.languages.map((language) => language.targetLanguage)),
+          )
+        : [],
+    [entryExport, workspace.glossaries],
+  );
+  const selectedGlossary = compatibleGlossaries.find(
     (glossary) => glossary.id === selectedGlossaryId,
   );
   const incoming = entryExport?.languages.find(
@@ -38,17 +53,31 @@ export function TerminologyGlossaryMergeWorkspace({
     return planTerminologyGlossaryMerge(selectedGlossary, incoming, entryExport.sourceLanguage);
   }, [entryExport, incoming, selectedGlossary]);
 
+  useEffect(() => {
+    setSelectedGlossaryId((current) =>
+      chooseTerminologyMergeTarget(
+        current,
+        compatibleGlossaries.map((glossary) => glossary.id),
+      ),
+    );
+  }, [compatibleGlossaries]);
+
   const applyMerge = () => {
     if (!selectedGlossary || !plan || !plan.compatibility.compatible) return;
     const merged = applyTerminologyGlossaryMerge(selectedGlossary, plan);
     workspace.upsertGlossary(normalizeGlossary(merged));
-    toast.success(t("glossary.replaced"));
+    toast.success(
+      t("terminology.mergeAdded", {
+        n: plan.additions.length,
+        name: selectedGlossary.name,
+      }),
+    );
   };
 
   if (!review || !entryExport || entryExport.languages.length === 0) {
     return (
       <div className="border-border text-muted-foreground rounded-lg border p-4 text-sm">
-        {t("empty.generic")}
+        {t("terminology.mergeNeedsAccepted")}
       </div>
     );
   }
@@ -57,34 +86,34 @@ export function TerminologyGlossaryMergeWorkspace({
     <div className="min-h-0 flex-1 overflow-auto">
       <div className="grid gap-4 pb-4">
         <section className="border-border grid gap-3 rounded-lg border p-3">
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{t("glossary.button")}</span>
-            <select
-              className="border-input bg-background h-9 rounded-md border px-3"
-              value={selectedGlossaryId}
-              onChange={(event) => setSelectedGlossaryId(event.target.value)}
-            >
-              <option value="">{t("glossary.empty")}</option>
-              {workspace.glossaries.map((glossary) => (
-                <option key={glossary.id} value={glossary.id}>
-                  {glossary.name} · {glossary.sourceLanguage} → {glossary.targetLanguage} ·{" "}
-                  {glossary.entries.length} {t("glossary.entries")}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {selectedGlossary && !incoming && (
-            <p className="text-destructive text-sm">
-              {selectedGlossary.targetLanguage} · {t("empty.noMatch")}
+          <p className="text-muted-foreground text-sm">{t("terminology.loadedGlossaries")}</p>
+          {compatibleGlossaries.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              {workspace.glossaries.length === 0
+                ? t("terminology.noLoadedGlossaries")
+                : t("terminology.noCompatibleGlossaries")}
             </p>
-          )}
-
-          {plan && !plan.compatibility.compatible && (
-            <p className="text-destructive text-sm">
-              {plan.compatibility.reason}: {plan.compatibility.actual} ≠{" "}
-              {plan.compatibility.expected}
-            </p>
+          ) : (
+            <label className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">{t("terminology.mergeTarget")}</span>
+              <select
+                className="border-input bg-background h-9 rounded-md border px-3"
+                value={selectedGlossaryId}
+                onChange={(event) => setSelectedGlossaryId(event.target.value)}
+              >
+                {compatibleGlossaries.length > 1 && (
+                  <option value="" disabled>
+                    {t("terminology.selectMergeTarget")}
+                  </option>
+                )}
+                {compatibleGlossaries.map((glossary) => (
+                  <option key={glossary.id} value={glossary.id}>
+                    {glossary.name} · {glossary.sourceLanguage} → {glossary.targetLanguage} ·{" "}
+                    {glossary.entries.length} {t("glossary.entries")}
+                  </option>
+                ))}
+              </select>
+            </label>
           )}
         </section>
 
@@ -93,13 +122,26 @@ export function TerminologyGlossaryMergeWorkspace({
             <section className="border-border grid gap-3 rounded-lg border p-3">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary">
-                  +{plan.additions.length} {t("glossary.entries")}
+                  +{plan.additions.length} {t("terminology.additions")}
                 </Badge>
-                <Badge variant="outline">={plan.identical.length}</Badge>
+                <Badge variant="outline">
+                  ={plan.identical.length} {t("terminology.identical")}
+                </Badge>
                 <Badge variant={plan.conflicts.length ? "destructive" : "outline"}>
-                  !{plan.conflicts.length}
+                  !{plan.conflicts.length} {t("terminology.conflicts")}
                 </Badge>
               </div>
+
+              {plan.additions.length === 0 && plan.conflicts.length === 0 && (
+                <p className="text-muted-foreground text-sm">
+                  {t("terminology.mergeAllIdentical")}
+                </p>
+              )}
+              {plan.additions.length === 0 && plan.conflicts.length > 0 && (
+                <p className="text-muted-foreground text-sm">
+                  {t("terminology.mergeConflictsOnly")}
+                </p>
+              )}
 
               {plan.additions.length > 0 && (
                 <div className="grid gap-1">
@@ -136,7 +178,7 @@ export function TerminologyGlossaryMergeWorkspace({
 
             <div className="flex justify-end">
               <Button disabled={plan.additions.length === 0} onClick={applyMerge}>
-                {t("glossary.install")} · +{plan.additions.length}
+                {t("terminology.addNewEntries")} · +{plan.additions.length}
               </Button>
             </div>
           </>
