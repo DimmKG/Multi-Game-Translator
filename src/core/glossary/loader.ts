@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-const GLOSSARY_FORMAT = "necesse-glossary";
+
+import {
+  GLOSSARY_FORMAT,
+  GLOSSARY_FORMAT_VERSION,
+  GLOSSARY_ID_PATTERN,
+  isGlossaryEntryStatus,
+  isGlossaryLanguageTag,
+} from "./contract";
+import { validateGlossaryDocument } from "./validation";
+
 const CATALOG_FORMAT = "necesse-glossary-catalog";
-const FORMAT_VERSION = 1;
-const ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
-const LANGUAGE_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
-const ENTRY_STATUSES = new Set(["approved", "draft", "deprecated", "context-dependent"]);
 
 export interface NormalizedGlossaryEntry {
   source: string;
@@ -22,7 +27,7 @@ export interface NormalizedGlossaryEntry {
 
 export interface NormalizedGlossary {
   format: typeof GLOSSARY_FORMAT;
-  version: typeof FORMAT_VERSION;
+  version: typeof GLOSSARY_FORMAT_VERSION;
   id: string;
   name: string;
   sourceLanguage: string;
@@ -56,7 +61,7 @@ function assertString(value: unknown, label: string): asserts value is string {
 
 function assertLanguage(value: unknown, label: string) {
   assertString(value, label);
-  if (!LANGUAGE_PATTERN.test(value))
+  if (!isGlossaryLanguageTag(value))
     throw new TypeError(`${label} is not a supported language tag.`);
 }
 
@@ -81,7 +86,7 @@ function normalizeEntry(entry: unknown, index: number): NormalizedGlossaryEntry 
   assertStringArray(entry.forbidden, `entries[${index}].forbidden`);
 
   const status = (entry.status as string | undefined) ?? "approved";
-  if (!ENTRY_STATUSES.has(status))
+  if (!isGlossaryEntryStatus(status))
     throw new TypeError(`entries[${index}].status is not supported.`);
 
   return Object.freeze({
@@ -111,12 +116,21 @@ export function parseJsonDocument(text: string, label = "JSON document") {
 }
 
 export function normalizeGlossary(input: unknown): NormalizedGlossary {
+  const validation = validateGlossaryDocument(input);
+  if (!validation.valid) {
+    throw new TypeError(
+      `Glossary validation failed: ${validation.errors
+        .map((problem) => `${problem.path} (${problem.code})`)
+        .join(", ")}`,
+    );
+  }
+
   assertObject(input, "Glossary");
-  if (input.format !== GLOSSARY_FORMAT || input.version !== FORMAT_VERSION) {
+  if (input.format !== GLOSSARY_FORMAT || input.version !== GLOSSARY_FORMAT_VERSION) {
     throw new TypeError("Unsupported glossary format or version.");
   }
   assertString(input.id, "Glossary id");
-  if (!ID_PATTERN.test(input.id)) throw new TypeError("Glossary id is invalid.");
+  if (!GLOSSARY_ID_PATTERN.test(input.id)) throw new TypeError("Glossary id is invalid.");
   assertString(input.name, "Glossary name");
   assertLanguage(input.sourceLanguage, "Glossary sourceLanguage");
   assertLanguage(input.targetLanguage, "Glossary targetLanguage");
@@ -124,7 +138,7 @@ export function normalizeGlossary(input: unknown): NormalizedGlossary {
 
   return Object.freeze({
     format: GLOSSARY_FORMAT,
-    version: FORMAT_VERSION,
+    version: GLOSSARY_FORMAT_VERSION,
     id: input.id,
     name: input.name,
     sourceLanguage: input.sourceLanguage as string,
@@ -138,7 +152,7 @@ export function normalizeGlossary(input: unknown): NormalizedGlossary {
 
 export function normalizeCatalog(input: unknown, baseUrl?: string) {
   assertObject(input, "Glossary catalog");
-  if (input.format !== CATALOG_FORMAT || input.version !== FORMAT_VERSION) {
+  if (input.format !== CATALOG_FORMAT || input.version !== GLOSSARY_FORMAT_VERSION) {
     throw new TypeError("Unsupported glossary catalog format or version.");
   }
   if (!Array.isArray(input.glossaries)) throw new TypeError("Catalog glossaries must be an array.");
@@ -147,7 +161,8 @@ export function normalizeCatalog(input: unknown, baseUrl?: string) {
   const glossaries = input.glossaries.map((item, index) => {
     assertObject(item, `glossaries[${index}]`);
     assertString(item.id, `glossaries[${index}].id`);
-    if (!ID_PATTERN.test(item.id)) throw new TypeError(`glossaries[${index}].id is invalid.`);
+    if (!GLOSSARY_ID_PATTERN.test(item.id))
+      throw new TypeError(`glossaries[${index}].id is invalid.`);
     if (ids.has(item.id)) throw new TypeError(`Duplicate glossary id: ${item.id}`);
     ids.add(item.id);
     assertString(item.name, `glossaries[${index}].name`);
@@ -165,7 +180,7 @@ export function normalizeCatalog(input: unknown, baseUrl?: string) {
   });
   return Object.freeze({
     format: CATALOG_FORMAT,
-    version: FORMAT_VERSION,
+    version: GLOSSARY_FORMAT_VERSION,
     glossaries: Object.freeze(glossaries),
   });
 }
@@ -194,5 +209,5 @@ export async function fetchGlossary(url: string, fetchImpl: typeof fetch = globa
 export const glossaryFormat = Object.freeze({
   glossary: GLOSSARY_FORMAT,
   catalog: CATALOG_FORMAT,
-  version: FORMAT_VERSION,
+  version: GLOSSARY_FORMAT_VERSION,
 });
