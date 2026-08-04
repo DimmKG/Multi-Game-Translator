@@ -39,7 +39,10 @@ function tokenize(value: string): Token[] {
   }));
 }
 
-function longestCommonContiguousPhrase(left: readonly Token[], right: readonly Token[]): PhraseSeed | null {
+function longestCommonContiguousPhrase(
+  left: readonly Token[],
+  right: readonly Token[],
+): PhraseSeed | null {
   let bestLength = 0;
   let bestLeftEnd = 0;
   const previous = new Array(right.length + 1).fill(0) as number[];
@@ -99,7 +102,10 @@ export function discoverPhraseFamilies(records: readonly PhraseFamilyRecord[]): 
       if (!seed) continue;
       const id = seed.normalizedTokens.join("\u0000");
       const existing = seeds.get(id);
-      if (!existing || seed.displayTokens.join(" ").localeCompare(existing.displayTokens.join(" ")) < 0) {
+      if (
+        !existing ||
+        seed.displayTokens.join(" ").localeCompare(existing.displayTokens.join(" ")) < 0
+      ) {
         seeds.set(id, seed);
       }
     }
@@ -118,17 +124,20 @@ export function discoverPhraseFamilies(records: readonly PhraseFamilyRecord[]): 
       return supporting.some((item) => isExactValue(item.tokens, seed.normalizedTokens));
     });
 
-  const maximal = candidates.filter((candidate) =>
-    !candidates.some(
-      (other) =>
-        other !== candidate &&
-        other.supporting.length === candidate.supporting.length &&
-        other.seed.normalizedTokens.length > candidate.seed.normalizedTokens.length &&
-        containsSequence(other.seed.normalizedTokens, candidate.seed.normalizedTokens) &&
-        other.supporting.every((item) =>
-          candidate.supporting.some((candidateItem) => candidateItem.record.key === item.record.key),
-        ),
-    ),
+  const maximal = candidates.filter(
+    (candidate) =>
+      !candidates.some(
+        (other) =>
+          other !== candidate &&
+          other.supporting.length === candidate.supporting.length &&
+          other.seed.normalizedTokens.length > candidate.seed.normalizedTokens.length &&
+          containsSequence(other.seed.normalizedTokens, candidate.seed.normalizedTokens) &&
+          other.supporting.every((item) =>
+            candidate.supporting.some(
+              (candidateItem) => candidateItem.record.key === item.record.key,
+            ),
+          ),
+      ),
   );
 
   return maximal
