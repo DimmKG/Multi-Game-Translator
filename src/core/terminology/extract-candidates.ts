@@ -263,7 +263,11 @@ export function extractTerminologyCandidates(
       return occurrence ? [occurrence] : [];
     });
     if (familyOccurrences.length < minimumSourceFrequency) continue;
-    if (!familyOccurrences.some((occurrence) => countWords(occurrence.value) > countWords(family.base))) {
+    if (
+      !familyOccurrences.some(
+        (occurrence) => countWords(occurrence.value) > countWords(family.base),
+      )
+    ) {
       continue;
     }
 
@@ -302,8 +306,7 @@ export function extractTerminologyCandidates(
           ? aligned.modifiers
               .filter(
                 (modifier) =>
-                  isMeaningfulCandidate(modifier.source) &&
-                  isMeaningfulCandidate(modifier.target),
+                  isMeaningfulCandidate(modifier.source) && isMeaningfulCandidate(modifier.target),
               )
               .map((modifier) => modifier.source)
           : [],
