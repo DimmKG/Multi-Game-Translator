@@ -86,9 +86,7 @@ const review: TerminologyReviewExport = {
 
 describe("buildTerminologyGlossaryEntryExport", () => {
   it("converts only accepted reviewed candidates into minimal glossary entries", () => {
-    expect(
-      buildTerminologyGlossaryEntryExport(review, "2026-08-04T01:00:00.000Z"),
-    ).toEqual({
+    expect(buildTerminologyGlossaryEntryExport(review, "2026-08-04T01:00:00.000Z")).toEqual({
       format: "necesse-glossary-entries",
       version: 1,
       sourceLanguage: "en",
