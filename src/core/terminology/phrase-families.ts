@@ -16,6 +16,17 @@ export interface PhraseFamily {
   members: readonly PhraseFamilyMember[];
 }
 
+export interface PhraseFamilyTermPair {
+  source: string;
+  target: string;
+  evidenceKeys: readonly string[];
+}
+
+export interface AlignedPhraseFamily {
+  base: PhraseFamilyTermPair;
+  modifiers: readonly PhraseFamilyTermPair[];
+}
+
 interface Token {
   value: string;
   normalized: string;
@@ -88,6 +99,68 @@ function containsSequence(container: readonly string[], candidate: readonly stri
     if (candidate.every((token, offset) => container[start + offset] === token)) return true;
   }
   return false;
+}
+
+function modifierValue(member: PhraseFamilyMember): string {
+  return [member.prefix, member.suffix].filter(Boolean).join(" ");
+}
+
+function commonPrefixLength(values: readonly (readonly Token[])[]): number {
+  if (values.length === 0) return 0;
+  const shortest = Math.min(...values.map((value) => value.length));
+  let length = 0;
+  while (
+    length < shortest &&
+    values.every((value) => value[length].normalized === values[0][length].normalized)
+  ) {
+    length += 1;
+  }
+  return length;
+}
+
+function commonSuffixLength(values: readonly (readonly Token[])[], prefixLength: number): number {
+  if (values.length === 0) return 0;
+  const shortestRemainder = Math.min(...values.map((value) => value.length - prefixLength));
+  let length = 0;
+  while (
+    length < shortestRemainder &&
+    values.every(
+      (value) =>
+        value[value.length - 1 - length].normalized ===
+        values[0][values[0].length - 1 - length].normalized,
+    )
+  ) {
+    length += 1;
+  }
+  return length;
+}
+
+function distinctModifierParts(family: PhraseFamily): Map<string, string> {
+  const modified = family.members
+    .map((member) => ({ member, tokens: tokenize(modifierValue(member)) }))
+    .filter((item) => item.tokens.length > 0);
+  if (modified.length < 2) {
+    return new Map(modified.map(({ member }) => [member.key, modifierValue(member)]));
+  }
+
+  const tokenLists = modified.map((item) => item.tokens);
+  const prefixLength = commonPrefixLength(tokenLists);
+  const suffixLength = commonSuffixLength(tokenLists, prefixLength);
+
+  return new Map(
+    modified.map(({ member, tokens }) => {
+      const end = tokens.length - suffixLength;
+      const distinct = tokens.slice(prefixLength, end);
+      const value = distinct.length > 0 ? distinct.map((token) => token.value).join(" ") : modifierValue(member);
+      return [member.key, value];
+    }),
+  );
+}
+
+function sameSupportKeys(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((key) => rightSet.has(key));
 }
 
 export function discoverPhraseFamilies(records: readonly PhraseFamilyRecord[]): PhraseFamily[] {
@@ -164,4 +237,36 @@ export function discoverPhraseFamilies(records: readonly PhraseFamilyRecord[]): 
       }
       return right.base.length - left.base.length || left.base.localeCompare(right.base);
     });
+}
+
+export function alignPhraseFamily(
+  sourceFamily: PhraseFamily,
+  targetRecords: readonly PhraseFamilyRecord[],
+): AlignedPhraseFamily | null {
+  const alignedTargets = targetRecords.filter((record) => sourceFamily.supportKeys.includes(record.key));
+  const targetFamily = discoverPhraseFamilies(alignedTargets).find((family) =>
+    sameSupportKeys(family.supportKeys, sourceFamily.supportKeys),
+  );
+  if (!targetFamily) return null;
+
+  const base: PhraseFamilyTermPair = {
+    source: sourceFamily.base,
+    target: targetFamily.base,
+    evidenceKeys: sourceFamily.supportKeys,
+  };
+
+  const sourceHasExactBase = sourceFamily.members.some((member) => modifierValue(member) === "");
+  const targetHasExactBase = targetFamily.members.some((member) => modifierValue(member) === "");
+  if (!sourceHasExactBase || !targetHasExactBase) return { base, modifiers: [] };
+
+  const sourceModifiers = distinctModifierParts(sourceFamily);
+  const targetModifiers = distinctModifierParts(targetFamily);
+  const modifiers = sourceFamily.members.flatMap((member) => {
+    const source = sourceModifiers.get(member.key)?.trim() ?? "";
+    const target = targetModifiers.get(member.key)?.trim() ?? "";
+    if (!source || !target) return [];
+    return [{ source, target, evidenceKeys: [member.key] }];
+  });
+
+  return { base, modifiers };
 }
