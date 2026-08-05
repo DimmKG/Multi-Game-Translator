@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,9 @@ import {
 import { emptyTerminologyReviewState } from "@/core/terminology/review-state";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
+import { useWorkspace } from "@/state/workspace-store";
 
+import { GlossaryAuthoringWorkspace } from "./GlossaryAuthoringWorkspace";
 import { TerminologyGlossaryMergeWorkspace } from "./TerminologyGlossaryMergeWorkspace";
 import { TerminologyReviewWorkspace } from "./TerminologyReviewWorkspace";
 
@@ -33,7 +35,7 @@ interface LoadedCorpusFile extends TerminologyCorpusFile {
   id: string;
 }
 
-type TerminologySection = "sources" | "review" | "merge";
+type TerminologySection = "sources" | "review" | "merge" | "authoring";
 
 function downloadJson(filename: string, value: unknown) {
   const blob = new Blob([JSON.stringify(value, null, 2) + "\n"], {
@@ -58,7 +60,10 @@ async function readCorpusFile(file: File, languageCode = ""): Promise<LoadedCorp
 
 export function TerminologyWorkspace() {
   const { t } = useI18n();
-  const [section, setSection] = useState<TerminologySection>("sources");
+  const workspace = useWorkspace();
+  const [section, setSection] = useState<TerminologySection>(() =>
+    workspace.glossaryAuthoringSession ? "authoring" : "sources",
+  );
   const [sourceLanguageCode, setSourceLanguageCode] = useState("en");
   const [sourceFile, setSourceFile] = useState<LoadedCorpusFile | null>(null);
   const [translatedFiles, setTranslatedFiles] = useState<LoadedCorpusFile[]>([]);
@@ -67,6 +72,10 @@ export function TerminologyWorkspace() {
   const [reviewState, setReviewState] = useState<TerminologyReviewState>(
     emptyTerminologyReviewState,
   );
+
+  useEffect(() => {
+    if (workspace.glossaryAuthoringFocusToken > 0) setSection("authoring");
+  }, [workspace.glossaryAuthoringFocusToken]);
 
   const conflictCount = useMemo(
     () =>
@@ -203,7 +212,7 @@ export function TerminologyWorkspace() {
         )}
       </header>
 
-      <div className="border-border flex flex-none gap-1 border-b">
+      <div className="border-border flex max-w-full flex-none gap-1 overflow-x-auto border-b">
         <button
           type="button"
           className={cn(
@@ -239,6 +248,18 @@ export function TerminologyWorkspace() {
           onClick={() => setSection("merge")}
         >
           {t("glossary.button")}
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "border-primary px-3 py-2 text-sm font-medium",
+            section === "authoring"
+              ? "text-foreground border-b-2"
+              : "text-muted-foreground border-b-2 border-transparent",
+          )}
+          onClick={() => setSection("authoring")}
+        >
+          {t("glossary.authoring")}
         </button>
       </div>
 
@@ -393,8 +414,10 @@ export function TerminologyWorkspace() {
             saveTerminologyReviewState(reviewSessionId, nextState);
           }}
         />
-      ) : (
+      ) : section === "merge" ? (
         <TerminologyGlossaryMergeWorkspace review={reviewExport} />
+      ) : (
+        <GlossaryAuthoringWorkspace />
       )}
     </section>
   );
