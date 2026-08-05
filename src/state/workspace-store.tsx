@@ -959,14 +959,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     return entries.filter((entry) => {
       const indexed = rowIndexes.get(entry.id);
       if (state.terminologyFilterActive) {
-        // Terminology is an exclusive view over all rows — ignore status filters.
-        if (!(indexed?.glossaryIssue ?? false)) return false;
-      } else {
-        const status = indexed?.status;
-        if (state.filter === "missing" && status !== "missing") return false;
-        if (state.filter === "done" && status !== "done") return false;
-        if (state.filter === "same" && status !== "same") return false;
-        if (state.filter === "ws" && !(indexed?.wsIssue ?? false)) return false;
+        // Terminology tab — only rows with terminology issues.
+        if (!indexed?.glossaryIssue) return false;
+      } else if (state.filter === "ws") {
+        // Whitespaces tab — only rows with whitespace issues.
+        if (!indexed?.wsIssue) return false;
+        // All other tabs — only rows with the selected status.
+      } else if (state.filter !== "all" && indexed?.status !== state.filter) {
+        return false;
       }
       if (query) {
         const haystack =
