@@ -38,11 +38,7 @@ import {
   replaceWorkspaceInIdb,
   updateWorkspaceMetaInIdb,
 } from "@/core/persistence/progress-store";
-import {
-  removeGlossaryFromIdb,
-  saveGlossaryToIdb,
-  type StoredGlossary,
-} from "@/core/persistence/glossary-store";
+import { removeGlossaryFromIdb, saveGlossaryToIdb } from "@/core/persistence/glossary-store";
 import { hydratePersistence } from "@/core/persistence/hydrate";
 import {
   buildRowIndexMap,
@@ -52,6 +48,26 @@ import {
 } from "@/core/persistence/row-index";
 import { inspectTerminology, type TerminologyIssue } from "@/core/glossary/matcher";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
+import {
+  clearGlossaryAuthoringRecovery,
+  createNewGlossaryAuthoringSession,
+  exportGlossaryAuthoringSession,
+  importGlossaryAuthoringSession,
+  isGlossaryAuthoringSessionDirty,
+  loadGlossaryAuthoringRecovery,
+  openGlossaryAuthoringSession,
+  saveGlossaryAuthoringRecovery,
+  saveGlossaryAuthoringSession,
+  updateGlossaryAuthoringSession,
+  type GlossaryAuthoringSession,
+} from "@/core/glossary/authoring-session";
+import type { GlossaryDraft } from "@/core/glossary/draft";
+import {
+  removeFromGlossaryLibrary,
+  setGlossaryLibraryEnabled,
+  upsertGlossaryLibrary,
+  type StoredGlossary,
+} from "@/core/glossary/library-persistence";
 import { codeFromFilename, normalizeProjectCode } from "@/core/mt/target-language";
 import {
   getAllProviders,
@@ -73,13 +89,25 @@ import {
 } from "@/lib/utils";
 import { useI18n } from "@/features/i18n/I18nProvider";
 
-export type { StoredGlossary } from "@/core/persistence/glossary-store";
+export type { StoredGlossary } from "@/core/glossary/library-persistence";
 
 setSettingsResolver(resolveProviderSettings);
 
 const SETTINGS_STORAGE_KEY = "necesse-translator.settings.v1";
 const FONT_STORAGE_KEY = "necesse-translator.font-settings.v1";
 const PREFERRED_PROVIDER_KEY = "necesse-translator.preferred-mt-provider.v1";
+
+function localBoundaryDate(date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function glossaryExportFilename(id: string): string {
+  const safe = id.trim().replace(/[^a-z0-9._-]+/gi, "-") || "glossary";
+  return `${safe}.json`;
+}
 
 export interface AppSettings {
   referenceReminder: boolean;
@@ -127,6 +155,8 @@ interface WorkspaceState {
   ready: boolean;
   /** Bumped when glossaries change so virtual lists remount with fresh heights. */
   listRevision: number;
+  glossaryAuthoringSession: GlossaryAuthoringSession | null;
+  glossaryAuthoringFocusToken: number;
 }
 
 interface WorkspaceContextValue extends WorkspaceState {
@@ -174,6 +204,13 @@ interface WorkspaceContextValue extends WorkspaceState {
   setGlossaryEnabled: (id: string, enabled: boolean) => void;
   upsertGlossary: (glossary: NormalizedGlossary) => void;
   removeGlossary: (id: string) => void;
+  createGlossaryAuthoring: () => boolean;
+  importGlossaryAuthoring: (text: string, label?: string) => boolean;
+  openGlossaryAuthoring: (id: string) => boolean;
+  updateGlossaryAuthoring: (update: (draft: GlossaryDraft) => void) => void;
+  saveGlossaryAuthoring: () => boolean;
+  exportGlossaryAuthoring: () => boolean;
+  closeGlossaryAuthoring: () => boolean;
   setSettings: (patch: Partial<AppSettings>) => void;
   setFonts: (patch: Partial<FontSettings>) => void;
   setTerminologyFilterActive: (active: boolean) => void;
@@ -270,35 +307,40 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const rowIndexesRef = useRef(rowIndexes);
   rowIndexesRef.current = rowIndexes;
 
-  const [state, setState] = useState<WorkspaceState>(() => ({
-    isOpen: false,
-    filename: "",
-    referenceFilename: "",
-    eol: "\r\n",
-    items: [],
-    filter: "missing",
-    query: "",
-    view: "editor",
-    reviewFilter: "all",
-    reviewQuery: "",
-    spellcheck: true,
-    autocompleteEnabled: true,
-    mtProvider: preferredProvider(),
-    targetLanguage: "",
-    compactView: false,
-    savedAt: 0,
-    saveState: "saved",
-    diffOther: null,
-    diffOnly: true,
-    diffMode: "word",
-    pendingRecovery: null,
-    glossaries: [],
-    settings: loadSettings(),
-    fonts: loadFonts(),
-    terminologyFilterActive: false,
-    ready: false,
-    listRevision: 0,
-  }));
+  const [state, setState] = useState<WorkspaceState>(() => {
+    const glossaryAuthoringSession = loadGlossaryAuthoringRecovery();
+    return {
+      isOpen: false,
+      filename: "",
+      referenceFilename: "",
+      eol: "\r\n",
+      items: [],
+      filter: "missing",
+      query: "",
+      view: glossaryAuthoringSession ? "terminology" : "editor",
+      reviewFilter: "all",
+      reviewQuery: "",
+      spellcheck: true,
+      autocompleteEnabled: true,
+      mtProvider: preferredProvider(),
+      targetLanguage: "",
+      compactView: false,
+      savedAt: 0,
+      saveState: "saved",
+      diffOther: null,
+      diffOnly: true,
+      diffMode: "word",
+      pendingRecovery: null,
+      glossaries: [],
+      settings: loadSettings(),
+      fonts: loadFonts(),
+      terminologyFilterActive: false,
+      ready: false,
+      listRevision: 0,
+      glossaryAuthoringSession,
+      glossaryAuthoringFocusToken: 0,
+    };
+  });
 
   // Read-only mirror for handlers that have to look at the current state to
   // decide something *and* report it — a state updater is not allowed to do the
@@ -755,6 +797,147 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const reindexAllGlossaries = useCallback(
+    (glossaries: StoredGlossary[]) => {
+      if (!stateRef.current.isOpen) {
+        setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
+        return;
+      }
+      const next = buildRowIndexMap(stateRef.current.items, glossaries);
+      markFullReplace(next);
+      setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
+      scheduleSave();
+    },
+    [markFullReplace, scheduleSave],
+  );
+
+  const canReplaceGlossaryAuthoring = useCallback(() => {
+    const session = stateRef.current.glossaryAuthoringSession;
+    return (
+      !session ||
+      !isGlossaryAuthoringSessionDirty(session) ||
+      window.confirm(t("glossary.authoringDiscardConfirm"))
+    );
+  }, [t]);
+
+  const focusGlossaryAuthoring = useCallback((session: GlossaryAuthoringSession) => {
+    saveGlossaryAuthoringRecovery(session);
+    setState((current) => ({
+      ...current,
+      view: "terminology",
+      glossaryAuthoringSession: session,
+      glossaryAuthoringFocusToken: current.glossaryAuthoringFocusToken + 1,
+    }));
+  }, []);
+
+  const createGlossaryAuthoring = useCallback(() => {
+    if (!canReplaceGlossaryAuthoring()) return false;
+    focusGlossaryAuthoring(createNewGlossaryAuthoringSession());
+    return true;
+  }, [canReplaceGlossaryAuthoring, focusGlossaryAuthoring]);
+
+  const importGlossaryAuthoring = useCallback(
+    (text: string, label = "glossary") => {
+      if (!canReplaceGlossaryAuthoring()) return false;
+      try {
+        focusGlossaryAuthoring(importGlossaryAuthoringSession(text, label));
+        return true;
+      } catch (error) {
+        toast.error(
+          t("glossary.authoringImportFailed", {
+            msg: error instanceof Error ? error.message : t("err.generic"),
+          }),
+        );
+        return false;
+      }
+    },
+    [canReplaceGlossaryAuthoring, focusGlossaryAuthoring, t],
+  );
+
+  const openGlossaryAuthoring = useCallback(
+    (id: string) => {
+      if (!canReplaceGlossaryAuthoring()) return false;
+      const glossary = stateRef.current.glossaries.find((item) => item.id === id);
+      if (!glossary) return false;
+      focusGlossaryAuthoring(openGlossaryAuthoringSession(glossary));
+      return true;
+    },
+    [canReplaceGlossaryAuthoring, focusGlossaryAuthoring],
+  );
+
+  const updateGlossaryAuthoring = useCallback((update: (draft: GlossaryDraft) => void) => {
+    setState((current) => {
+      if (!current.glossaryAuthoringSession) return current;
+      const session = updateGlossaryAuthoringSession(current.glossaryAuthoringSession, update);
+      saveGlossaryAuthoringRecovery(session);
+      return { ...current, glossaryAuthoringSession: session };
+    });
+  }, []);
+
+  const saveGlossaryAuthoring = useCallback(() => {
+    const current = stateRef.current;
+    if (!current.glossaryAuthoringSession) return false;
+    try {
+      const result = saveGlossaryAuthoringSession(
+        current.glossaryAuthoringSession,
+        localBoundaryDate(),
+      );
+      const glossaries = upsertGlossaryLibrary(current.glossaries, result.glossary);
+      const updated = glossaries.find((item) => item.id === result.glossary.id);
+      if (updated) void saveGlossaryToIdb(updated);
+      queueMicrotask(() => reindexAllGlossaries(glossaries));
+      saveGlossaryAuthoringRecovery(result.session);
+      setState((state) => ({
+        ...state,
+        glossaries,
+        glossaryAuthoringSession: result.session,
+      }));
+      toast.success(t("glossary.authoringSaved", { name: result.glossary.name }));
+      return true;
+    } catch (error) {
+      toast.error(
+        t("glossary.authoringSaveFailed", {
+          msg: error instanceof Error ? error.message : t("err.generic"),
+        }),
+      );
+      return false;
+    }
+  }, [reindexAllGlossaries, t]);
+
+  const exportGlossaryAuthoring = useCallback(() => {
+    const current = stateRef.current;
+    if (!current.glossaryAuthoringSession) return false;
+    try {
+      const result = exportGlossaryAuthoringSession(
+        current.glossaryAuthoringSession,
+        localBoundaryDate(),
+      );
+      downloadText(
+        glossaryExportFilename(result.glossary.id),
+        result.serialized,
+        "application/json",
+      );
+      saveGlossaryAuthoringRecovery(result.session);
+      setState((state) => ({ ...state, glossaryAuthoringSession: result.session }));
+      toast.success(t("glossary.authoringExported", { name: result.glossary.name }));
+      return true;
+    } catch (error) {
+      toast.error(
+        t("glossary.authoringExportFailed", {
+          msg: error instanceof Error ? error.message : t("err.generic"),
+        }),
+      );
+      return false;
+    }
+  }, [t]);
+
+  const closeGlossaryAuthoring = useCallback(() => {
+    if (!canReplaceGlossaryAuthoring()) return false;
+    clearGlossaryAuthoringRecovery();
+    setState((current) => ({ ...current, glossaryAuthoringSession: null }));
+    return true;
+  }, [canReplaceGlossaryAuthoring]);
+
   const enabledGlossaries = useMemo(
     () => state.glossaries.filter((glossary) => glossary.enabled),
     [state.glossaries],
@@ -805,20 +988,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
   const whitespaceIssueCount = indexCounts.wsIssues;
   const terminologyIssueCount = indexCounts.glossaryIssues;
-
-  const reindexAllGlossaries = useCallback(
-    (glossaries: StoredGlossary[]) => {
-      if (!stateRef.current.isOpen) {
-        setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
-        return;
-      }
-      const next = buildRowIndexMap(stateRef.current.items, glossaries);
-      markFullReplace(next);
-      setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
-      scheduleSave();
-    },
-    [markFullReplace, scheduleSave],
-  );
 
   const value: WorkspaceContextValue = {
     ...state,
@@ -883,9 +1052,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     rowIndexes,
     setGlossaryEnabled: (id, enabled) => {
       setState((current) => {
-        const glossaries = current.glossaries.map((glossary) =>
-          glossary.id === id ? { ...glossary, enabled } : glossary,
-        );
+        const glossaries = setGlossaryLibraryEnabled(current.glossaries, id, enabled);
         const updated = glossaries.find((glossary) => glossary.id === id);
         if (updated) void saveGlossaryToIdb(updated);
         queueMicrotask(() => reindexAllGlossaries(glossaries));
@@ -894,27 +1061,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     },
     upsertGlossary: (glossary) => {
       setState((current) => {
-        const existing = current.glossaries.find((item) => item.id === glossary.id);
-        const next: StoredGlossary = {
-          ...glossary,
-          enabled: existing?.enabled ?? true,
-        };
-        const glossaries = existing
-          ? current.glossaries.map((item) => (item.id === glossary.id ? next : item))
-          : [...current.glossaries, next];
-        void saveGlossaryToIdb(next);
+        const glossaries = upsertGlossaryLibrary(current.glossaries, glossary);
+        const updated = glossaries.find((item) => item.id === glossary.id);
+        if (updated) void saveGlossaryToIdb(updated);
         queueMicrotask(() => reindexAllGlossaries(glossaries));
         return { ...current, glossaries };
       });
     },
     removeGlossary: (id) => {
       setState((current) => {
-        const glossaries = current.glossaries.filter((glossary) => glossary.id !== id);
+        const glossaries = removeFromGlossaryLibrary(current.glossaries, id);
         void removeGlossaryFromIdb(id);
         queueMicrotask(() => reindexAllGlossaries(glossaries));
         return { ...current, glossaries };
       });
     },
+    createGlossaryAuthoring,
+    importGlossaryAuthoring,
+    openGlossaryAuthoring,
+    updateGlossaryAuthoring,
+    saveGlossaryAuthoring,
+    exportGlossaryAuthoring,
+    closeGlossaryAuthoring,
     setSettings: (patch) => {
       setState((current) => {
         const settings = { ...current.settings, ...patch };

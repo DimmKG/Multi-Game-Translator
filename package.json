@@ -18,7 +18,7 @@
     "format:check": "prettier --check .",
     "validate:locales": "node scripts/validate-locales.mjs",
     "validate:interface-locales": "node scripts/validate-interface-locales.mjs",
-    "validate:glossaries": "node scripts/validate-glossaries.mjs",
+    "validate:glossaries": "vitest run src/core/glossary/repository-validation.test.ts",
     "generate:fixtures": "node --experimental-strip-types scripts/generate-fixtures.mjs",
     "verify": "npm run lint && npm run format:check && npm test && npm run validate:locales && npm run validate:interface-locales && npm run validate:glossaries && npm run build && npm run build:standalone",
     "prepare": "husky"

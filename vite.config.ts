@@ -57,6 +57,11 @@ export default defineConfig(({ mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },
+    optimizeDeps: {
+      // Generated standalone and legacy HTML files live inside the repository,
+      // but they are build artifacts/reference files rather than dev entry points.
+      entries: ["index.html"],
+    },
     build: {
       assetsInlineLimit: standalone ? Number.MAX_SAFE_INTEGER : undefined,
       cssCodeSplit: !standalone,
