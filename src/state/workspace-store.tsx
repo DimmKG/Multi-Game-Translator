@@ -26,20 +26,30 @@ import {
   parseLangFile,
   parseReferenceLang,
 } from "@/core/lang/parse";
+import { hasUsableReference, type TranslationEntry } from "@/core/lang/status";
 import {
-  countProgress,
-  hasUsableReference,
-  statusOf,
-  type TranslationEntry,
-} from "@/core/lang/status";
-import {
-  clearProgressFromLocalStorage,
   deserializeProgress,
-  loadProgressFromLocalStorage,
-  saveProgressToLocalStorage,
   serializeProgress,
   type WorkspaceSnapshot,
 } from "@/core/persistence/serialize";
+import {
+  clearWorkspaceFromIdb,
+  putWorkspaceLines,
+  replaceWorkspaceInIdb,
+  updateWorkspaceMetaInIdb,
+} from "@/core/persistence/progress-store";
+import {
+  removeGlossaryFromIdb,
+  saveGlossaryToIdb,
+  type StoredGlossary,
+} from "@/core/persistence/glossary-store";
+import { hydratePersistence } from "@/core/persistence/hydrate";
+import {
+  buildRowIndexMap,
+  countFromIndex,
+  reindexOne,
+  type RowIndex,
+} from "@/core/persistence/row-index";
 import { inspectTerminology, type TerminologyIssue } from "@/core/glossary/matcher";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
 import { codeFromFilename, normalizeProjectCode } from "@/core/mt/target-language";
@@ -52,7 +62,6 @@ import {
 import { resolveProviderSettings } from "@/core/mt/provider-settings";
 import { sourceText } from "@/core/lang/status";
 import { validateEnglishReferenceFile } from "@/core/lang/reference-validation";
-import { countWhitespaceIssues, scanWhitespace } from "@/core/tokens/whitespace";
 import {
   downloadBlob,
   downloadText,
@@ -64,16 +73,13 @@ import {
 } from "@/lib/utils";
 import { useI18n } from "@/features/i18n/I18nProvider";
 
+export type { StoredGlossary } from "@/core/persistence/glossary-store";
+
 setSettingsResolver(resolveProviderSettings);
 
-const GLOSSARY_STORAGE_KEY = "necesse-translator.glossaries.v1";
 const SETTINGS_STORAGE_KEY = "necesse-translator.settings.v1";
 const FONT_STORAGE_KEY = "necesse-translator.font-settings.v1";
 const PREFERRED_PROVIDER_KEY = "necesse-translator.preferred-mt-provider.v1";
-
-export interface StoredGlossary extends NormalizedGlossary {
-  enabled: boolean;
-}
 
 export interface AppSettings {
   referenceReminder: boolean;
@@ -117,6 +123,10 @@ interface WorkspaceState {
   settings: AppSettings;
   fonts: FontSettings;
   terminologyFilterActive: boolean;
+  /** False until IndexedDB hydrate finishes. */
+  ready: boolean;
+  /** Bumped when glossaries change so virtual lists remount with fresh heights. */
+  listRevision: number;
 }
 
 interface WorkspaceContextValue extends WorkspaceState {
@@ -157,8 +167,10 @@ interface WorkspaceContextValue extends WorkspaceState {
   progress: { done: number; total: number };
   referenceAvailable: boolean;
   whitespaceIssueCount: number;
+  terminologyIssueCount: number;
   enabledGlossaries: StoredGlossary[];
   terminologyIssuesFor: (entry: TranslationEntry) => readonly TerminologyIssue[];
+  rowIndexes: ReadonlyMap<number, RowIndex>;
   setGlossaryEnabled: (id: string, enabled: boolean) => void;
   upsertGlossary: (glossary: NormalizedGlossary) => void;
   removeGlossary: (id: string) => void;
@@ -170,15 +182,6 @@ interface WorkspaceContextValue extends WorkspaceState {
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
-
-function loadGlossaries(): StoredGlossary[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(GLOSSARY_STORAGE_KEY) || "[]");
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
-}
 
 function loadSettings(): AppSettings {
   try {
@@ -239,9 +242,33 @@ function applyFontCss(fonts: FontSettings) {
   else document.documentElement.style.removeProperty("--user-editor-font");
 }
 
+function snapshotFromState(snapshot: WorkspaceState): WorkspaceSnapshot {
+  return {
+    filename: snapshot.filename,
+    referenceFilename: snapshot.referenceFilename,
+    eol: snapshot.eol,
+    savedAt: Date.now(),
+    items: snapshot.items,
+    meta: {
+      provider: snapshot.mtProvider,
+      targetLanguage: snapshot.targetLanguage,
+      spellcheck: snapshot.spellcheck,
+      autocompleteEnabled: snapshot.autocompleteEnabled,
+    },
+  };
+}
+
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dirtyLineIds = useRef<Set<number>>(new Set());
+  const fullReplace = useRef(false);
+  const metaDirty = useRef(false);
+  const readyRef = useRef(false);
+
+  const [rowIndexes, setRowIndexes] = useState<ReadonlyMap<number, RowIndex>>(() => new Map());
+  const rowIndexesRef = useRef(rowIndexes);
+  rowIndexesRef.current = rowIndexes;
 
   const [state, setState] = useState<WorkspaceState>(() => ({
     isOpen: false,
@@ -264,11 +291,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     diffOther: null,
     diffOnly: true,
     diffMode: "word",
-    pendingRecovery: loadProgressFromLocalStorage(),
-    glossaries: loadGlossaries(),
+    pendingRecovery: null,
+    glossaries: [],
     settings: loadSettings(),
     fonts: loadFonts(),
     terminologyFilterActive: false,
+    ready: false,
+    listRevision: 0,
   }));
 
   // Read-only mirror for handlers that have to look at the current state to
@@ -278,6 +307,41 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   stateRef.current = state;
 
   useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const hydrated = await hydratePersistence();
+        if (cancelled) return;
+        readyRef.current = true;
+        // Never clobber an already-open workspace — hydrate only seeds recovery.
+        if (stateRef.current.isOpen) {
+          setState((current) => ({
+            ...current,
+            glossaries: hydrated.glossaries,
+            ready: true,
+          }));
+          return;
+        }
+        rowIndexesRef.current = hydrated.rowIndexes;
+        setRowIndexes(hydrated.rowIndexes);
+        setState((current) => ({
+          ...current,
+          glossaries: hydrated.glossaries,
+          pendingRecovery: hydrated.pendingRecovery,
+          ready: true,
+        }));
+      } catch {
+        if (cancelled) return;
+        readyRef.current = true;
+        setState((current) => ({ ...current, ready: true }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     applyFontCss(state.fonts);
   }, [state.fonts]);
 
@@ -285,46 +349,77 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("compact-view", state.compactView && state.isOpen);
   }, [state.compactView, state.isOpen]);
 
-  const persistNow = useCallback((snapshot: WorkspaceState) => {
-    if (!snapshot.isOpen) return false;
-    const ok = saveProgressToLocalStorage({
-      filename: snapshot.filename,
-      referenceFilename: snapshot.referenceFilename,
-      eol: snapshot.eol,
-      savedAt: Date.now(),
-      items: snapshot.items,
-      meta: {
-        provider: snapshot.mtProvider,
-        targetLanguage: snapshot.targetLanguage,
-        spellcheck: snapshot.spellcheck,
-        autocompleteEnabled: snapshot.autocompleteEnabled,
-      },
-    });
-    setState((current) => ({
-      ...current,
-      savedAt: Date.now(),
-      saveState: ok ? "saved" : "error",
-    }));
-    return ok;
+  const markFullReplace = useCallback((indexes: Map<number, RowIndex>) => {
+    fullReplace.current = true;
+    dirtyLineIds.current.clear();
+    metaDirty.current = true;
+    setRowIndexes(indexes);
+  }, []);
+
+  const persistNow = useCallback(async (snapshot: WorkspaceState) => {
+    if (!snapshot.isOpen || !readyRef.current) return false;
+    const indexes = rowIndexesRef.current;
+    try {
+      if (fullReplace.current) {
+        await replaceWorkspaceInIdb(snapshotFromState(snapshot), indexes, snapshot.glossaries);
+        fullReplace.current = false;
+        dirtyLineIds.current.clear();
+        metaDirty.current = false;
+      } else if (dirtyLineIds.current.size > 0) {
+        const dirty = [...dirtyLineIds.current];
+        await putWorkspaceLines(snapshot.items, dirty, indexes, {
+          filename: snapshot.filename,
+          referenceFilename: snapshot.referenceFilename,
+          eol: snapshot.eol,
+          provider: snapshot.mtProvider,
+          targetLanguage: snapshot.targetLanguage,
+          spellcheck: snapshot.spellcheck,
+          autocompleteEnabled: snapshot.autocompleteEnabled,
+          glossaries: snapshot.glossaries,
+        });
+        dirtyLineIds.current.clear();
+        metaDirty.current = false;
+      } else if (metaDirty.current) {
+        await updateWorkspaceMetaInIdb(
+          {
+            filename: snapshot.filename,
+            referenceFilename: snapshot.referenceFilename,
+            eol: snapshot.eol,
+            provider: snapshot.mtProvider,
+            targetLanguage: snapshot.targetLanguage,
+            spellcheck: snapshot.spellcheck,
+            autocompleteEnabled: snapshot.autocompleteEnabled,
+          },
+          snapshot.glossaries,
+        );
+        metaDirty.current = false;
+      }
+      setState((current) => ({
+        ...current,
+        savedAt: Date.now(),
+        saveState: "saved",
+      }));
+      return true;
+    } catch {
+      setState((current) => ({
+        ...current,
+        saveState: "error",
+      }));
+      return false;
+    }
   }, []);
 
   const scheduleSave = useCallback(() => {
     setState((current) => ({ ...current, saveState: "saving" }));
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      setState((current) => {
-        persistNow(current);
-        return current;
-      });
+      void persistNow(stateRef.current);
     }, 500);
   }, [persistNow]);
 
   useEffect(() => {
     const flush = () => {
-      setState((current) => {
-        if (current.isOpen) persistNow(current);
-        return current;
-      });
+      if (stateRef.current.isOpen) void persistNow(stateRef.current);
     };
     window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", () => {
@@ -335,7 +430,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const dismissPendingRecovery = useCallback((discardStored = false) => {
     setState((current) => ({ ...current, pendingRecovery: null }));
-    if (discardStored) clearProgressFromLocalStorage();
+    if (discardStored) {
+      void clearWorkspaceFromIdb();
+      setRowIndexes(new Map());
+    }
   }, []);
 
   const openWorkspaceFromText = useCallback(
@@ -355,6 +453,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       const filename = options.filename ? cleanLangFilename(options.filename) : "";
       dismissPendingRecovery();
+      const glossaries = stateRef.current.glossaries;
+      markFullReplace(buildRowIndexMap(parsed.items, glossaries));
       setState((current) => ({
         ...current,
         isOpen: true,
@@ -377,7 +477,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }));
       scheduleSave();
     },
-    [dismissPendingRecovery, scheduleSave],
+    [dismissPendingRecovery, markFullReplace, scheduleSave],
   );
 
   const openLangFile = useCallback(
@@ -434,6 +534,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       // React re-ran the updater — three times, in practice.
       const items = stateRef.current.items.map((item) => ({ ...item }));
       const matched = applyReferenceMap(items, map);
+      markFullReplace(buildRowIndexMap(items, stateRef.current.glossaries));
       setState((current) => ({
         ...current,
         items,
@@ -442,7 +543,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       toast.success(t("btn.enRefLoaded", { file: validation.filename, n: matched }));
       scheduleSave();
     },
-    [scheduleSave, t],
+    [markFullReplace, scheduleSave, t],
   );
 
   const exportLang = useCallback(() => {
@@ -460,19 +561,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [t]);
 
   const saveProgressFile = useCallback(async () => {
-    const snapshot = serializeProgress({
-      filename: state.filename,
-      referenceFilename: state.referenceFilename,
-      eol: state.eol,
-      savedAt: Date.now(),
-      items: state.items,
-      meta: {
-        provider: state.mtProvider,
-        targetLanguage: state.targetLanguage,
-        spellcheck: state.spellcheck,
-        autocompleteEnabled: state.autocompleteEnabled,
-      },
-    });
+    const snapshot = serializeProgress(snapshotFromState(state));
     const base = (state.filename || "translation.lang").replace(/\.lang$/i, "");
     const text = JSON.stringify(snapshot);
     if (typeof CompressionStream !== "undefined") {
@@ -505,6 +594,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }
         const snapshot = deserializeProgress(JSON.parse(text));
         dismissPendingRecovery();
+        markFullReplace(buildRowIndexMap(snapshot.items, stateRef.current.glossaries));
         setState((current) => ({
           ...current,
           isOpen: true,
@@ -529,12 +619,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [dismissPendingRecovery, scheduleSave, t],
+    [dismissPendingRecovery, markFullReplace, scheduleSave, t],
   );
 
   const continueRecovery = useCallback(() => {
     const recovery = state.pendingRecovery;
     if (!recovery) return;
+    markFullReplace(buildRowIndexMap(recovery.items, stateRef.current.glossaries));
     setState((current) => ({
       ...current,
       isOpen: true,
@@ -550,7 +641,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       pendingRecovery: null,
       view: "editor",
     }));
-  }, [state.pendingRecovery]);
+    scheduleSave();
+  }, [markFullReplace, scheduleSave, state.pendingRecovery]);
 
   const startOverRecovery = useCallback(() => {
     dismissPendingRecovery(true);
@@ -558,19 +650,40 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const updateEntryValue = useCallback(
     (entryId: number, value: string, options?: { mtDraft?: boolean }) => {
-      setState((current) => ({
-        ...current,
-        items: current.items.map((item) =>
-          item.type === "entry" && item.id === entryId
-            ? {
-                ...item,
-                value,
-                touched: true,
-                mtDraft: options?.mtDraft ?? false,
-              }
-            : item,
-        ),
-      }));
+      const current = stateRef.current;
+      const items = current.items.map((item) =>
+        item.type === "entry" && item.id === entryId
+          ? {
+              ...item,
+              value,
+              touched: true,
+              mtDraft: options?.mtDraft ?? false,
+            }
+          : item,
+      );
+      const entry = items.find(
+        (item): item is TranslationEntry => item.type === "entry" && item.id === entryId,
+      );
+      if (entry) {
+        const next = new Map(rowIndexesRef.current);
+        const nextIndex = reindexOne(next, entry, current.glossaries);
+        const prevIndex = rowIndexesRef.current.get(entryId);
+        rowIndexesRef.current = next;
+        dirtyLineIds.current.add(entryId);
+        // Only publish a new Map when filter-relevant flags change — otherwise the
+        // virtual list rebuilds and measure() snaps the scroll mid-fling.
+        if (
+          !prevIndex ||
+          prevIndex.status !== nextIndex.status ||
+          prevIndex.tokenIssue !== nextIndex.tokenIssue ||
+          prevIndex.wsIssue !== nextIndex.wsIssue ||
+          prevIndex.glossaryIssue !== nextIndex.glossaryIssue ||
+          prevIndex.hasRef !== nextIndex.hasRef
+        ) {
+          setRowIndexes(next);
+        }
+      }
+      setState((prev) => ({ ...prev, items }));
       scheduleSave();
     },
     [scheduleSave],
@@ -578,14 +691,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const toggleMarkedSame = useCallback(
     (entryId: number) => {
-      setState((current) => ({
-        ...current,
-        items: current.items.map((item) =>
-          item.type === "entry" && item.id === entryId && item.ref != null
-            ? { ...item, markedSame: !item.markedSame, touched: true }
-            : item,
-        ),
-      }));
+      const current = stateRef.current;
+      const items = current.items.map((item) =>
+        item.type === "entry" && item.id === entryId && item.ref != null
+          ? { ...item, markedSame: !item.markedSame, touched: true }
+          : item,
+      );
+      const entry = items.find(
+        (item): item is TranslationEntry => item.type === "entry" && item.id === entryId,
+      );
+      if (entry) {
+        const next = new Map(rowIndexesRef.current);
+        reindexOne(next, entry, current.glossaries);
+        rowIndexesRef.current = next;
+        setRowIndexes(next);
+        dirtyLineIds.current.add(entryId);
+      }
+      setState((prev) => ({ ...prev, items }));
       scheduleSave();
     },
     [scheduleSave],
@@ -652,12 +774,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const filteredEntries = useMemo(() => {
     const query = state.query.trim().toLowerCase();
     return entries.filter((entry) => {
-      if (state.terminologyFilterActive && terminologyIssuesFor(entry).length === 0) return false;
-      const status = statusOf(entry);
-      if (state.filter === "missing" && status !== "missing") return false;
-      if (state.filter === "done" && status !== "done") return false;
-      if (state.filter === "same" && status !== "same") return false;
-      if (state.filter === "ws" && !scanWhitespace(entry).any) return false;
+      const indexed = rowIndexes.get(entry.id);
+      if (state.terminologyFilterActive) {
+        // Terminology is an exclusive view over all rows — ignore status filters.
+        if (!(indexed?.glossaryIssue ?? false)) return false;
+      } else {
+        const status = indexed?.status;
+        if (state.filter === "missing" && status !== "missing") return false;
+        if (state.filter === "done" && status !== "done") return false;
+        if (state.filter === "same" && status !== "same") return false;
+        if (state.filter === "ws" && !(indexed?.wsIssue ?? false)) return false;
+      }
       if (query) {
         const haystack =
           `${entry.key}\n${entry.value}\n${entry.english}\n${entry.ref || ""}`.toLowerCase();
@@ -665,14 +792,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       return true;
     });
-  }, [entries, state.filter, state.query, state.terminologyFilterActive, terminologyIssuesFor]);
+  }, [entries, rowIndexes, state.filter, state.query, state.terminologyFilterActive]);
 
-  const progress = useMemo(() => countProgress(state.items), [state.items]);
+  const indexCounts = useMemo(() => countFromIndex(rowIndexes), [rowIndexes]);
+  const progress = useMemo(
+    () => ({ done: indexCounts.done, total: indexCounts.total }),
+    [indexCounts],
+  );
   const referenceAvailable = useMemo(
     () => hasUsableReference(state.items, state.referenceFilename),
     [state.items, state.referenceFilename],
   );
-  const whitespaceIssueCount = useMemo(() => countWhitespaceIssues(entries), [entries]);
+  const whitespaceIssueCount = indexCounts.wsIssues;
+  const terminologyIssueCount = indexCounts.glossaryIssues;
+
+  const reindexAllGlossaries = useCallback(
+    (glossaries: StoredGlossary[]) => {
+      if (!stateRef.current.isOpen) {
+        setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
+        return;
+      }
+      const next = buildRowIndexMap(stateRef.current.items, glossaries);
+      markFullReplace(next);
+      setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
+      scheduleSave();
+    },
+    [markFullReplace, scheduleSave],
+  );
 
   const value: WorkspaceContextValue = {
     ...state,
@@ -687,6 +833,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     startOverRecovery,
     setFilename: (name) => {
       setState((current) => ({ ...current, filename: name }));
+      metaDirty.current = true;
       scheduleSave();
     },
     setFilter: (filter) => setState((current) => ({ ...current, filter })),
@@ -696,10 +843,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setReviewQuery: (reviewQuery) => setState((current) => ({ ...current, reviewQuery })),
     setSpellcheck: (spellcheck) => {
       setState((current) => ({ ...current, spellcheck }));
+      metaDirty.current = true;
       scheduleSave();
     },
     setAutocompleteEnabled: (autocompleteEnabled) => {
       setState((current) => ({ ...current, autocompleteEnabled }));
+      metaDirty.current = true;
       scheduleSave();
     },
     setMtProvider: (mtProvider) => {
@@ -709,10 +858,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         /* ignore */
       }
       setState((current) => ({ ...current, mtProvider }));
+      metaDirty.current = true;
       scheduleSave();
     },
     setTargetLanguage: (targetLanguage) => {
       setState((current) => ({ ...current, targetLanguage: normalizeProjectCode(targetLanguage) }));
+      metaDirty.current = true;
       scheduleSave();
     },
     setCompactView: (compactView) =>
@@ -726,14 +877,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     progress,
     referenceAvailable,
     whitespaceIssueCount,
+    terminologyIssueCount,
     enabledGlossaries,
     terminologyIssuesFor,
+    rowIndexes,
     setGlossaryEnabled: (id, enabled) => {
       setState((current) => {
         const glossaries = current.glossaries.map((glossary) =>
           glossary.id === id ? { ...glossary, enabled } : glossary,
         );
-        localStorage.setItem(GLOSSARY_STORAGE_KEY, JSON.stringify(glossaries));
+        const updated = glossaries.find((glossary) => glossary.id === id);
+        if (updated) void saveGlossaryToIdb(updated);
+        queueMicrotask(() => reindexAllGlossaries(glossaries));
         return { ...current, glossaries };
       });
     },
@@ -747,14 +902,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const glossaries = existing
           ? current.glossaries.map((item) => (item.id === glossary.id ? next : item))
           : [...current.glossaries, next];
-        localStorage.setItem(GLOSSARY_STORAGE_KEY, JSON.stringify(glossaries));
+        void saveGlossaryToIdb(next);
+        queueMicrotask(() => reindexAllGlossaries(glossaries));
         return { ...current, glossaries };
       });
     },
     removeGlossary: (id) => {
       setState((current) => {
         const glossaries = current.glossaries.filter((glossary) => glossary.id !== id);
-        localStorage.setItem(GLOSSARY_STORAGE_KEY, JSON.stringify(glossaries));
+        void removeGlossaryFromIdb(id);
+        queueMicrotask(() => reindexAllGlossaries(glossaries));
         return { ...current, glossaries };
       });
     },

@@ -316,27 +316,33 @@ export function EditorSidebar() {
     warn?: boolean;
     title?: string;
   }> = useMemo(() => {
-    const count = (predicate: (entry: TranslationEntry) => boolean) =>
-      entries.filter(predicate).length;
+    let missing = 0;
+    let done = 0;
+    let same = 0;
+    for (const row of workspace.rowIndexes.values()) {
+      if (row.status === "missing") missing += 1;
+      else if (row.status === "done") done += 1;
+      else if (row.status === "same") same += 1;
+    }
     return [
       {
         id: "missing",
         label: t("filter.missing"),
-        count: count((entry) => statusOf(entry) === "missing"),
+        count: missing,
         icon: CircleDashed,
         tint: "text-primary",
       },
       {
         id: "done",
         label: t("filter.done"),
-        count: count((entry) => statusOf(entry) === "done"),
+        count: done,
         icon: CircleCheck,
         tint: "text-success",
       },
       {
         id: "same",
         label: t("filter.same"),
-        count: workspace.referenceAvailable ? count((entry) => statusOf(entry) === "same") : "—",
+        count: workspace.referenceAvailable ? same : "—",
         icon: Equal,
         tint: "text-same",
         disabled: !workspace.referenceAvailable,
@@ -359,12 +365,15 @@ export function EditorSidebar() {
         title: t("filter.wsTitle"),
       },
     ];
-  }, [entries, t, workspace.referenceAvailable, workspace.whitespaceIssueCount]);
+  }, [
+    entries.length,
+    t,
+    workspace.referenceAvailable,
+    workspace.rowIndexes,
+    workspace.whitespaceIssueCount,
+  ]);
 
-  const terminologyCount = useMemo(
-    () => entries.filter((entry) => workspace.terminologyIssuesFor(entry).length > 0).length,
-    [entries, workspace],
-  );
+  const terminologyCount = workspace.terminologyIssueCount;
 
   const sections = useMemo(() => {
     const list: Array<{ name: string; count: number }> = [];
@@ -491,7 +500,7 @@ export function EditorView() {
 
   useEffect(() => {
     setStickyIds(new Set());
-  }, [workspace.view]);
+  }, [workspace.view, workspace.terminologyFilterActive, workspace.listRevision]);
 
   const rows = useMemo(() => {
     const visible = new Set(workspace.filteredEntries.map((entry) => entry.id));
@@ -514,16 +523,13 @@ export function EditorView() {
     return out;
   }, [workspace.items, workspace.filteredEntries, stickyIds]);
 
-  const terminologyCount = useMemo(
-    () =>
-      workspace.items.filter(
-        (item) => item.type === "entry" && workspace.terminologyIssuesFor(item).length > 0,
-      ).length,
-    [workspace],
-  );
+  const terminologyCount = workspace.terminologyIssueCount;
 
-  const { terminologyIssuesFor } = workspace;
   const listApi = useRef<VirtualListApi | null>(null);
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const rowIndexesRef = useRef(workspace.rowIndexes);
+  rowIndexesRef.current = workspace.rowIndexes;
 
   // Card geometry is calibrated against the real DOM once, then every row's
   // height is derived from it — so the virtual list knows the full scroll
@@ -554,7 +560,8 @@ export function EditorView() {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [workspace.fonts]);
+    // listRevision remounts VirtualList — re-bind to the new scroll element.
+  }, [workspace.fonts, workspace.listRevision]);
 
   useEffect(() => {
     const flush = () => {
@@ -576,25 +583,32 @@ export function EditorView() {
     return unsubscribe;
   }, [rows]);
 
-  // Must keep a stable identity: the virtualizer treats a new estimator as a
-  // reason to re-measure, which shows up as dropped frames while scrolling.
+  // Stable across item edits (rows via ref). Recreate only when card metrics
+  // recalibrate — otherwise virtualizer.measure() snaps the scroll mid-fling.
   const estimateSize = useCallback(
     (index: number) => {
-      const row = rows[index];
+      const row = rowsRef.current[index];
       if (!row || row.kind === "section") return SECTION_HEAD_HEIGHT;
       if (!heights) return FALLBACK_CARD_HEIGHT;
-      return heights.heightOf(row.entry, terminologyIssuesFor(row.entry).length);
+      const warnings = rowIndexesRef.current.get(row.entry.id);
+      const warningCount =
+        (warnings?.tokenIssue ? 1 : 0) +
+        (warnings?.wsIssue ? 1 : 0) +
+        (warnings?.glossaryIssue ? 1 : 0);
+      return heights.heightOf(row.entry, warningCount);
     },
-    [rows, heights, terminologyIssuesFor],
+    [heights],
   );
 
-  const emptyKey = workspace.query.trim()
-    ? "empty.noMatch"
-    : workspace.filter === "missing"
-      ? "empty.allDone"
-      : workspace.filter === "ws"
-        ? "empty.noWs"
-        : "empty.generic";
+  const emptyKey = workspace.terminologyFilterActive
+    ? "terminology.none"
+    : workspace.query.trim()
+      ? "empty.noMatch"
+      : workspace.filter === "missing"
+        ? "empty.allDone"
+        : workspace.filter === "ws"
+          ? "empty.noWs"
+          : "empty.generic";
 
   return (
     <>
@@ -629,30 +643,30 @@ export function EditorView() {
               {t("query.hint", { q: workspace.query, n: workspace.filteredEntries.length })}
             </span>
           )}
-          {/* Reports terminology state even with nothing to filter, so it stays
-              legible when disabled rather than dimming out like a dead action. */}
-          <Button
-            type="button"
-            variant="outline"
-            className={cn(
-              "font-mono disabled:opacity-100",
-              workspace.terminologyFilterActive && "border-primary bg-primary-soft text-primary",
-            )}
-            title={t("terminology.filterTitle")}
-            disabled={terminologyCount === 0}
-            onClick={() => workspace.setTerminologyFilterActive(!workspace.terminologyFilterActive)}
-          >
-            {terminologyCount === 0 ? (
-              <CircleCheck className="text-success" aria-hidden="true" />
-            ) : (
-              <TriangleAlert className="text-warn" aria-hidden="true" />
-            )}
-            <span>
-              {t(terminologyCount === 1 ? "terminology.count.one" : "terminology.count.other", {
-                n: terminologyCount,
-              })}
-            </span>
-          </Button>
+          {/* Near-search toggle — hidden while the terminology sidebar tab is
+              already active (that mode lists all issue rows). On other tabs it
+              stays so you can jump into terminology without leaving the rail. */}
+          {!workspace.terminologyFilterActive && (
+            <Button
+              type="button"
+              variant="outline"
+              className="font-mono disabled:opacity-100"
+              title={t("terminology.filterTitle")}
+              disabled={terminologyCount === 0}
+              onClick={() => workspace.setTerminologyFilterActive(true)}
+            >
+              {terminologyCount === 0 ? (
+                <CircleCheck className="text-success" aria-hidden="true" />
+              ) : (
+                <TriangleAlert className="text-warn" aria-hidden="true" />
+              )}
+              <span>
+                {t(terminologyCount === 1 ? "terminology.count.one" : "terminology.count.other", {
+                  n: terminologyCount,
+                })}
+              </span>
+            </Button>
+          )}
         </BarOptions>
         <span className="flex-1" />
         <ToolbarHint>
@@ -661,6 +675,7 @@ export function EditorView() {
       </Toolbar>
 
       <VirtualList
+        key={workspace.listRevision}
         className={LIST_CLASS}
         apiRef={listApi}
         items={rows}

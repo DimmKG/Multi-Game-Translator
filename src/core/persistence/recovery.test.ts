@@ -2,12 +2,7 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
-import {
-  clearProgressFromLocalStorage,
-  deserializeProgress,
-  PROGRESS_STORAGE_KEY,
-  serializeProgress,
-} from "./serialize";
+import { deserializeProgress, serializeProgress } from "./serialize";
 
 describe("recovery / persistence contracts", () => {
   it("opening a workspace path dismisses stale recovery offers", async () => {
@@ -35,9 +30,7 @@ describe("recovery / persistence contracts", () => {
       "utf8",
     );
     expect(store).toMatch(/dismissPendingRecovery\(true\)/);
-    expect(store).toMatch(/clearProgressFromLocalStorage/);
-    expect(PROGRESS_STORAGE_KEY).toBe("necesse_lang_translator_v1");
-    clearProgressFromLocalStorage();
+    expect(store).toMatch(/clearWorkspaceFromIdb/);
   });
 
   it("serialize keeps neutral filename fallbacks", () => {
