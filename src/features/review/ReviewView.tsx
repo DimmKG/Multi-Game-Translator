@@ -60,9 +60,11 @@ export function ReviewView() {
     });
   }, []);
 
+  // Same rule as the editor: changing the mode or the chip retires a pin,
+  // typing in the search box does not.
   useEffect(() => {
     setStickyIds(new Set());
-  }, [workspace.view]);
+  }, [workspace.view, workspace.reviewFilter]);
 
   const touched = useMemo(
     () =>

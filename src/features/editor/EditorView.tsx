@@ -498,9 +498,12 @@ export function EditorView() {
     });
   }, []);
 
+  // Switching the list the user is looking at — the mode above or a filter chip
+  // in the rail — is what retires a pin. Typing is not: `query` stays out, or a
+  // card would unpin itself on every keystroke of a search.
   useEffect(() => {
     setStickyIds(new Set());
-  }, [workspace.view, workspace.terminologyFilterActive, workspace.listRevision]);
+  }, [workspace.view, workspace.filter, workspace.terminologyFilterActive, workspace.listRevision]);
 
   const rows = useMemo(() => {
     const visible = new Set(workspace.filteredEntries.map((entry) => entry.id));
