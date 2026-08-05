@@ -27,7 +27,14 @@ export function GlossaryDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useI18n();
-  const { glossaries, upsertGlossary, removeGlossary, setGlossaryEnabled } = useWorkspace();
+  const {
+    glossaries,
+    upsertGlossary,
+    removeGlossary,
+    setGlossaryEnabled,
+    createGlossaryAuthoring,
+    openGlossaryAuthoring,
+  } = useWorkspace();
   const [busy, setBusy] = useState(false);
 
   return (
@@ -39,6 +46,14 @@ export function GlossaryDialog({
         </DialogHeader>
 
         <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              if (createGlossaryAuthoring()) onOpenChange(false);
+            }}
+          >
+            {t("glossary.authoringNew")}
+          </Button>
           <Button
             size="sm"
             variant="outline"
@@ -102,7 +117,9 @@ export function GlossaryDialog({
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <strong>{glossary.name}</strong>
-                    <Badge variant="secondary">{glossary.targetLanguage}</Badge>
+                    <Badge variant="secondary">
+                      {glossary.sourceLanguage} → {glossary.targetLanguage}
+                    </Badge>
                     <span className="text-muted-foreground text-xs">
                       {glossary.entries.length} {t("glossary.entries")}
                     </span>
@@ -115,6 +132,15 @@ export function GlossaryDialog({
                     onCheckedChange={(checked) => setGlossaryEnabled(glossary.id, checked)}
                     aria-label={glossary.enabled ? t("glossary.enabled") : t("glossary.disabled")}
                   />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      if (openGlossaryAuthoring(glossary.id)) onOpenChange(false);
+                    }}
+                  >
+                    {t("glossary.authoringEdit")}
+                  </Button>
                   <Button size="sm" variant="ghost" onClick={() => removeGlossary(glossary.id)}>
                     {t("glossary.remove")}
                   </Button>

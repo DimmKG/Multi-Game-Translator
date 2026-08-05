@@ -93,6 +93,7 @@ function WorkspaceShell({
   const reviewCount = workspace.items.filter(
     (item) => item.type === "entry" && item.touched,
   ).length;
+  const showWorkspace = workspace.isOpen || workspace.view === "terminology";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -105,7 +106,7 @@ function WorkspaceShell({
       <RecoveryBanner />
       <CompactBar />
 
-      {!workspace.isOpen ? (
+      {!showWorkspace ? (
         <main className="flex min-h-0 flex-1 flex-row">
           <section className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Dropzone />
@@ -120,7 +121,9 @@ function WorkspaceShell({
         >
           <div>
             <SidebarProvider open={railOpen} onOpenChange={setRailOpen}>
-              {workspace.view === "editor" && !workspace.compactView && <EditorSidebar />}
+              {workspace.isOpen && workspace.view === "editor" && !workspace.compactView && (
+                <EditorSidebar />
+              )}
               <SidebarInset className="min-h-0 min-w-0">
                 <div
                   className={cn(
@@ -129,17 +132,21 @@ function WorkspaceShell({
                   )}
                 >
                   <TabsList>
-                    <TabsTrigger value="editor">{t("tab.editor")}</TabsTrigger>
-                    <TabsTrigger value="review">
-                      {t("tab.review")}
-                      <Badge
-                        variant="ghost"
-                        className="text-muted-foreground h-4 min-w-4 px-1 font-mono text-[10px] tabular-nums"
-                      >
-                        {reviewCount}
-                      </Badge>
-                    </TabsTrigger>
-                    <TabsTrigger value="diff">{t("tab.diff")}</TabsTrigger>
+                    {workspace.isOpen && (
+                      <>
+                        <TabsTrigger value="editor">{t("tab.editor")}</TabsTrigger>
+                        <TabsTrigger value="review">
+                          {t("tab.review")}
+                          <Badge
+                            variant="ghost"
+                            className="text-muted-foreground h-4 min-w-4 px-1 font-mono text-[10px] tabular-nums"
+                          >
+                            {reviewCount}
+                          </Badge>
+                        </TabsTrigger>
+                        <TabsTrigger value="diff">{t("tab.diff")}</TabsTrigger>
+                      </>
+                    )}
                     <TabsTrigger value="terminology">{t("terminology.title")}</TabsTrigger>
                   </TabsList>
                 </div>
@@ -157,7 +164,7 @@ function WorkspaceShell({
                   <TerminologyWorkspace />
                 </TabsContent>
 
-                <Footnote />
+                {workspace.isOpen && <Footnote />}
               </SidebarInset>
             </SidebarProvider>
           </div>
