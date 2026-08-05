@@ -25,6 +25,12 @@ import {
   type StoredGlossary,
 } from "./glossary-store";
 import { hydratePersistence } from "./hydrate";
+import {
+  applyPendingMirror,
+  PENDING_MIRROR_KEY,
+  readPendingMirror,
+  writePendingMirror,
+} from "./pending-mirror";
 import { PROGRESS_STORAGE_KEY, serializeProgress } from "./serialize";
 
 function memoryLocalStorage() {
@@ -182,6 +188,18 @@ describe("row index", () => {
     expect(a).not.toBe(b);
     expect(b).toBe("empty");
   });
+
+  it("glossaryFingerprint follows edited rules, not just updatedAt", () => {
+    // updatedAt is day-granular, so a same-day edit must still be detected.
+    const before = sampleGlossary();
+    const after = sampleGlossary({
+      entries: [{ ...before.entries[0], target: "Привет" }],
+    });
+    expect(after.updatedAt).toBe(before.updatedAt);
+    expect(after.entries.length).toBe(before.entries.length);
+    expect(glossaryFingerprint([after])).not.toBe(glossaryFingerprint([before]));
+    expect(glossaryFingerprint([sampleGlossary()])).toBe(glossaryFingerprint([before]));
+  });
 });
 
 describe("IndexedDB migration and reload", () => {
@@ -326,5 +344,68 @@ describe("IndexedDB migration and reload", () => {
     const again = await migrateGlossariesFromLocalStorage();
     expect(again.map((g) => g.id)).toEqual(["legacy"]);
     expect(localStorage.getItem(GLOSSARY_STORAGE_KEY)).toBeNull();
+  });
+});
+
+describe("pending-edit mirror (unload safety net)", () => {
+  const workspace = (items: LangLine[]) => ({
+    filename: "bg.lang",
+    referenceFilename: "",
+    eol: "\n" as const,
+    savedAt: 1,
+    items,
+    meta: {
+      provider: "google",
+      targetLanguage: "bg",
+      spellcheck: true,
+      autocompleteEnabled: true,
+    },
+  });
+
+  it("replays edits the last unload could not commit, then drops the mirror", async () => {
+    const items: LangLine[] = [
+      sampleEntry({ id: 0, key: "a", value: "", english: "A", wasMissing: true }),
+      sampleEntry({ id: 1, key: "b", value: "B", english: "B", wasMissing: false }),
+    ];
+    await replaceWorkspaceInIdb(workspace(items), buildRowIndexMap(items, []), []);
+
+    // The row was edited but the debounced IDB write never ran.
+    const edited = [items[0], { ...items[1], value: "Bee", touched: true }] as LangLine[];
+    writePendingMirror("bg.lang", edited, [1]);
+    expect(localStorage.getItem(PENDING_MIRROR_KEY)).not.toBeNull();
+
+    const hydrated = await hydratePersistence();
+    expect(hydrated.pendingRecovery?.items[1]).toMatchObject({ value: "Bee", touched: true });
+    expect(hydrated.rowIndexes.get(1)?.status).toBe("done");
+    expect(localStorage.getItem(PENDING_MIRROR_KEY)).toBeNull();
+
+    // The replay was committed, not just held in memory.
+    await closeNecesseDb();
+    const reloaded = await loadWorkspaceFromIdb([]);
+    expect(reloaded.snapshot?.items[1]).toMatchObject({ value: "Bee" });
+  });
+
+  it("ignores a mirror left over from another workspace", () => {
+    const items: LangLine[] = [sampleEntry({ id: 0, key: "a", value: "A" })];
+    const snapshot = workspace(items);
+    const applied = applyPendingMirror(snapshot, {
+      filename: "other.lang",
+      savedAt: 2,
+      edits: [{ id: 0, value: "hijacked", markedSame: false, touched: true, mtDraft: false }],
+    });
+    expect(applied).toEqual([]);
+    expect(snapshot.items[0]).toMatchObject({ value: "A" });
+  });
+
+  it("mirrors only the dirty rows, and clears itself when none are left", () => {
+    const items: LangLine[] = [
+      sampleEntry({ id: 0, key: "a", value: "A" }),
+      sampleEntry({ id: 1, key: "b", value: "B" }),
+    ];
+    writePendingMirror("bg.lang", items, [1]);
+    expect(readPendingMirror()?.edits.map((edit) => edit.id)).toEqual([1]);
+
+    writePendingMirror("bg.lang", items, []);
+    expect(readPendingMirror()).toBeNull();
   });
 });

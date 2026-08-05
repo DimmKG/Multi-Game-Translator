@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { classifyNonEntryLine } from "@/core/lang/parse";
+import { assignEntrySections, classifyNonEntryLine } from "@/core/lang/parse";
 import type { LangLine } from "@/core/lang/markers";
 
 export const PROGRESS_STORAGE_KEY = "necesse_lang_translator_v1";
@@ -157,18 +157,6 @@ function deserializeV1(document: Record<string, unknown>): WorkspaceSnapshot {
       autocompleteEnabled: mt.ac !== false,
     },
   };
-}
-
-/** Stamp each entry with the nearest preceding `[section]` header name. */
-function assignEntrySections(items: LangLine[]) {
-  let currentSection = "";
-  for (const item of items) {
-    if (item.type === "section") {
-      currentSection = item.name;
-      continue;
-    }
-    if (item.type === "entry") item.section = currentSection;
-  }
 }
 
 export function saveProgressToLocalStorage(snapshot: WorkspaceSnapshot): boolean {

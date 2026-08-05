@@ -44,7 +44,7 @@ let dbPromise: Promise<IDBPDatabase<NecesseDb>> | null = null;
 
 export function openNecesseDb(): Promise<IDBPDatabase<NecesseDb>> {
   if (!dbPromise) {
-    dbPromise = openDB<NecesseDb>(DB_NAME, DB_VERSION, {
+    const opening = openDB<NecesseDb>(DB_NAME, DB_VERSION, {
       upgrade(db) {
         if (!db.objectStoreNames.contains("meta")) {
           db.createObjectStore("meta");
@@ -58,16 +58,27 @@ export function openNecesseDb(): Promise<IDBPDatabase<NecesseDb>> {
         }
       },
     });
+    // A cached rejection would disable persistence for the rest of the session;
+    // drop it so the next call gets a fresh attempt.
+    const guarded: Promise<IDBPDatabase<NecesseDb>> = opening.catch((error: unknown) => {
+      if (dbPromise === guarded) dbPromise = null;
+      throw error;
+    });
+    dbPromise = guarded;
   }
   return dbPromise;
 }
 
 /** Close the cached connection so tests can delete the database. */
 export async function closeNecesseDb() {
-  if (!dbPromise) return;
-  const db = await dbPromise;
-  db.close();
+  const pending = dbPromise;
+  if (!pending) return;
   dbPromise = null;
+  try {
+    (await pending).close();
+  } catch {
+    /* never opened — nothing to close */
+  }
 }
 
 /** Test helper — drop the cached promise without closing (prefer closeNecesseDb). */

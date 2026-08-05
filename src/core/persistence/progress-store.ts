@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { LangLine } from "@/core/lang/markers";
 import type { WorkspaceSnapshot } from "./serialize";
-import {
-  clearProgressFromLocalStorage,
-  loadProgressFromLocalStorage,
-  PROGRESS_STORAGE_KEY,
-} from "./serialize";
+import { clearProgressFromLocalStorage, loadProgressFromLocalStorage } from "./serialize";
 import { openNecesseDb, type WorkspaceMetaRecord } from "./idb";
-import { assignEntrySections, decodeLine, encodeLine, type StoredLine } from "./line-codec";
+import { assignEntrySections } from "@/core/lang/parse";
+import { decodeLine, encodeLine, type StoredLine } from "./line-codec";
 import {
   buildRowIndexMap,
   glossaryFingerprint,
@@ -73,17 +70,23 @@ export async function replaceWorkspaceInIdb(
   const db = await openNecesseDb();
   const tx = db.transaction(["meta", "lines"], "readwrite");
   const lines = tx.objectStore("lines");
-  await lines.clear();
+  const pending: Promise<unknown>[] = [lines.clear()];
+  // Queued without awaiting each one — a full file is tens of thousands of
+  // rows, and one round trip per row is the difference between a blip and a
+  // visible stall. `tx.done` is what actually reports failure.
   for (let i = 0; i < snapshot.items.length; i += 1) {
     const item = snapshot.items[i];
     const idx = item.type === "entry" ? rowIndexes.get(item.id) : undefined;
-    await lines.put(encodeLine(item, i, idx));
+    pending.push(lines.put(encodeLine(item, i, idx)));
   }
   const meta = tx.objectStore("meta");
-  await meta.put(SCHEMA_VERSION, META_SCHEMA);
-  await meta.put(INDEXER_VERSION, META_INDEXER);
-  await meta.put(glossaryFingerprint(glossaries), META_GLOSSARY_FP);
-  await meta.put(toWorkspaceMeta({ ...snapshot, savedAt: Date.now() }), META_WORKSPACE);
+  pending.push(
+    meta.put(SCHEMA_VERSION, META_SCHEMA),
+    meta.put(INDEXER_VERSION, META_INDEXER),
+    meta.put(glossaryFingerprint(glossaries), META_GLOSSARY_FP),
+    meta.put(toWorkspaceMeta({ ...snapshot, savedAt: Date.now() }), META_WORKSPACE),
+  );
+  await Promise.all(pending);
   await tx.done;
 }
 
@@ -96,12 +99,16 @@ export async function putWorkspaceLines(
   const db = await openNecesseDb();
   const tx = db.transaction(["meta", "lines"], "readwrite");
   const lines = tx.objectStore("lines");
+  // `dirtyIndexes` are entry ids, which every construction path keeps equal to
+  // the row's position in `items` — see `encodeLine`, which stores that position.
+  const pending: Promise<unknown>[] = [];
   for (const index of dirtyIndexes) {
     const item = items[index];
     if (!item) continue;
     const idx = item.type === "entry" ? rowIndexes.get(item.id) : undefined;
-    await lines.put(encodeLine(item, index, idx));
+    pending.push(lines.put(encodeLine(item, index, idx)));
   }
+  await Promise.all(pending);
   if (metaPatch) {
     const metaStore = tx.objectStore("meta");
     const current = (await metaStore.get(META_WORKSPACE)) as WorkspaceMetaRecord | undefined;
@@ -207,12 +214,4 @@ export async function migrateProgressFromLocalStorage(
   await replaceWorkspaceInIdb(legacy, rowIndexes, glossaries);
   clearProgressFromLocalStorage();
   return legacy;
-}
-
-export function hasLegacyProgressInLocalStorage(): boolean {
-  try {
-    return localStorage.getItem(PROGRESS_STORAGE_KEY) != null;
-  } catch {
-    return false;
-  }
 }

@@ -94,15 +94,3 @@ export function decodeLine(record: StoredLine): LangLine {
   }
   return entry;
 }
-
-/** Stamp each entry with the nearest preceding `[section]` header name. */
-export function assignEntrySections(items: LangLine[]) {
-  let currentSection = "";
-  for (const item of items) {
-    if (item.type === "section") {
-      currentSection = item.name;
-      continue;
-    }
-    if (item.type === "entry") item.section = currentSection;
-  }
-}

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import type { NormalizedGlossary } from "@/core/glossary/loader";
+import { GLOSSARY_LIBRARY_STORAGE_KEY } from "@/core/glossary/library-persistence";
 
 import { openNecesseDb, type StoredGlossaryRecord } from "./idb";
 
-export const GLOSSARY_STORAGE_KEY = "necesse-translator.glossaries.v1";
+/** Legacy localStorage key, kept for the one-shot migration below. */
+export const GLOSSARY_STORAGE_KEY = GLOSSARY_LIBRARY_STORAGE_KEY;
 
 export interface StoredGlossary extends NormalizedGlossary {
   enabled: boolean;

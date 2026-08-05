@@ -39,11 +39,13 @@ import {
   updateWorkspaceMetaInIdb,
 } from "@/core/persistence/progress-store";
 import { removeGlossaryFromIdb, saveGlossaryToIdb } from "@/core/persistence/glossary-store";
+import { clearPendingMirror, writePendingMirror } from "@/core/persistence/pending-mirror";
 import { hydratePersistence } from "@/core/persistence/hydrate";
 import {
   buildRowIndexMap,
   countFromIndex,
   reindexOne,
+  sameRowIndex,
   type RowIndex,
 } from "@/core/persistence/row-index";
 import { inspectTerminology, type TerminologyIssue } from "@/core/glossary/matcher";
@@ -302,6 +304,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const fullReplace = useRef(false);
   const metaDirty = useRef(false);
   const readyRef = useRef(false);
+  const writeInFlight = useRef(false);
+  const rewriteRequested = useRef(false);
+  const inFlightLines = useRef<number[]>([]);
 
   const [rowIndexes, setRowIndexes] = useState<ReadonlyMap<number, RowIndex>>(() => new Map());
   const rowIndexesRef = useRef(rowIndexes);
@@ -395,21 +400,42 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     fullReplace.current = true;
     dirtyLineIds.current.clear();
     metaDirty.current = true;
+    // Whatever the mirror holds belongs to the workspace being replaced.
+    clearPendingMirror();
     setRowIndexes(indexes);
   }, []);
 
-  const persistNow = useCallback(async (snapshot: WorkspaceState) => {
-    if (!snapshot.isOpen || !readyRef.current) return false;
+  /**
+   * One write pass. The pending work is claimed *before* the first `await`, so
+   * edits made while the transaction is in flight stay dirty and are picked up
+   * by the next pass instead of being cleared by this one; a failed write puts
+   * the claim back so it is retried.
+   */
+  const persistOnce = useCallback(async (snapshot: WorkspaceState) => {
+    const wasFullReplace = fullReplace.current;
+    const wasMetaDirty = metaDirty.current;
+    // A full replace writes every line of this snapshot, so it also covers the
+    // rows that were dirty when it was claimed.
+    const claimedLines = [...dirtyLineIds.current];
+    if (!wasFullReplace && !wasMetaDirty && claimedLines.length === 0) {
+      setState((current) =>
+        current.saveState === "saved" ? current : { ...current, saveState: "saved" },
+      );
+      return true;
+    }
+
     const indexes = rowIndexesRef.current;
+    fullReplace.current = false;
+    metaDirty.current = false;
+    for (const id of claimedLines) dirtyLineIds.current.delete(id);
+    // Claimed but not committed yet — the unload mirror still has to cover these.
+    inFlightLines.current = claimedLines;
+
     try {
-      if (fullReplace.current) {
+      if (wasFullReplace) {
         await replaceWorkspaceInIdb(snapshotFromState(snapshot), indexes, snapshot.glossaries);
-        fullReplace.current = false;
-        dirtyLineIds.current.clear();
-        metaDirty.current = false;
-      } else if (dirtyLineIds.current.size > 0) {
-        const dirty = [...dirtyLineIds.current];
-        await putWorkspaceLines(snapshot.items, dirty, indexes, {
+      } else if (claimedLines.length > 0) {
+        await putWorkspaceLines(snapshot.items, claimedLines, indexes, {
           filename: snapshot.filename,
           referenceFilename: snapshot.referenceFilename,
           eol: snapshot.eol,
@@ -419,9 +445,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           autocompleteEnabled: snapshot.autocompleteEnabled,
           glossaries: snapshot.glossaries,
         });
-        dirtyLineIds.current.clear();
-        metaDirty.current = false;
-      } else if (metaDirty.current) {
+      } else {
         await updateWorkspaceMetaInIdb(
           {
             filename: snapshot.filename,
@@ -434,8 +458,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           },
           snapshot.glossaries,
         );
-        metaDirty.current = false;
       }
+      inFlightLines.current = [];
+      // Committed to IndexedDB — the unload safety net is no longer needed.
+      if (dirtyLineIds.current.size === 0 && !fullReplace.current) clearPendingMirror();
       setState((current) => ({
         ...current,
         savedAt: Date.now(),
@@ -443,6 +469,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }));
       return true;
     } catch {
+      if (wasFullReplace) fullReplace.current = true;
+      if (wasMetaDirty) metaDirty.current = true;
+      for (const id of claimedLines) dirtyLineIds.current.add(id);
+      inFlightLines.current = [];
       setState((current) => ({
         ...current,
         saveState: "error",
@@ -450,6 +480,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, []);
+
+  /**
+   * Serialized entry point: overlapping flushes (debounce + page-hide) would
+   * otherwise interleave a full replace with line writes from a different
+   * workspace. A flush requested mid-write is folded into one follow-up pass.
+   */
+  const persistNow = useCallback(
+    async (snapshot: WorkspaceState) => {
+      if (!snapshot.isOpen || !readyRef.current) return false;
+      if (writeInFlight.current) {
+        rewriteRequested.current = true;
+        return false;
+      }
+      writeInFlight.current = true;
+      try {
+        let ok = await persistOnce(snapshot);
+        while (rewriteRequested.current) {
+          rewriteRequested.current = false;
+          if (!stateRef.current.isOpen) break;
+          ok = await persistOnce(stateRef.current);
+        }
+        return ok;
+      } finally {
+        writeInFlight.current = false;
+      }
+    },
+    [persistOnce],
+  );
 
   const scheduleSave = useCallback(() => {
     setState((current) => ({ ...current, saveState: "saving" }));
@@ -461,19 +519,44 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const flush = () => {
-      if (stateRef.current.isOpen) void persistNow(stateRef.current);
+      const current = stateRef.current;
+      if (!current.isOpen || !readyRef.current) return;
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+        saveTimer.current = null;
+      }
+      // An IndexedDB transaction opened here may never commit, so the pending
+      // rows go to localStorage synchronously first. A pending full replace is
+      // not mirrored: it is a freshly opened file, re-openable by hand, and
+      // mirroring it whole is exactly the quota problem IndexedDB solved.
+      const unsaved = new Set([...dirtyLineIds.current, ...inFlightLines.current]);
+      if (!fullReplace.current && unsaved.size > 0) {
+        writePendingMirror(current.filename, current.items, unsaved);
+      }
+      void persistNow(current);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flush();
     };
     window.addEventListener("pagehide", flush);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") flush();
-    });
-    return () => window.removeEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, [persistNow]);
 
   const dismissPendingRecovery = useCallback((discardStored = false) => {
     setState((current) => ({ ...current, pendingRecovery: null }));
     if (discardStored) {
-      void clearWorkspaceFromIdb();
+      // Discarding the stored session also drops whatever was still queued for it.
+      fullReplace.current = false;
+      dirtyLineIds.current.clear();
+      metaDirty.current = false;
+      clearPendingMirror();
+      void clearWorkspaceFromIdb().catch(() => {
+        /* nothing to recover from a failed discard — the next save overwrites */
+      });
       setRowIndexes(new Map());
     }
   }, []);
@@ -714,16 +797,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         dirtyLineIds.current.add(entryId);
         // Only publish a new Map when filter-relevant flags change — otherwise the
         // virtual list rebuilds and measure() snaps the scroll mid-fling.
-        if (
-          !prevIndex ||
-          prevIndex.status !== nextIndex.status ||
-          prevIndex.tokenIssue !== nextIndex.tokenIssue ||
-          prevIndex.wsIssue !== nextIndex.wsIssue ||
-          prevIndex.glossaryIssue !== nextIndex.glossaryIssue ||
-          prevIndex.hasRef !== nextIndex.hasRef
-        ) {
-          setRowIndexes(next);
-        }
+        if (!sameRowIndex(prevIndex, nextIndex)) setRowIndexes(next);
       }
       setState((prev) => ({ ...prev, items }));
       scheduleSave();
@@ -799,16 +873,39 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const reindexAllGlossaries = useCallback(
     (glossaries: StoredGlossary[]) => {
-      if (!stateRef.current.isOpen) {
-        setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
-        return;
-      }
-      const next = buildRowIndexMap(stateRef.current.items, glossaries);
-      markFullReplace(next);
       setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
+      if (!stateRef.current.isOpen) return;
+
+      const previous = rowIndexesRef.current;
+      const next = buildRowIndexMap(stateRef.current.items, glossaries);
+      // A glossary toggle usually moves a handful of rows out of tens of
+      // thousands, so rewrite those rather than the whole workspace. The meta
+      // record is dirty either way — it carries the glossary fingerprint.
+      for (const [id, row] of next) {
+        if (!sameRowIndex(previous.get(id), row)) dirtyLineIds.current.add(id);
+      }
+      metaDirty.current = true;
+      rowIndexesRef.current = next;
+      setRowIndexes(next);
       scheduleSave();
     },
-    [markFullReplace, scheduleSave],
+    [scheduleSave],
+  );
+
+  /** Persist one glossary library change; state, storage and index in one place. */
+  const commitGlossaryLibrary = useCallback(
+    (glossaries: StoredGlossary[], write: () => Promise<unknown>) => {
+      setState((current) => ({ ...current, glossaries }));
+      void write().catch((error: unknown) => {
+        toast.error(
+          t("glossary.authoringSaveFailed", {
+            msg: error instanceof Error ? error.message : t("err.generic"),
+          }),
+        );
+      });
+      reindexAllGlossaries(glossaries);
+    },
+    [reindexAllGlossaries, t],
   );
 
   const canReplaceGlossaryAuthoring = useCallback(() => {
@@ -884,12 +981,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       );
       const glossaries = upsertGlossaryLibrary(current.glossaries, result.glossary);
       const updated = glossaries.find((item) => item.id === result.glossary.id);
-      if (updated) void saveGlossaryToIdb(updated);
-      queueMicrotask(() => reindexAllGlossaries(glossaries));
+      commitGlossaryLibrary(glossaries, () =>
+        updated ? saveGlossaryToIdb(updated) : Promise.resolve(),
+      );
       saveGlossaryAuthoringRecovery(result.session);
       setState((state) => ({
         ...state,
-        glossaries,
         glossaryAuthoringSession: result.session,
       }));
       toast.success(t("glossary.authoringSaved", { name: result.glossary.name }));
@@ -902,7 +999,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       );
       return false;
     }
-  }, [reindexAllGlossaries, t]);
+  }, [commitGlossaryLibrary, t]);
 
   const exportGlossaryAuthoring = useCallback(() => {
     const current = stateRef.current;
@@ -1050,31 +1147,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     enabledGlossaries,
     terminologyIssuesFor,
     rowIndexes,
+    // Storage writes stay out of the state updaters: React runs those more than
+    // once (StrictMode does it on every change), and a write is not repeatable.
     setGlossaryEnabled: (id, enabled) => {
-      setState((current) => {
-        const glossaries = setGlossaryLibraryEnabled(current.glossaries, id, enabled);
-        const updated = glossaries.find((glossary) => glossary.id === id);
-        if (updated) void saveGlossaryToIdb(updated);
-        queueMicrotask(() => reindexAllGlossaries(glossaries));
-        return { ...current, glossaries };
-      });
+      const glossaries = setGlossaryLibraryEnabled(stateRef.current.glossaries, id, enabled);
+      const updated = glossaries.find((glossary) => glossary.id === id);
+      commitGlossaryLibrary(glossaries, () =>
+        updated ? saveGlossaryToIdb(updated) : Promise.resolve(),
+      );
     },
     upsertGlossary: (glossary) => {
-      setState((current) => {
-        const glossaries = upsertGlossaryLibrary(current.glossaries, glossary);
-        const updated = glossaries.find((item) => item.id === glossary.id);
-        if (updated) void saveGlossaryToIdb(updated);
-        queueMicrotask(() => reindexAllGlossaries(glossaries));
-        return { ...current, glossaries };
-      });
+      const glossaries = upsertGlossaryLibrary(stateRef.current.glossaries, glossary);
+      const updated = glossaries.find((item) => item.id === glossary.id);
+      commitGlossaryLibrary(glossaries, () =>
+        updated ? saveGlossaryToIdb(updated) : Promise.resolve(),
+      );
     },
     removeGlossary: (id) => {
-      setState((current) => {
-        const glossaries = removeFromGlossaryLibrary(current.glossaries, id);
-        void removeGlossaryFromIdb(id);
-        queueMicrotask(() => reindexAllGlossaries(glossaries));
-        return { ...current, glossaries };
-      });
+      const glossaries = removeFromGlossaryLibrary(stateRef.current.glossaries, id);
+      commitGlossaryLibrary(glossaries, () => removeGlossaryFromIdb(id));
     },
     createGlossaryAuthoring,
     importGlossaryAuthoring,

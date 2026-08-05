@@ -5,8 +5,14 @@ import {
   migrateProgressFromLocalStorage,
   replaceWorkspaceInIdb,
 } from "./progress-store";
+import {
+  applyPendingMirror,
+  clearPendingMirror,
+  findEntryById,
+  readPendingMirror,
+} from "./pending-mirror";
 import type { WorkspaceSnapshot } from "./serialize";
-import type { RowIndex } from "./row-index";
+import { indexEntry, type RowIndex } from "./row-index";
 
 export interface HydratedPersistence {
   glossaries: StoredGlossary[];
@@ -15,16 +21,41 @@ export interface HydratedPersistence {
 }
 
 /**
- * Migrate legacy LS → IDB (once), then load glossaries + optional recovery snapshot.
- * Reindex writes are kicked off in the background so the UI can mount on loaded data.
+ * Migrate legacy LS → IDB (once), replay any edits the last unload could not
+ * commit, then load glossaries + optional recovery snapshot.
+ * Plain reindex writes are kicked off in the background so the UI can mount on
+ * loaded data; a replayed mirror is awaited, since dropping it would lose work.
  */
 export async function hydratePersistence(): Promise<HydratedPersistence> {
   const glossaries = await migrateGlossariesFromLocalStorage();
   await migrateProgressFromLocalStorage(glossaries);
 
   const loaded = await loadWorkspaceFromIdb(glossaries);
-  if (loaded.snapshot && loaded.needsReindexWrite) {
-    void replaceWorkspaceInIdb(loaded.snapshot, loaded.rowIndexes, glossaries);
+  let needsWrite = loaded.needsReindexWrite;
+
+  if (loaded.snapshot) {
+    const mirror = readPendingMirror();
+    if (mirror) {
+      const replayed = applyPendingMirror(loaded.snapshot, mirror);
+      for (const id of replayed) {
+        const entry = findEntryById(loaded.snapshot.items, id);
+        if (entry) loaded.rowIndexes.set(id, indexEntry(entry, glossaries));
+      }
+      if (replayed.length) {
+        await replaceWorkspaceInIdb(loaded.snapshot, loaded.rowIndexes, glossaries);
+        needsWrite = false;
+      }
+      clearPendingMirror();
+    }
+  } else {
+    // Nothing to replay onto — a mirror without a workspace is stale by definition.
+    clearPendingMirror();
+  }
+
+  if (loaded.snapshot && needsWrite) {
+    void replaceWorkspaceInIdb(loaded.snapshot, loaded.rowIndexes, glossaries).catch(() => {
+      /* the workspace is still usable in memory; the next save retries */
+    });
   }
 
   return {

@@ -58,6 +58,22 @@ export function parseLangFile(text: string): ParsedLangFile {
 }
 
 /**
+ * Stamp each entry with the nearest preceding `[section]` header name.
+ * Storage formats drop `entry.section` — it is rebuilt from the preserved
+ * header lines on the way back in, and reference matching depends on it.
+ */
+export function assignEntrySections(items: LangLine[]) {
+  let currentSection = "";
+  for (const item of items) {
+    if (item.type === "section") {
+      currentSection = item.name;
+      continue;
+    }
+    if (item.type === "entry") item.section = currentSection;
+  }
+}
+
+/**
  * Reference lookup built from a `.lang` file.
  * Indexed by section + key (comments / blanks ignored) so duplicate keys in
  * different sections stay distinct. Multiple values under the same identity
