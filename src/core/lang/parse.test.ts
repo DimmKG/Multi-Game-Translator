@@ -7,8 +7,9 @@ import {
   createTranslationFromReference,
   parseLangFile,
   parseReferenceLang,
+  referenceIdentity,
 } from "./parse";
-import { statusOf } from "./status";
+import { statusOf, type TranslationEntry } from "./status";
 
 describe("parseLangFile", () => {
   it("preserves sections, markers and CRLF", () => {
@@ -42,6 +43,88 @@ describe("reference and export", () => {
     }
     const exported = buildLangFile(parsed.items, "\n");
     expect(exported).toContain("SAME_TRANSLATION:hello=Hallo");
+  });
+
+  it("matches by key while ignoring divergent comments", () => {
+    const target = parseLangFile(
+      [
+        "// target-only header",
+        "[tile]",
+        "// translator note before water",
+        "watertile=Wasser",
+        "",
+        "// spacer comment",
+        "grasstile=Gras",
+        "",
+      ].join("\n"),
+    );
+    const reference = parseReferenceLang(
+      [
+        "// reference-only header",
+        "// another ref comment",
+        "[tile]",
+        "watertile=Water",
+        "// ref lore between tiles",
+        "",
+        "grasstile=Grass",
+        "// trailing ref comment",
+        "",
+      ].join("\n"),
+    );
+
+    expect(applyReferenceMap(target.items, reference)).toBe(2);
+    const entries = target.items.filter((item): item is TranslationEntry => item.type === "entry");
+    expect(entries).toEqual([
+      expect.objectContaining({
+        key: "watertile",
+        value: "Wasser",
+        ref: "Water",
+        section: "[tile]",
+      }),
+      expect.objectContaining({
+        key: "grasstile",
+        value: "Gras",
+        ref: "Grass",
+        section: "[tile]",
+      }),
+    ]);
+  });
+
+  it("keeps duplicate keys in different sections distinct", () => {
+    const target = parseLangFile(
+      [
+        "[item]",
+        "// item note",
+        "title=Gegenstandstitel",
+        "[npc]",
+        "// npc note — shifts line indexes vs reference",
+        "title=NSC-Titel",
+        "",
+      ].join("\n"),
+    );
+    const reference = parseReferenceLang(
+      ["[item]", "title=Item Title", "// only in reference", "[npc]", "title=Npc Title", ""].join(
+        "\n",
+      ),
+    );
+
+    expect(reference.bySectionKey.get(referenceIdentity("[item]", "title"))).toEqual([
+      "Item Title",
+    ]);
+    expect(reference.bySectionKey.get(referenceIdentity("[npc]", "title"))).toEqual(["Npc Title"]);
+    expect(applyReferenceMap(target.items, reference)).toBe(2);
+
+    const entries = target.items.filter((item): item is TranslationEntry => item.type === "entry");
+    expect(entries.find((entry) => entry.section === "[item]")?.ref).toBe("Item Title");
+    expect(entries.find((entry) => entry.section === "[npc]")?.ref).toBe("Npc Title");
+  });
+
+  it("matches duplicate keys inside one section by occurrence order", () => {
+    const target = parseLangFile("[misc]\na=eins\na=zwei\n");
+    const reference = parseReferenceLang("[misc]\na=one\na=two\n");
+    expect(applyReferenceMap(target.items, reference)).toBe(2);
+    const entries = target.items.filter((item): item is TranslationEntry => item.type === "entry");
+    expect(entries.map((entry) => entry.ref)).toEqual(["one", "two"]);
   });
 
   it("creates missing translation workspace from reference", () => {

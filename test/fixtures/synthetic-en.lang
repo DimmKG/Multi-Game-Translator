@@ -3,6 +3,7 @@
 // MISSING_TRANSLATION / SAME_TRANSLATION prefixes mirror Necesse conventions.
 
 // Reference language: English (synthetic)
+// Reference-only notes: intentional comment drift vs the target file.
 
 [lang]
 localname=English
@@ -11,7 +12,9 @@ credits=By the fixture authors
 extrasymbols=AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz
 
 [tile]
+// Reference tile catalog notes (not present in target).
 watertile=Water
+// ref: water is the alignment canary for comment drift
 grasstile=Grass
 sandtile=Sand
 lavatile=Lava
@@ -45,11 +48,13 @@ tilepad23=Tile Pad 23
 tilepad24=Tile Pad 24
 
 [item]
+// Reference designers left item lore comments here.
 greeting=Hello <name>
 tooltip=Press [item/input=interact] to use
 multiline=Line one[newline]Line two
 oreformat=<rock> <ore>
 brandnewrelic=Brand New Relic
+title=Item Title
 loot1=Loot Drop 1
 loot2=Loot Drop 2
 loot3=Loot Drop 3
@@ -80,6 +85,11 @@ loot27=Loot Drop 27
 loot28=Loot Drop 28
 loot29=Loot Drop 29
 loot30=Loot Drop 30
+
+[npc]
+title=Npc Title
+// ref: npc title must not pick up the item title value
+greeting=Well met, traveler
 
 [ui]
 timerticks=Ticks: <value>

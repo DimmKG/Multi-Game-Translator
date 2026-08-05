@@ -3,8 +3,10 @@
 // MISSING_TRANSLATION / SAME_TRANSLATION prefixes mirror Necesse conventions.
 
 // Target language: Synthetic German-like mix
+// Translator notes differ from the English reference comments.
 
 [lang]
+// Translator: keep metadata keys in sync with en.lang
 localname=Synthetisch
 engname=Synthetic
 credits=Von den Fixture-Autoren
@@ -46,10 +48,13 @@ tilepad24=Kachel Pad 24
 
 [item]
 greeting=Hallo <name>
+// TODO: verify <name> placeholder tone
 tooltip=Drücke [item/input=interact] zum Nutzen
 multiline=Zeile eins[newline]Zeile zwei
 SAME_TRANSLATION:oreformat=<rock> <ore>
 MISSING_TRANSLATION:brandnewrelic=Brand New Relic
+title=Gegenstandstitel
+// target: item title is distinct from npc title
 loot1=Beute 1
 loot2=Beute 2
 loot3=Beute 3
@@ -81,7 +86,13 @@ MISSING_TRANSLATION:loot28=Loot Drop 28
 loot29=Beute 29
 SAME_TRANSLATION:loot30=Loot Drop 30
 
+[npc]
+title=NSC-Titel
+// target: npc title duplicate-key canary
+greeting=Sei gegrüßt, Reisender
+
 [ui]
+// Translator UI pass — comments only, no entries moved
 SAME_TRANSLATION:timerticks=Ticks: <value>
 saveprompt=Änderungen speichern?
 MISSING_TRANSLATION:unsavedfeature=Unsaved Feature Label
