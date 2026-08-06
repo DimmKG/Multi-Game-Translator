@@ -605,7 +605,7 @@ export function EditorView() {
 
   const emptyKey = workspace.terminologyFilterActive
     ? "terminology.none"
-    : workspace.query.trim()
+    : workspace.query
       ? "empty.noMatch"
       : workspace.filter === "missing"
         ? "empty.allDone"
@@ -632,20 +632,6 @@ export function EditorView() {
           >
             {t("btn.findDbl")}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="font-mono"
-            title={t("btn.findTabTitle")}
-            onClick={() => workspace.setQuery("\t")}
-          >
-            {t("btn.findTab")}
-          </Button>
-          {workspace.query.trim() && (
-            <span className="text-warn font-mono text-[11.5px] whitespace-nowrap">
-              {t("query.hint", { q: workspace.query, n: workspace.filteredEntries.length })}
-            </span>
-          )}
           {/* Near-search toggle — hidden while the terminology sidebar tab is
               already active (that mode lists all issue rows). On other tabs it
               stays so you can jump into terminology without leaving the rail. */}

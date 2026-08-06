@@ -26,6 +26,7 @@ import {
   parseLangFile,
   parseReferenceLang,
 } from "@/core/lang/parse";
+import { normalizeSearchQuery } from "@/core/lang/search-query";
 import { hasUsableReference, type TranslationEntry } from "@/core/lang/status";
 import {
   deserializeProgress,
@@ -1052,7 +1053,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const filteredEntries = useMemo(() => {
-    const query = state.query.trim().toLowerCase();
+    const query = normalizeSearchQuery(state.query);
     return entries.filter((entry) => {
       const indexed = rowIndexes.get(entry.id);
       if (state.terminologyFilterActive) {
