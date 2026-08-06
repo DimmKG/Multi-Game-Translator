@@ -131,6 +131,12 @@ export function syntheticCatalog(): SyntheticSection[] {
           english: "Brand New Relic",
           missing: true,
         },
+        {
+          // Same key as [npc].title — reference must match by section, not key alone.
+          key: "title",
+          english: "Item Title",
+          translated: "Gegenstandstitel",
+        },
         ...numberedEntries(
           "loot",
           30,
@@ -142,6 +148,21 @@ export function syntheticCatalog(): SyntheticSection[] {
                 ? { sameAsEnglish: true }
                 : { translated: `Beute ${n}` },
         ),
+      ],
+    },
+    {
+      name: "[npc]",
+      entries: [
+        {
+          key: "title",
+          english: "Npc Title",
+          translated: "NSC-Titel",
+        },
+        {
+          key: "greeting",
+          english: "Well met, traveler",
+          translated: "Sei gegrüßt, Reisender",
+        },
       ],
     },
     {
@@ -187,16 +208,30 @@ function renderTargetEntry(entry: SyntheticEntry): string {
   return `${entry.key}=${entry.translated ?? entry.english}`;
 }
 
+type RenderOptions = {
+  /** Extra comment lines inserted after each section header (file-specific). */
+  sectionNotes?: Readonly<Record<string, readonly string[]>>;
+  /** Extra comment lines inserted after a specific key inside a section. */
+  entryNotes?: Readonly<Record<string, Readonly<Record<string, readonly string[]>>>>;
+};
+
 function renderDocument(
   sections: SyntheticSection[],
   renderEntry: (entry: SyntheticEntry) => string,
   langHeader: string[],
+  options: RenderOptions = {},
 ): string {
   const chunks: string[] = [HEADER, ...langHeader, ""];
   for (const section of sections) {
     chunks.push(section.name);
+    for (const note of options.sectionNotes?.[section.name] ?? []) {
+      chunks.push(note);
+    }
     for (const entry of section.entries) {
       chunks.push(renderEntry(entry));
+      for (const note of options.entryNotes?.[section.name]?.[entry.key] ?? []) {
+        chunks.push(note);
+      }
     }
     chunks.push("");
   }
@@ -205,16 +240,55 @@ function renderDocument(
 
 /** English-style reference document. */
 export function buildSyntheticEnglishReference(): string {
-  return renderDocument(syntheticCatalog(), renderEnglishEntry, [
-    "// Reference language: English (synthetic)",
-  ]);
+  return renderDocument(
+    syntheticCatalog(),
+    renderEnglishEntry,
+    [
+      "// Reference language: English (synthetic)",
+      "// Reference-only notes: intentional comment drift vs the target file.",
+    ],
+    {
+      sectionNotes: {
+        "[tile]": ["// Reference tile catalog notes (not present in target)."],
+        "[item]": ["// Reference designers left item lore comments here."],
+      },
+      entryNotes: {
+        "[tile]": {
+          watertile: ["// ref: water is the alignment canary for comment drift"],
+        },
+        "[npc]": {
+          title: ["// ref: npc title must not pick up the item title value"],
+        },
+      },
+    },
+  );
 }
 
 /** Partial target translation with SAME / MISSING markers. */
 export function buildSyntheticTargetTranslation(): string {
-  return renderDocument(syntheticCatalog(), renderTargetEntry, [
-    "// Target language: Synthetic German-like mix",
-  ]);
+  return renderDocument(
+    syntheticCatalog(),
+    renderTargetEntry,
+    [
+      "// Target language: Synthetic German-like mix",
+      "// Translator notes differ from the English reference comments.",
+    ],
+    {
+      sectionNotes: {
+        "[lang]": ["// Translator: keep metadata keys in sync with en.lang"],
+        "[ui]": ["// Translator UI pass — comments only, no entries moved"],
+      },
+      entryNotes: {
+        "[item]": {
+          greeting: ["// TODO: verify <name> placeholder tone"],
+          title: ["// target: item title is distinct from npc title"],
+        },
+        "[npc]": {
+          title: ["// target: npc title duplicate-key canary"],
+        },
+      },
+    },
+  );
 }
 
 export function countSyntheticEntries(): number {

@@ -13,6 +13,7 @@ import {
   createTranslationFromReference,
   parseLangFile,
   parseReferenceLang,
+  referenceIdentity,
 } from "@/core/lang/parse";
 import { countProgress, statusOf, type TranslationEntry } from "@/core/lang/status";
 
@@ -36,9 +37,17 @@ describe("synthetic .lang integration fixtures", () => {
     ).toBe(true);
   });
 
-  it("applies English reference onto the target and preserves SAME/MISSING markers on export", () => {
+  it("applies English reference onto the target despite divergent comments", () => {
+    // Fixtures intentionally place different comment lines in en vs target so
+    // line indexes diverge; matching must stay on section+key.
+    expect(english).toContain("Reference-only notes");
+    expect(target).toContain("Translator notes differ");
+    expect(english).not.toContain("Translator notes differ");
+    expect(target).not.toContain("Reference-only notes");
+
     const workspace = parseLangFile(target);
-    const matched = applyReferenceMap(workspace.items, parseReferenceLang(english));
+    const reference = parseReferenceLang(english);
+    const matched = applyReferenceMap(workspace.items, reference);
     expect(matched).toBe(expectedEntries);
 
     const entries = workspace.items.filter(
@@ -49,10 +58,37 @@ describe("synthetic .lang integration fixtures", () => {
     expect(missingCount).toBeGreaterThan(0);
     expect(sameCount).toBeGreaterThan(0);
 
+    const water = entries.find((entry) => entry.key === "watertile");
+    expect(water).toMatchObject({ value: "Wasser", ref: "Water", section: "[tile]" });
+
     const exported = buildLangFile(workspace.items, workspace.eol);
     expect(exported).toContain("SAME_TRANSLATION:sandtile=");
     expect(exported).toContain("MISSING_TRANSLATION:");
     expect(countProgress(workspace.items).total).toBe(entries.length);
+  });
+
+  it("keeps duplicate title keys distinct across item and npc sections", () => {
+    const workspace = parseLangFile(target);
+    const reference = parseReferenceLang(english);
+    applyReferenceMap(workspace.items, reference);
+
+    expect(reference.bySectionKey.get(referenceIdentity("[item]", "title"))).toEqual([
+      "Item Title",
+    ]);
+    expect(reference.bySectionKey.get(referenceIdentity("[npc]", "title"))).toEqual(["Npc Title"]);
+
+    const entries = workspace.items.filter(
+      (item): item is TranslationEntry => item.type === "entry" && item.key === "title",
+    );
+    expect(entries).toHaveLength(2);
+    expect(entries.find((entry) => entry.section === "[item]")).toMatchObject({
+      value: "Gegenstandstitel",
+      ref: "Item Title",
+    });
+    expect(entries.find((entry) => entry.section === "[npc]")).toMatchObject({
+      value: "NSC-Titel",
+      ref: "Npc Title",
+    });
   });
 
   it("creates a new translation workspace from English without inventing Russian defaults", () => {

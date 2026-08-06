@@ -95,6 +95,23 @@ function WorkspaceShell({
   ).length;
   const showWorkspace = workspace.isOpen || workspace.view === "terminology";
 
+  if (!workspace.ready) {
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <AppHeader
+          theme={theme}
+          mode={mode}
+          onThemeChange={onThemeChange}
+          onModeChange={onModeChange}
+        />
+        <main className="text-foreground-faint flex flex-1 items-center justify-center text-sm">
+          {t("glossary.loading")}
+        </main>
+        <Toaster position="bottom-center" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <AppHeader

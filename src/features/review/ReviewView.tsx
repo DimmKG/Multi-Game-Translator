@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { BarOptions } from "@/components/layout/BarOptions";
 import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
@@ -60,9 +60,11 @@ export function ReviewView() {
     });
   }, []);
 
+  // Same rule as the editor: changing the mode or the chip retires a pin,
+  // typing in the search box does not.
   useEffect(() => {
     setStickyIds(new Set());
-  }, [workspace.view]);
+  }, [workspace.view, workspace.reviewFilter]);
 
   const touched = useMemo(
     () =>
@@ -78,28 +80,21 @@ export function ReviewView() {
     let same = 0;
     for (const entry of touched) {
       if (entry.mtDraft) mt += 1;
-      if (statusOf(entry) === "same") same += 1;
-      if (
-        missingTokens(entry).length > 0 ||
-        scanWhitespace(entry).any ||
-        workspace.terminologyIssuesFor(entry).length > 0
-      ) {
-        issues += 1;
-      }
+      const indexed = workspace.rowIndexes.get(entry.id);
+      if (indexed?.status === "same") same += 1;
+      if (indexed?.tokenIssue || indexed?.wsIssue || indexed?.glossaryIssue) issues += 1;
     }
     return { all: touched.length, mt, issues, same };
-  }, [touched, workspace]);
+  }, [touched, workspace.rowIndexes]);
 
   const rows = useMemo(() => {
     const query = workspace.reviewQuery.trim().toLowerCase();
     const matched = touched.filter((entry) => {
-      const hasIssues =
-        missingTokens(entry).length > 0 ||
-        scanWhitespace(entry).any ||
-        workspace.terminologyIssuesFor(entry).length > 0;
+      const indexed = workspace.rowIndexes.get(entry.id);
+      const hasIssues = !!(indexed?.tokenIssue || indexed?.wsIssue || indexed?.glossaryIssue);
       if (workspace.reviewFilter === "mt" && !entry.mtDraft) return false;
       if (workspace.reviewFilter === "issues" && !hasIssues) return false;
-      if (workspace.reviewFilter === "same" && statusOf(entry) !== "same") return false;
+      if (workspace.reviewFilter === "same" && indexed?.status !== "same") return false;
       if (query) {
         const haystack = `${entry.key}\n${entry.value}`.toLowerCase();
         if (!haystack.includes(query)) return false;
@@ -110,23 +105,22 @@ export function ReviewView() {
     const seen = new Set(matched.map((entry) => entry.id));
     const keep = new Set([...seen, ...stickyIds]);
     return touched.filter((entry) => keep.has(entry.id));
-  }, [touched, workspace, stickyIds]);
+  }, [touched, workspace.reviewFilter, workspace.reviewQuery, workspace.rowIndexes, stickyIds]);
 
   // Stable identity — see the note in EditorView.
-  const estimateSize = useCallback(
-    (index: number) => {
-      // Three columns side by side, so the tallest of source/translation wins.
-      const entry = rows[index];
-      if (!entry) return REVIEW_ROW_CHROME;
-      const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
-      const lines = Math.max(
-        reference ? Math.ceil(reference.length / REVIEW_CHARS_PER_LINE) : 1,
-        Math.ceil((entry.value.length || 1) / REVIEW_CHARS_PER_LINE),
-      );
-      return REVIEW_ROW_CHROME + lines * 20;
-    },
-    [rows],
-  );
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+  const estimateSize = useCallback((index: number) => {
+    // Three columns side by side, so the tallest of source/translation wins.
+    const entry = rowsRef.current[index];
+    if (!entry) return REVIEW_ROW_CHROME;
+    const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
+    const lines = Math.max(
+      reference ? Math.ceil(reference.length / REVIEW_CHARS_PER_LINE) : 1,
+      Math.ceil((entry.value.length || 1) / REVIEW_CHARS_PER_LINE),
+    );
+    return REVIEW_ROW_CHROME + lines * 20;
+  }, []);
 
   const chips: Array<{ id: ReviewFilter; label: string; n: number; disabled?: boolean }> = [
     { id: "all", label: t("review.all"), n: counts.all },
@@ -171,6 +165,7 @@ export function ReviewView() {
       </Toolbar>
 
       <VirtualList
+        key={workspace.listRevision}
         className={LIST_CLASS}
         items={rows}
         overscan={14}

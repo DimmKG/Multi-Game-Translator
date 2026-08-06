@@ -57,12 +57,48 @@ export function parseLangFile(text: string): ParsedLangFile {
   return { eol, items };
 }
 
-/** Build a key → value map from a reference `.lang` file. */
-export function parseReferenceLang(text: string): Map<string, string> {
-  const referenceByKey = new Map<string, string>();
+/**
+ * Stamp each entry with the nearest preceding `[section]` header name.
+ * Storage formats drop `entry.section` — it is rebuilt from the preserved
+ * header lines on the way back in, and reference matching depends on it.
+ */
+export function assignEntrySections(items: LangLine[]) {
+  let currentSection = "";
+  for (const item of items) {
+    if (item.type === "section") {
+      currentSection = item.name;
+      continue;
+    }
+    if (item.type === "entry") item.section = currentSection;
+  }
+}
+
+/**
+ * Reference lookup built from a `.lang` file.
+ * Indexed by section + key (comments / blanks ignored) so duplicate keys in
+ * different sections stay distinct. Multiple values under the same identity
+ * are kept in file order and consumed by occurrence.
+ */
+export interface ReferenceIndex {
+  bySectionKey: Map<string, string[]>;
+}
+
+/** Stable identity for a reference/entry pair within one section. */
+export function referenceIdentity(section: string, key: string): string {
+  return `${section}\u0000${key}`;
+}
+
+/** Build a section+key index from a reference `.lang` file (comments skipped). */
+export function parseReferenceLang(text: string): ReferenceIndex {
+  const bySectionKey = new Map<string, string[]>();
+  let currentSection = "";
   for (const rawLine of text.split(/\r\n|\n/)) {
     const trimmed = rawLine.trim();
-    if (trimmed === "" || trimmed.startsWith("//") || /^\[.*\]$/.test(trimmed)) continue;
+    if (trimmed === "" || trimmed.startsWith("//")) continue;
+    if (/^\[.*\]$/.test(trimmed)) {
+      currentSection = trimmed;
+      continue;
+    }
 
     let body = rawLine;
     if (body.startsWith(MISSING_TRANSLATION_PREFIX)) {
@@ -73,22 +109,40 @@ export function parseReferenceLang(text: string): Map<string, string> {
 
     const equalsIndex = body.indexOf("=");
     if (equalsIndex < 0) continue;
-    referenceByKey.set(body.slice(0, equalsIndex), body.slice(equalsIndex + 1));
+    const identity = referenceIdentity(currentSection, body.slice(0, equalsIndex));
+    const value = body.slice(equalsIndex + 1);
+    const queue = bySectionKey.get(identity);
+    if (queue) queue.push(value);
+    else bySectionKey.set(identity, [value]);
   }
-  return referenceByKey;
+  return { bySectionKey };
 }
 
-/** Apply reference values onto entries; clears previous refs first. */
-export function applyReferenceMap(items: LangLine[], referenceByKey: Map<string, string>): number {
+/** First reference value for `key` in any section (metadata helpers). */
+export function firstReferenceByKey(index: ReferenceIndex, key: string): string | undefined {
+  for (const [identity, values] of index.bySectionKey) {
+    const separator = identity.lastIndexOf("\u0000");
+    if (separator < 0) continue;
+    if (identity.slice(separator + 1) === key) return values[0];
+  }
+  return undefined;
+}
+
+/** Apply reference values onto entries by section+key occurrence; clears previous refs. */
+export function applyReferenceMap(items: LangLine[], reference: ReferenceIndex): number {
+  const cursors = new Map<string, number>();
   let matchedCount = 0;
   for (const item of items) {
     if (item.type !== "entry") continue;
     delete item.ref;
-    const referenceValue = referenceByKey.get(item.key);
-    if (referenceValue != null) {
-      item.ref = referenceValue;
-      matchedCount += 1;
-    }
+    const identity = referenceIdentity(item.section ?? "", item.key);
+    const values = reference.bySectionKey.get(identity);
+    if (!values?.length) continue;
+    const cursor = cursors.get(identity) ?? 0;
+    if (cursor >= values.length) continue;
+    item.ref = values[cursor];
+    cursors.set(identity, cursor + 1);
+    matchedCount += 1;
   }
   return matchedCount;
 }

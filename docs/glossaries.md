@@ -227,7 +227,10 @@ Local import works in both versions of the application:
 - the generated standalone HTML opened through `file://`;
 - the source or hosted HTTP application.
 
-Local glossaries remain stored in browser `localStorage`. Enabling and disabling a glossary does not reload its JSON; it only changes whether the saved copy participates in QA.
+Local glossaries are stored in the browser's IndexedDB (a library saved by an
+older version is migrated out of `localStorage` on first load). Enabling and
+disabling a glossary does not reload its JSON; it only changes whether the saved
+copy participates in QA.
 
 To replace an older local copy, import the updated file again with the same `id`. Removing and importing it again also works.
 

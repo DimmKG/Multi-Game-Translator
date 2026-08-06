@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { cleanLangFilename, parseReferenceLang } from "@/core/lang/parse";
+import { cleanLangFilename, firstReferenceByKey, parseReferenceLang } from "@/core/lang/parse";
 
 /** Necesse English reference files are always shipped as this name. */
 export const ENGLISH_REFERENCE_FILENAME = "en.lang";
@@ -21,8 +21,7 @@ export function normalizeEnglishReferenceFilename(filename: string): string | nu
  * That marker is what keeps SAME_TRANSLATION comparisons on English source text.
  */
 export function hasEnglishEngname(text: string): boolean {
-  const map = parseReferenceLang(text);
-  return map.get("engname") === ENGLISH_ENGNAME_VALUE;
+  return firstReferenceByKey(parseReferenceLang(text), "engname") === ENGLISH_ENGNAME_VALUE;
 }
 
 export type ReferenceValidationFailure = {
