@@ -605,7 +605,7 @@ export function EditorView() {
 
   const emptyKey = workspace.terminologyFilterActive
     ? "terminology.none"
-    : workspace.query.trim()
+    : workspace.query
       ? "empty.noMatch"
       : workspace.filter === "missing"
         ? "empty.allDone"
@@ -631,15 +631,6 @@ export function EditorView() {
             onClick={() => workspace.setQuery("  ")}
           >
             {t("btn.findDbl")}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="font-mono"
-            title={t("btn.findTabTitle")}
-            onClick={() => workspace.setQuery("\t")}
-          >
-            {t("btn.findTab")}
           </Button>
           {/* Near-search toggle — hidden while the terminology sidebar tab is
               already active (that mode lists all issue rows). On other tabs it
