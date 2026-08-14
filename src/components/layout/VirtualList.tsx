@@ -72,11 +72,27 @@ export function VirtualList<T>({
   // between those so scrolling does not re-measure every frame.
   const prevEstimateRef = useRef(estimateSize);
 
+  // tanstack caches measured sizes by item key, keyed through this callback —
+  // without it the cache falls back to the row's index. A filtered/search list
+  // reshuffles which item sits at a given index on every keystroke, so an
+  // index-keyed cache hands a stale height (from whatever used to be at that
+  // index) to the row that's there now: cards overlap and the visible window
+  // drifts to the wrong rows. Reading items/getKey through refs keeps this
+  // callback's identity stable so it doesn't itself force a re-measure.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const getKeyRef = useRef(getKey);
+  getKeyRef.current = getKey;
+  const getItemKeyRef = useRef((index: number) =>
+    getKeyRef.current(itemsRef.current[index], index),
+  );
+
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
     estimateSize,
     overscan,
+    getItemKey: getItemKeyRef.current,
   });
 
   useLayoutEffect(() => {

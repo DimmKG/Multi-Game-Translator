@@ -3,10 +3,10 @@ import { readdir, readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { isGlossaryId, isGlossaryLanguageTag } from "./contract";
+import { GLOSSARY_FORMAT_VERSION, isGlossaryId, isGlossaryLanguageTag } from "./contract";
 import { validateGlossaryDocument } from "./validation";
 
-const glossaryRoot = resolve("glossaries");
+const glossaryRoots = [resolve("glossaries"), resolve("public/glossaries")];
 
 async function collectJson(directory: string): Promise<string[]> {
   const files: string[] = [];
@@ -25,7 +25,9 @@ function validateCatalog(data: unknown, file: string): string[] {
 
   const catalog = data as Record<string, unknown>;
   const errors: string[] = [];
-  if (catalog.version !== 1) errors.push(`${file}: unsupported catalog version`);
+  if (catalog.version !== GLOSSARY_FORMAT_VERSION) {
+    errors.push(`${file}: unsupported catalog version`);
+  }
   if (!Array.isArray(catalog.glossaries)) {
     errors.push(`${file}: glossaries must be an array`);
     return errors;
@@ -58,7 +60,8 @@ describe("repository glossary files", () => {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    for (const path of await collectJson(glossaryRoot)) {
+    const paths = (await Promise.all(glossaryRoots.map(collectJson))).flat();
+    for (const path of paths) {
       const file = path.slice(resolve(".").length + 1).replaceAll("\\", "/");
       let data: unknown;
       try {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { History } from "lucide-react";
+import { History, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/features/i18n/I18nProvider";
@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function RecoveryBanner() {
   const { t } = useI18n();
-  const { pendingRecovery, continueRecovery, startOverRecovery } = useWorkspace();
+  const { pendingRecovery, continueRecovery, startOverRecovery, isImportingFile } = useWorkspace();
   if (!pendingRecovery) return null;
 
   const when = pendingRecovery.savedAt ? new Date(pendingRecovery.savedAt).toLocaleString() : "";
@@ -41,8 +41,10 @@ export function RecoveryBanner() {
           type="button"
           size="sm"
           className="bg-success text-success-soft hover:bg-success/85 font-semibold"
-          onClick={continueRecovery}
+          disabled={isImportingFile}
+          onClick={() => void continueRecovery()}
         >
+          {isImportingFile && <Loader2 className="animate-spin" aria-hidden="true" />}
           {t("restore.continue")}
         </Button>
         <Button
@@ -54,6 +56,7 @@ export function RecoveryBanner() {
             "hover:bg-success/20 hover:text-success",
             "dark:border-success dark:bg-success/10 dark:hover:bg-success/20",
           )}
+          disabled={isImportingFile}
           onClick={startOverRecovery}
         >
           {t("restore.startOver")}

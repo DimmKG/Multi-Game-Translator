@@ -46,7 +46,6 @@ import {
   ROW1_CLASS,
   ROW3_CLASS,
   TEXTAREA_CLASS,
-  WARNLINE_CLASS,
 } from "@/features/editor/card-classes";
 import {
   calibrateCardMetrics,
@@ -54,6 +53,7 @@ import {
   SECTION_HEAD_HEIGHT,
   type CardMetrics,
 } from "@/features/editor/card-metrics";
+import { TerminologyRuleDialog } from "@/features/editor/TerminologyRuleDialog";
 
 import type { FilterMode } from "@/core/lang/markers";
 import { statusOf, type TranslationEntry } from "@/core/lang/status";
@@ -152,7 +152,12 @@ const EntryCard = memo(function EntryCard({
   const missing = missingTokens(entry);
   const whitespace = scanWhitespace(entry);
   const guidance = metadataGuidanceFor(entry);
-  const terminology = workspace.terminologyIssuesFor(entry);
+  const terminologyMatches = workspace.terminologyMatchesFor(entry);
+  const terminologyIssueCount = terminologyMatches.reduce(
+    (total, match) => total + match.issues.length,
+    0,
+  );
+  const [terminologyDialogOpen, setTerminologyDialogOpen] = useState(false);
   const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
   const badge = STATUS_BADGE[status];
 
@@ -259,6 +264,37 @@ const EntryCard = memo(function EntryCard({
           >
             {t("mt.btn")}
           </Button>
+          {terminologyMatches.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="xs"
+              className={cn(
+                "font-mono",
+                terminologyIssueCount > 0
+                  ? "border-warn bg-warn-soft text-warn hover:bg-warn-soft/70"
+                  : "border-success bg-success-soft text-success hover:bg-success-soft/70",
+              )}
+              title={
+                terminologyIssueCount > 0
+                  ? t(
+                      terminologyIssueCount === 1
+                        ? "terminology.count.one"
+                        : "terminology.count.other",
+                      { n: terminologyIssueCount },
+                    )
+                  : t("terminology.entryButtonOk")
+              }
+              onClick={() => setTerminologyDialogOpen(true)}
+            >
+              {terminologyIssueCount > 0 ? (
+                <TriangleAlert size={13} aria-hidden="true" />
+              ) : (
+                <CircleCheck size={13} aria-hidden="true" />
+              )}
+              {t("terminology.filter")}
+            </Button>
+          )}
           {entry.ref != null && (
             <Button
               type="button"
@@ -275,19 +311,14 @@ const EntryCard = memo(function EntryCard({
             </Button>
           )}
         </div>
-
-        {terminology.map((issue, index) => (
-          <div className={WARNLINE_CLASS} key={`${issue.type}-${index}`}>
-            <TriangleAlert size={13} aria-hidden="true" className="shrink-0" />
-            {issue.type === "forbidden"
-              ? t("terminology.forbidden", {
-                  found: issue.found ?? issue.source,
-                  preferred: issue.preferred,
-                })
-              : t("terminology.missing", { source: issue.source, preferred: issue.preferred })}
-          </div>
-        ))}
       </article>
+      {terminologyMatches.length > 0 && (
+        <TerminologyRuleDialog
+          open={terminologyDialogOpen}
+          onOpenChange={setTerminologyDialogOpen}
+          matches={terminologyMatches}
+        />
+      )}
     </div>
   );
 });
@@ -342,11 +373,9 @@ export function EditorSidebar() {
       {
         id: "same",
         label: t("filter.same"),
-        count: workspace.referenceAvailable ? same : "—",
+        count: same,
         icon: Equal,
         tint: "text-same",
-        disabled: !workspace.referenceAvailable,
-        title: workspace.referenceAvailable ? undefined : t("reference.notLoaded"),
       },
       {
         id: "all",
@@ -365,13 +394,7 @@ export function EditorSidebar() {
         title: t("filter.wsTitle"),
       },
     ];
-  }, [
-    entries.length,
-    t,
-    workspace.referenceAvailable,
-    workspace.rowIndexes,
-    workspace.whitespaceIssueCount,
-  ]);
+  }, [entries.length, t, workspace.rowIndexes, workspace.whitespaceIssueCount]);
 
   const terminologyCount = workspace.terminologyIssueCount;
 
@@ -593,11 +616,12 @@ export function EditorView() {
       const row = rowsRef.current[index];
       if (!row || row.kind === "section") return SECTION_HEAD_HEIGHT;
       if (!heights) return FALLBACK_CARD_HEIGHT;
+      // Terminology issues no longer render their own full-width line (they
+      // moved into the rule dialog behind a single chip in row 3), so they no
+      // longer factor into this estimate the way a token/whitespace warning
+      // line still does.
       const warnings = rowIndexesRef.current.get(row.entry.id);
-      const warningCount =
-        (warnings?.tokenIssue ? 1 : 0) +
-        (warnings?.wsIssue ? 1 : 0) +
-        (warnings?.glossaryIssue ? 1 : 0);
+      const warningCount = (warnings?.tokenIssue ? 1 : 0) + (warnings?.wsIssue ? 1 : 0);
       return heights.heightOf(row.entry, warningCount);
     },
     [heights],
@@ -663,36 +687,54 @@ export function EditorView() {
         </ToolbarHint>
       </Toolbar>
 
-      <VirtualList
-        key={workspace.listRevision}
-        className={LIST_CLASS}
-        apiRef={listApi}
-        items={rows}
-        overscan={18}
-        estimateSize={estimateSize}
-        getKey={(row) => (row.kind === "section" ? `s-${row.name}` : row.entry.id)}
-        empty={
-          <Empty className="border-0">
-            <EmptyHeader className="flex-row">
-              {emptyKey === "empty.allDone" && (
-                <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
-              )}
-              <EmptyDescription>{t(emptyKey)}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        }
-        renderItem={(row) =>
-          row.kind === "section" ? (
-            <div className={CARD_ROW_GAP_CLASS}>
-              <div className={SECTION_HEAD_INNER_CLASS} data-section={row.name}>
-                {sectionLabel(row.name)}
+      {workspace.terminologyFilterActive && !workspace.referenceAvailable ? (
+        <Empty className="border-0">
+          <EmptyHeader className="flex-row">
+            <TriangleAlert className="text-warn shrink-0" size={18} aria-hidden="true" />
+            <EmptyDescription>{t("terminology.referenceRequiredCard")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : !workspace.terminologyFilterActive &&
+        workspace.filter === "same" &&
+        !workspace.referenceAvailable ? (
+        <Empty className="border-0">
+          <EmptyHeader className="flex-row">
+            <TriangleAlert className="text-warn shrink-0" size={18} aria-hidden="true" />
+            <EmptyDescription>{t("filter.sameReferenceRequiredCard")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <VirtualList
+          key={workspace.listRevision}
+          className={LIST_CLASS}
+          apiRef={listApi}
+          items={rows}
+          overscan={18}
+          estimateSize={estimateSize}
+          getKey={(row) => (row.kind === "section" ? `s-${row.name}` : row.entry.id)}
+          empty={
+            <Empty className="border-0">
+              <EmptyHeader className="flex-row">
+                {emptyKey === "empty.allDone" && (
+                  <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
+                )}
+                <EmptyDescription>{t(emptyKey)}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          }
+          renderItem={(row) =>
+            row.kind === "section" ? (
+              <div className={CARD_ROW_GAP_CLASS}>
+                <div className={SECTION_HEAD_INNER_CLASS} data-section={row.name}>
+                  {sectionLabel(row.name)}
+                </div>
               </div>
-            </div>
-          ) : (
-            <EntryCard entry={row.entry} onPin={pinEntry} />
-          )
-        }
-      />
+            ) : (
+              <EntryCard entry={row.entry} onPin={pinEntry} />
+            )
+          }
+        />
+      )}
     </>
   );
 }

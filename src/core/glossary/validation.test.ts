@@ -6,7 +6,7 @@ import { validateGlossaryDocument } from "./validation";
 function glossary(entries: unknown[]) {
   return {
     format: "necesse-glossary",
-    version: 1,
+    version: 2,
     id: "necesse-bg",
     name: "Bulgarian glossary",
     sourceLanguage: "en",
@@ -40,7 +40,7 @@ describe("shared glossary authoring validation", () => {
   it("reports blocking document and entry errors with stable paths", () => {
     const result = validateGlossaryDocument({
       format: "other",
-      version: 2,
+      version: 99,
       id: "Bad ID",
       name: "",
       sourceLanguage: "english",

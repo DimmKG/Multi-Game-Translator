@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { Download, Menu } from "lucide-react";
+import { Download, Loader2, Menu } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { WorkspaceMenu } from "@/components/layout/WorkspaceMenu";
@@ -138,6 +138,16 @@ export function AppHeader({
 
       {/* Export and menu stay paired at the trailing edge, not adrift mid-bar. */}
       <div className="ms-auto flex flex-none items-center gap-2 max-[720px]:order-3">
+        {workspace.isImportingFile && (
+          <span role="status" className="flex flex-none items-center gap-1.5">
+            <span className="bg-primary-soft text-primary flex size-8 flex-none items-center justify-center rounded-lg">
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            </span>
+            <span className="text-muted-foreground text-xs max-[560px]:hidden">
+              {t("drop.loading")}
+            </span>
+          </span>
+        )}
         {workspace.isOpen && (
           <Button
             type="button"

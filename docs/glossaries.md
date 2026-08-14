@@ -12,9 +12,9 @@ A minimal glossary looks like this:
 
 ```json
 {
-  "$schema": "../../schemas/glossary-v1.schema.json",
+  "$schema": "../../schemas/glossary-v2.schema.json",
   "format": "necesse-glossary",
-  "version": 1,
+  "version": 2,
   "id": "necesse-bg-community",
   "name": "Necesse Bulgarian Community Glossary",
   "sourceLanguage": "en",
@@ -40,7 +40,7 @@ Required fields:
 | Field | Meaning |
 | --- | --- |
 | `format` | Must be `necesse-glossary`. |
-| `version` | Format version. Currently `1`. |
+| `version` | Format version. Currently `2`. |
 | `id` | Stable machine-readable identifier. Do not change it merely because the contents changed. |
 | `name` | Display name shown in Glossary Manager. |
 | `sourceLanguage` | Source language tag, normally `en`. |
@@ -147,6 +147,28 @@ Controls whether the term must be a complete word. The default is `true`.
 
 Keep it enabled for normal terminology. Set it to `false` only for a fragment, prefix, suffix or expression that legitimately occurs inside a larger token.
 
+### `includeRegex` and `excludeRegex`
+
+Restrict a rule to (or away from) specific `.lang` entries by translation key, for a source word that means different things in different keys — matching happens against the key, never against the English or translated text.
+
+```json
+{
+  "source": "Hat",
+  "target": "Шляпа",
+  "excludeRegex": "^soundhat$"
+}
+```
+
+`Cloth Hat`, `Runic Hat` and the other headwear items still get checked against `Шляпа`. `soundhat`, whose English value is also just `Hat` but which actually names a hi-hat drum sound, is skipped instead of being wrongly held to the headwear translation.
+
+- `includeRegex` — if set, the rule applies **only** to keys the pattern matches;
+- `excludeRegex` — if set, the rule is skipped for keys the pattern matches;
+- both can be set together; `excludeRegex` wins if a key matches both;
+- an invalid pattern fails glossary validation rather than being silently ignored;
+- when two entries share a source and only differ by these fields (e.g. two `Hat` rules scoped to different keys), that is a deliberate split, not a duplicate.
+
+Reach for these only when a source word is genuinely ambiguous by key. Most terminology never needs them.
+
 ### `status`
 
 Supported values:
@@ -181,6 +203,24 @@ These fields provide human guidance and appear in terminology details where appl
 - `note` records a decision, exception or translator instruction.
 
 They do not replace separate entries when two source terms genuinely require different matching rules.
+
+## Overlapping entries
+
+Two entries can legitimately match the same source text, for example a generic `Log` entry and a more specific `Log Bench` entry both matching `Spruce Log Bench`. When that happens, only the entry with the longest matching source phrase applies; shorter entries whose source is a whole word inside the longer one are skipped for that text.
+
+Given:
+
+```json
+[
+  { "source": "Log", "target": "Бревно" },
+  { "source": "Log Bench", "target": "Скамейка" }
+]
+```
+
+- `Spruce Log Bench` is checked only against `Log Bench` — `Log` does not also fire and does not need to accept `Скамейка` as a workaround.
+- `Oak Log` has no `Bench`, so `Log Bench` does not match it and the generic `Log` entry applies normally.
+
+This lets a specific phrase entry carve out its own translation rule without the generic entry needing to know about it.
 
 ## Complete entry example
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { FileType2 } from "lucide-react";
+import { FileType2, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,7 @@ const LEGEND_ITEMS = [
 
 export function Dropzone() {
   const { t } = useI18n();
-  const { openLangFile, createFromReferenceFile } = useWorkspace();
+  const { openLangFile, createFromReferenceFile, isImportingFile } = useWorkspace();
   const inputRef = useRef<HTMLInputElement>(null);
   const newRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -34,6 +34,7 @@ export function Dropzone() {
       <Empty
         id="drop"
         data-testid="dropzone"
+        aria-busy={isImportingFile}
         className={cn(
           "bg-card w-[min(560px,90%)] border-[1.5px] border-dashed px-[34px] py-11 transition",
           dragging && "border-primary bg-secondary",
@@ -53,6 +54,7 @@ export function Dropzone() {
         onDrop={(event) => {
           event.preventDefault();
           setDragging(false);
+          if (isImportingFile) return;
           const file = event.dataTransfer.files?.[0];
           if (file) void openLangFile(file);
         }}
@@ -64,7 +66,7 @@ export function Dropzone() {
             aria-hidden="true"
             data-testid="dropzone-icon"
           >
-            <FileType2 />
+            {isImportingFile ? <Loader2 className="animate-spin" /> : <FileType2 />}
           </EmptyMedia>
 
           <EmptyTitle
@@ -76,13 +78,20 @@ export function Dropzone() {
 
           <EmptyDescription
             className="mb-5 text-[13.5px]"
-            dangerouslySetInnerHTML={{ __html: t("drop.text") }}
+            dangerouslySetInnerHTML={{
+              __html: isImportingFile ? t("drop.loading") : t("drop.text"),
+            }}
           />
         </EmptyHeader>
 
         <EmptyContent className="max-w-none gap-0">
           <div className="mb-[22px] flex flex-wrap items-center justify-center gap-2">
-            <Button type="button" id="btnPick" onClick={() => inputRef.current?.click()}>
+            <Button
+              type="button"
+              id="btnPick"
+              disabled={isImportingFile}
+              onClick={() => inputRef.current?.click()}
+            >
               {t("drop.pick")}
             </Button>
             <Button
@@ -90,6 +99,7 @@ export function Dropzone() {
               variant="ghost"
               data-new-translation-button=""
               title={t("btn.newTranslationTitle")}
+              disabled={isImportingFile}
               onClick={() => newRef.current?.click()}
             >
               {t("btn.newTranslation")}

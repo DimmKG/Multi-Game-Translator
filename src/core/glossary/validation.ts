@@ -44,7 +44,8 @@ export type GlossaryValidationCode =
   | "one-character-source"
   | "short-non-whole-word"
   | "missing-category"
-  | "context-dependent-missing-context";
+  | "context-dependent-missing-context"
+  | "invalid-regex";
 
 export interface GlossaryValidationProblem {
   severity: GlossaryValidationSeverity;
@@ -133,6 +134,28 @@ interface ValidatableEntry {
   wholeWord: boolean;
   status: string;
   context: string;
+  includeRegex: string;
+  excludeRegex: string;
+}
+
+function validateRegexField(
+  value: unknown,
+  path: string,
+  index: number,
+  problems: GlossaryValidationProblem[],
+): string {
+  if (value === undefined || value === "") return "";
+  if (typeof value !== "string") {
+    addProblem(problems, "error", "invalid-regex", path, { entryIndex: index });
+    return "";
+  }
+  try {
+    new RegExp(value, "u");
+  } catch {
+    addProblem(problems, "error", "invalid-regex", path, { entryIndex: index, value });
+    return "";
+  }
+  return value;
 }
 
 function validateEntry(
@@ -177,6 +200,18 @@ function validateEntry(
   const context = typeof value.context === "string" ? value.context : "";
   const alternatives = arrays.alternatives ?? [];
   const forbidden = arrays.forbidden ?? [];
+  const includeRegex = validateRegexField(
+    value.includeRegex,
+    `${path}.includeRegex`,
+    index,
+    problems,
+  );
+  const excludeRegex = validateRegexField(
+    value.excludeRegex,
+    `${path}.excludeRegex`,
+    index,
+    problems,
+  );
 
   if (source && target && comparable(source, caseSensitive) === comparable(target, caseSensitive)) {
     addProblem(problems, "warning", "source-target-identical", `${path}.target`, {
@@ -234,6 +269,8 @@ function validateEntry(
     wholeWord,
     status: typeof status === "string" ? status : "",
     context,
+    includeRegex,
+    excludeRegex,
   };
 }
 
@@ -268,6 +305,8 @@ function validateDuplicateEntries(
       entry.caseSensitive ? "case" : "fold",
       entry.wholeWord ? "word" : "substring",
       comparable(entry.source, entry.caseSensitive),
+      entry.includeRegex,
+      entry.excludeRegex,
     ].join("\0");
     const previousMatch = matchingRules.get(signature);
     if (!previousMatch) {

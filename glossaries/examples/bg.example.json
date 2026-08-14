@@ -1,7 +1,7 @@
 {
-  "$schema": "../../schemas/glossary-v1.schema.json",
+  "$schema": "../../schemas/glossary-v2.schema.json",
   "format": "necesse-glossary",
-  "version": 1,
+  "version": 2,
   "id": "necesse-bg-example",
   "name": "Necesse Bulgarian Glossary Example",
   "sourceLanguage": "en",
@@ -31,6 +31,16 @@
       "wholeWord": true,
       "status": "approved",
       "category": "creature"
+    },
+    {
+      "source": "Hat",
+      "target": "Шапка",
+      "excludeRegex": "^soundhat$",
+      "caseSensitive": false,
+      "wholeWord": true,
+      "status": "approved",
+      "category": "cosmetic",
+      "note": "excludeRegex example: the key \"soundhat\" is a hi-hat drum sound whose English value is also just \"Hat\", not headwear, so this rule must not apply to it."
     }
   ]
 }

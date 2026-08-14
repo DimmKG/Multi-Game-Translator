@@ -10,7 +10,7 @@ import { scanWhitespace } from "@/core/tokens/whitespace";
 export const SCHEMA_VERSION = 1;
 
 /** Bump when status / token / whitespace / glossary indexing logic changes. */
-export const INDEXER_VERSION = 1;
+export const INDEXER_VERSION = 2;
 
 export interface RowIndex {
   status: EntryStatus;
@@ -88,7 +88,8 @@ function indexEntryWith(entry: TranslationEntry, enabled: GlossaryLike[]): RowIn
     status: statusOf(entry),
     tokenIssue: missingTokens(entry).length > 0,
     wsIssue: scanWhitespace(entry).any,
-    glossaryIssue: inspectTerminology(sourceText(entry), entry.value, enabled).length > 0,
+    glossaryIssue:
+      inspectTerminology(sourceText(entry), entry.value, enabled, entry.key).length > 0,
     hasRef: entry.ref != null,
   };
 }

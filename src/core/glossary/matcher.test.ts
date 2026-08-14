@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it } from "vitest";
 
-import { containsGlossaryTerm, inspectTerminology, stripProtectedTokens } from "./matcher";
+import {
+  containsGlossaryTerm,
+  inspectTerminology,
+  matchingTerminologyRules,
+  stripProtectedTokens,
+} from "./matcher";
 
 const glossary = {
   id: "bg-test",
@@ -97,5 +102,105 @@ describe("glossary matcher", () => {
   it("forbidden wording produces a forbidden issue", () => {
     const issues = inspectTerminology("A Caveling appears", "Появява се Пещерняк", [glossary]);
     expect(issues.some((issue) => issue.type === "forbidden")).toBe(true);
+  });
+
+  describe("overlapping entries: longest matching phrase wins", () => {
+    const overlapGlossary = {
+      id: "overlap-test",
+      name: "Overlap test",
+      entries: [
+        {
+          source: "Log",
+          target: "Бревно",
+          status: "approved",
+        },
+        {
+          source: "Log Bench",
+          target: "Скамейка",
+          status: "approved",
+        },
+      ],
+    };
+
+    it("only the specific phrase entry applies when both entries match", () => {
+      const issues = inspectTerminology("Spruce Log Bench", "Еловая скамейка", [overlapGlossary]);
+      expect(issues).toEqual([]);
+    });
+
+    it("the specific phrase entry still reports its own issues", () => {
+      const issues = inspectTerminology("Spruce Log Bench", "Еловая лавочка", [overlapGlossary]);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].source).toBe("Log Bench");
+    });
+
+    it("the generic entry applies normally when the specific phrase is absent", () => {
+      const issues = inspectTerminology("Oak Log", "Дубовое дерево", [overlapGlossary]);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].source).toBe("Log");
+    });
+
+    it("the generic entry is unaffected when it does not match at all", () => {
+      const issues = inspectTerminology("Bench", "Скамейка", [overlapGlossary]);
+      expect(issues).toEqual([]);
+    });
+  });
+
+  describe("matchingTerminologyRules", () => {
+    it("returns a clean match (empty issues) when the translation satisfies the rule", () => {
+      const matches = matchingTerminologyRules("A Caveling appears", "Появява се Пещерник", [
+        glossary,
+      ]);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].source).toBe("Caveling");
+      expect(matches[0].target).toBe("Пещерник");
+      expect(matches[0].issues).toEqual([]);
+    });
+
+    it("returns the same match with populated issues when the rule is violated", () => {
+      const matches = matchingTerminologyRules("A Caveling appears", "Появява се същество", [
+        glossary,
+      ]);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].issues).toHaveLength(1);
+      expect(matches[0].issues[0].type).toBe("missing-preferred");
+    });
+
+    it("omits rules whose source does not appear in the text", () => {
+      expect(matchingTerminologyRules("Nothing relevant here", "Нищо", [glossary])).toEqual([]);
+    });
+
+    it("respects longest-phrase-wins: only the specific entry appears when both match", () => {
+      const overlapGlossary = {
+        id: "overlap-test",
+        name: "Overlap test",
+        entries: [
+          { source: "Log", target: "Бревно", status: "approved" },
+          { source: "Log Bench", target: "Скамейка", status: "approved" },
+        ],
+      };
+      const matches = matchingTerminologyRules("Spruce Log Bench", "Еловая скамейка", [
+        overlapGlossary,
+      ]);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].source).toBe("Log Bench");
+    });
+
+    it("flattening every match's issues equals inspectTerminology's result", () => {
+      const sourceText = "A Caveling appears near a Log Bench";
+      const targetText = "Появява се същество близо до пейка";
+      const overlapGlossary = {
+        id: "overlap-test",
+        name: "Overlap test",
+        entries: [
+          { source: "Log", target: "Бревно", status: "approved" },
+          { source: "Log Bench", target: "Скамейка", status: "approved" },
+        ],
+      };
+      const glossaries = [glossary, overlapGlossary];
+      const flattened = matchingTerminologyRules(sourceText, targetText, glossaries).flatMap(
+        (match) => match.issues,
+      );
+      expect(flattened).toEqual(inspectTerminology(sourceText, targetText, glossaries));
+    });
   });
 });

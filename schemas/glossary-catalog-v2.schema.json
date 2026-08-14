@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://actepukc.github.io/Necesse-Lang-Translator/schemas/glossary-catalog-v1.schema.json",
+  "$id": "https://actepukc.github.io/Necesse-Lang-Translator/schemas/glossary-catalog-v2.schema.json",
   "title": "Necesse Translator Glossary Catalog",
   "type": "object",
   "required": ["format", "version", "glossaries"],
@@ -8,7 +8,7 @@
   "properties": {
     "$schema": { "type": "string", "format": "uri-reference" },
     "format": { "const": "necesse-glossary-catalog" },
-    "version": { "const": 1 },
+    "version": { "const": 2 },
     "glossaries": {
       "type": "array",
       "items": {

@@ -53,7 +53,7 @@ class MemoryStorage implements Storage {
 function validGlossary() {
   return normalizeGlossary({
     format: "necesse-glossary",
-    version: 1,
+    version: 2,
     id: "necesse-bg",
     name: "Bulgarian glossary",
     sourceLanguage: "en",

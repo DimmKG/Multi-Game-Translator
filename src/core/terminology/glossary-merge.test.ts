@@ -9,7 +9,7 @@ import {
 
 const glossary: MergeableGlossaryDocument = {
   format: "necesse-glossary",
-  version: 1,
+  version: 2,
   id: "necesse-bg",
   name: "Bulgarian",
   sourceLanguage: "en",
