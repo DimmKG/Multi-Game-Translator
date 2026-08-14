@@ -21,7 +21,7 @@ describe("glossary authoring drafts", () => {
 
     expect(draft).toMatchObject({
       format: "necesse-glossary",
-      version: 1,
+      version: 2,
       name: "Bulgarian glossary",
       sourceLanguage: "en",
       targetLanguage: "bg",
@@ -40,7 +40,7 @@ describe("glossary authoring drafts", () => {
   it("deep-copies frozen runtime glossaries before editing", () => {
     const runtime = normalizeGlossary({
       format: "necesse-glossary",
-      version: 1,
+      version: 2,
       id: "necesse-bg",
       name: "Bulgarian glossary",
       sourceLanguage: "en",

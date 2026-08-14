@@ -9,6 +9,7 @@ Thumbs.db
 
 # Local copyrighted game localization fixtures
 /test/locals/
+*.lang
 
 # Local visual capture artifacts (never commit)
 .cursor-visual-*.png

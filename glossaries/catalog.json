@@ -1,6 +1,6 @@
 {
-  "$schema": "../schemas/glossary-catalog-v1.schema.json",
+  "$schema": "../schemas/glossary-catalog-v2.schema.json",
   "format": "necesse-glossary-catalog",
-  "version": 1,
+  "version": 2,
   "glossaries": []
 }

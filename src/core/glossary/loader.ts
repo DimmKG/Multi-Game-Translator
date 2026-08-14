@@ -23,6 +23,8 @@ export interface NormalizedGlossaryEntry {
   category: string;
   context: string;
   note: string;
+  includeRegex: string;
+  excludeRegex: string;
 }
 
 export interface NormalizedGlossary {
@@ -101,6 +103,8 @@ function normalizeEntry(entry: unknown, index: number): NormalizedGlossaryEntry 
     category: (entry.category as string | undefined) ?? "",
     context: (entry.context as string | undefined) ?? "",
     note: (entry.note as string | undefined) ?? "",
+    includeRegex: (entry.includeRegex as string | undefined) ?? "",
+    excludeRegex: (entry.excludeRegex as string | undefined) ?? "",
   });
 }
 

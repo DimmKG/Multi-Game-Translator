@@ -63,7 +63,7 @@ const sampleEntry = (overrides: Partial<Extract<LangLine, { type: "entry" }>> = 
 
 const sampleGlossary = (overrides: Partial<StoredGlossary> = {}): StoredGlossary => ({
   format: "necesse-glossary",
-  version: 1,
+  version: 2,
   id: "test-glossary",
   name: "Test",
   sourceLanguage: "en",
@@ -84,6 +84,8 @@ const sampleGlossary = (overrides: Partial<StoredGlossary> = {}): StoredGlossary
       category: "",
       context: "",
       note: "",
+      includeRegex: "",
+      excludeRegex: "",
     },
   ],
   enabled: true,

@@ -98,4 +98,45 @@ describe("glossary matcher", () => {
     const issues = inspectTerminology("A Caveling appears", "Появява се Пещерняк", [glossary]);
     expect(issues.some((issue) => issue.type === "forbidden")).toBe(true);
   });
+
+  describe("overlapping entries: longest matching phrase wins", () => {
+    const overlapGlossary = {
+      id: "overlap-test",
+      name: "Overlap test",
+      entries: [
+        {
+          source: "Log",
+          target: "Бревно",
+          status: "approved",
+        },
+        {
+          source: "Log Bench",
+          target: "Скамейка",
+          status: "approved",
+        },
+      ],
+    };
+
+    it("only the specific phrase entry applies when both entries match", () => {
+      const issues = inspectTerminology("Spruce Log Bench", "Еловая скамейка", [overlapGlossary]);
+      expect(issues).toEqual([]);
+    });
+
+    it("the specific phrase entry still reports its own issues", () => {
+      const issues = inspectTerminology("Spruce Log Bench", "Еловая лавочка", [overlapGlossary]);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].source).toBe("Log Bench");
+    });
+
+    it("the generic entry applies normally when the specific phrase is absent", () => {
+      const issues = inspectTerminology("Oak Log", "Дубовое дерево", [overlapGlossary]);
+      expect(issues).toHaveLength(1);
+      expect(issues[0].source).toBe("Log");
+    });
+
+    it("the generic entry is unaffected when it does not match at all", () => {
+      const issues = inspectTerminology("Bench", "Скамейка", [overlapGlossary]);
+      expect(issues).toEqual([]);
+    });
+  });
 });

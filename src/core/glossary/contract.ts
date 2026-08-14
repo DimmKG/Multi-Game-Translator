@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 export const GLOSSARY_FORMAT = "necesse-glossary" as const;
-export const GLOSSARY_FORMAT_VERSION = 1 as const;
+export const GLOSSARY_FORMAT_VERSION = 2 as const;
 export const GLOSSARY_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/;
 export const LANGUAGE_TAG_PATTERN = /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 export const GLOSSARY_ENTRY_STATUSES = [

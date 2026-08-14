@@ -13,6 +13,8 @@ export interface GlossaryEntry {
   category?: string;
   context?: string;
   note?: string;
+  includeRegex?: string;
+  excludeRegex?: string;
 }
 
 export interface GlossaryDocument {
@@ -69,6 +71,28 @@ function matchingSource(sourceText: string, entry: GlossaryEntry) {
   return containsGlossaryTerm(sourceText, entry.source, entry);
 }
 
+function testRegexSafely(pattern: string, value: string): boolean {
+  try {
+    return new RegExp(pattern, "u").test(value);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Restricts a rule to (or away from) specific `.lang` entries by translation
+ * key, for source words that mean different things in different keys (e.g.
+ * "Hat" the headwear item vs. "soundhat" the hi-hat drum sound). Invalid
+ * regex is treated as "no match" rather than thrown — authoring validation
+ * is where a bad pattern should be reported.
+ */
+function entryAppliesToKey(entry: GlossaryEntry, key: string): boolean {
+  const value = key ?? "";
+  if (entry.includeRegex && !testRegexSafely(entry.includeRegex, value)) return false;
+  if (entry.excludeRegex && testRegexSafely(entry.excludeRegex, value)) return false;
+  return true;
+}
+
 function acceptedTargets(entry: GlossaryEntry) {
   return [entry.target, ...(entry.forms || []), ...(entry.alternatives || [])].filter(Boolean);
 }
@@ -78,8 +102,11 @@ export function inspectGlossaryEntry(
   targetText: string,
   entry: GlossaryEntry,
   glossary: GlossaryDocument = {},
+  key = "",
 ): TerminologyIssue[] {
-  if (!entry || entry.status === "deprecated" || !matchingSource(sourceText, entry)) return [];
+  if (!entry || entry.status === "deprecated") return [];
+  if (!entryAppliesToKey(entry, key)) return [];
+  if (!matchingSource(sourceText, entry)) return [];
 
   const issues: TerminologyIssue[] = [];
   for (const forbidden of entry.forbidden || []) {
@@ -117,16 +144,42 @@ export function inspectGlossaryEntry(
   return issues;
 }
 
+/**
+ * True when `longer` is a strictly longer phrase that contains `shorter`'s
+ * source as a whole word and also matches the same source text. A generic
+ * entry (e.g. "Log") is then redundant with a more specific one that already
+ * covers this text (e.g. "Log Bench"): only the specific entry should apply.
+ */
+function isSubsumedByLongerEntry(
+  sourceText: string,
+  entry: GlossaryEntry,
+  candidates: readonly GlossaryEntry[],
+  key: string,
+): boolean {
+  return candidates.some((candidate) => {
+    if (candidate === entry || candidate.status === "deprecated") return false;
+    if (!entryAppliesToKey(candidate, key)) return false;
+    if (candidate.source.length <= entry.source.length) return false;
+    if (!containsGlossaryTerm(candidate.source, entry.source, { wholeWord: true })) return false;
+    return matchingSource(sourceText, candidate);
+  });
+}
+
 export function inspectTerminology(
   sourceText: string,
   targetText: string,
   glossaries: GlossaryDocument[] = [],
+  key = "",
 ): readonly TerminologyIssue[] {
+  const entries = (glossaries || []).flatMap((glossary) =>
+    (glossary.entries || []).map((entry) => ({ entry, glossary })),
+  );
+  const allSources = entries.map((pair) => pair.entry);
+
   const issues: TerminologyIssue[] = [];
-  for (const glossary of glossaries || []) {
-    for (const entry of glossary.entries || []) {
-      issues.push(...inspectGlossaryEntry(sourceText, targetText, entry, glossary));
-    }
+  for (const { entry, glossary } of entries) {
+    if (isSubsumedByLongerEntry(sourceText, entry, allSources, key)) continue;
+    issues.push(...inspectGlossaryEntry(sourceText, targetText, entry, glossary, key));
   }
   return Object.freeze(issues);
 }

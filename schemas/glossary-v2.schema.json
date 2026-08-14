@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://actepukc.github.io/Necesse-Lang-Translator/schemas/glossary-v1.schema.json",
+  "$id": "https://actepukc.github.io/Necesse-Lang-Translator/schemas/glossary-v2.schema.json",
   "title": "Necesse Translator Glossary",
   "type": "object",
   "required": ["format", "version", "id", "name", "sourceLanguage", "targetLanguage", "entries"],
@@ -8,7 +8,7 @@
   "properties": {
     "$schema": { "type": "string", "format": "uri-reference" },
     "format": { "const": "necesse-glossary" },
-    "version": { "const": 1 },
+    "version": { "const": 2 },
     "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
     "name": { "type": "string", "minLength": 1 },
     "sourceLanguage": { "$ref": "#/$defs/languageTag" },
@@ -63,7 +63,17 @@
         },
         "category": { "type": "string", "minLength": 1 },
         "context": { "type": "string" },
-        "note": { "type": "string" }
+        "note": { "type": "string" },
+        "includeRegex": {
+          "description": "The rule only applies to .lang entries whose translation key matches this regular expression.",
+          "type": "string",
+          "minLength": 1
+        },
+        "excludeRegex": {
+          "description": "The rule is skipped for .lang entries whose translation key matches this regular expression.",
+          "type": "string",
+          "minLength": 1
+        }
       }
     }
   }

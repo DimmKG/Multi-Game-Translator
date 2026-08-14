@@ -1043,7 +1043,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const terminologyIssuesFor = useCallback(
     (entry: TranslationEntry) =>
-      inspectTerminology(sourceText(entry), entry.value, enabledGlossaries),
+      inspectTerminology(sourceText(entry), entry.value, enabledGlossaries, entry.key),
     [enabledGlossaries],
   );
 

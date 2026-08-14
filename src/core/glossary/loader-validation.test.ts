@@ -6,7 +6,7 @@ import { normalizeGlossary } from "./loader";
 function glossary(entry: Record<string, unknown>) {
   return {
     format: "necesse-glossary",
-    version: 1,
+    version: 2,
     id: "necesse-bg",
     name: "Bulgarian glossary",
     sourceLanguage: "en",
