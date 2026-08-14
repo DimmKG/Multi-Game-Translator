@@ -163,6 +163,8 @@ interface WorkspaceState {
 }
 
 interface WorkspaceContextValue extends WorkspaceState {
+  /** True while a picked/dropped file is being read and parsed. */
+  isImportingFile: boolean;
   openWorkspaceFromText: (
     text: string,
     options?: {
@@ -178,7 +180,7 @@ interface WorkspaceContextValue extends WorkspaceState {
   exportLang: () => void;
   saveProgressFile: () => Promise<void>;
   loadProgressFile: (file: File) => Promise<void>;
-  continueRecovery: () => void;
+  continueRecovery: () => Promise<void>;
   startOverRecovery: () => void;
   setFilename: (name: string) => void;
   setFilter: (filter: FilterMode) => void;
@@ -354,6 +356,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(state);
   stateRef.current = state;
 
+  // Transient UI flag, not part of the persisted state: true while a picked
+  // file is being read/parsed, so pickers can show a spinner instead of
+  // appearing to hang on large files.
+  const [isImportingFile, setIsImportingFile] = useState(false);
+
+  // On small files the read/parse below finishes inside a single frame, so the
+  // spinner would flash on and off without visibly rotating. Holding it up for
+  // at least this long keeps it perceivable without slowing large files down
+  // (they already run well past this floor).
+  const runWithImportSpinner = useCallback(async <T,>(task: () => Promise<T>): Promise<T> => {
+    setIsImportingFile(true);
+    const startedAt = Date.now();
+    try {
+      return await task();
+    } finally {
+      const elapsed = Date.now() - startedAt;
+      const MIN_SPINNER_MS = 320;
+      if (elapsed < MIN_SPINNER_MS) {
+        await new Promise((resolve) => setTimeout(resolve, MIN_SPINNER_MS - elapsed));
+      }
+      setIsImportingFile(false);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -397,7 +423,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("compact-view", state.compactView && state.isOpen);
   }, [state.compactView, state.isOpen]);
 
-  const markFullReplace = useCallback((indexes: Map<number, RowIndex>) => {
+  const markFullReplace = useCallback((indexes: ReadonlyMap<number, RowIndex>) => {
     fullReplace.current = true;
     dirtyLineIds.current.clear();
     metaDirty.current = true;
@@ -608,68 +634,74 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const openLangFile = useCallback(
     async (file: File) => {
-      const text = await readFileAsText(file);
-      openWorkspaceFromText(text, { filename: file.name });
-      toast.success(t("toast.fileLoaded"));
+      await runWithImportSpinner(async () => {
+        const text = await readFileAsText(file);
+        openWorkspaceFromText(text, { filename: file.name });
+        toast.success(t("toast.fileLoaded"));
+      });
     },
-    [openWorkspaceFromText, t],
+    [openWorkspaceFromText, runWithImportSpinner, t],
   );
 
   const createFromReferenceFile = useCallback(
     async (file: File) => {
-      const text = await readFileAsText(file);
-      const validation = validateEnglishReferenceFile(file.name, text);
-      if (!validation.ok) {
-        toast.error(t(validation.messageKey));
-        return;
-      }
-      const result = createTranslationFromReference(text, validation.filename);
-      if (!result.entryCount) {
-        toast.error(t("err.newTranslationNoEntries"));
-        return;
-      }
-      // Apply the same English body as the live reference so SAME_TRANSLATION
-      // and the reminder button settle in one frame — no pulse flash.
-      openWorkspaceFromText(result.text, {
-        filename: "",
-        referenceFilename: validation.filename,
-        referenceSourceText: text,
-        targetLang: "",
+      await runWithImportSpinner(async () => {
+        const text = await readFileAsText(file);
+        const validation = validateEnglishReferenceFile(file.name, text);
+        if (!validation.ok) {
+          toast.error(t(validation.messageKey));
+          return;
+        }
+        const result = createTranslationFromReference(text, validation.filename);
+        if (!result.entryCount) {
+          toast.error(t("err.newTranslationNoEntries"));
+          return;
+        }
+        // Apply the same English body as the live reference so SAME_TRANSLATION
+        // and the reminder button settle in one frame — no pulse flash.
+        openWorkspaceFromText(result.text, {
+          filename: "",
+          referenceFilename: validation.filename,
+          referenceSourceText: text,
+          targetLang: "",
+        });
+        toast.success(
+          t("toast.newTranslationCreated", {
+            file: validation.filename,
+            n: result.entryCount,
+          }),
+        );
       });
-      toast.success(
-        t("toast.newTranslationCreated", {
-          file: validation.filename,
-          n: result.entryCount,
-        }),
-      );
     },
-    [openWorkspaceFromText, t],
+    [openWorkspaceFromText, runWithImportSpinner, t],
   );
 
   const loadReferenceFile = useCallback(
     async (file: File) => {
-      const text = await readFileAsText(file);
-      const validation = validateEnglishReferenceFile(file.name, text);
-      if (!validation.ok) {
-        toast.error(t(validation.messageKey));
-        return;
-      }
-      const map = parseReferenceLang(text);
-      // Applied outside the updater: how many entries matched is worth telling
-      // the user, and a toast fired from inside would be repeated every time
-      // React re-ran the updater — three times, in practice.
-      const items = stateRef.current.items.map((item) => ({ ...item }));
-      const matched = applyReferenceMap(items, map);
-      markFullReplace(buildRowIndexMap(items, stateRef.current.glossaries));
-      setState((current) => ({
-        ...current,
-        items,
-        referenceFilename: validation.filename,
-      }));
-      toast.success(t("btn.enRefLoaded", { file: validation.filename, n: matched }));
-      scheduleSave();
+      await runWithImportSpinner(async () => {
+        const text = await readFileAsText(file);
+        const validation = validateEnglishReferenceFile(file.name, text);
+        if (!validation.ok) {
+          toast.error(t(validation.messageKey));
+          return;
+        }
+        const map = parseReferenceLang(text);
+        // Applied outside the updater: how many entries matched is worth telling
+        // the user, and a toast fired from inside would be repeated every time
+        // React re-ran the updater — three times, in practice.
+        const items = stateRef.current.items.map((item) => ({ ...item }));
+        const matched = applyReferenceMap(items, map);
+        markFullReplace(buildRowIndexMap(items, stateRef.current.glossaries));
+        setState((current) => ({
+          ...current,
+          items,
+          referenceFilename: validation.filename,
+        }));
+        toast.success(t("btn.enRefLoaded", { file: validation.filename, n: matched }));
+        scheduleSave();
+      });
     },
-    [markFullReplace, scheduleSave, t],
+    [markFullReplace, runWithImportSpinner, scheduleSave, t],
   );
 
   const exportLang = useCallback(() => {
@@ -711,64 +743,75 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const loadProgressFile = useCallback(
     async (file: File) => {
-      try {
-        let text: string;
-        if (/\.gz$/i.test(file.name) || file.type === "application/gzip") {
-          text = await gunzipToText(await readFileAsArrayBuffer(file));
-        } else {
-          text = await readFileAsText(file);
+      await runWithImportSpinner(async () => {
+        try {
+          let text: string;
+          if (/\.gz$/i.test(file.name) || file.type === "application/gzip") {
+            text = await gunzipToText(await readFileAsArrayBuffer(file));
+          } else {
+            text = await readFileAsText(file);
+          }
+          const snapshot = deserializeProgress(JSON.parse(text));
+          dismissPendingRecovery();
+          markFullReplace(buildRowIndexMap(snapshot.items, stateRef.current.glossaries));
+          setState((current) => ({
+            ...current,
+            isOpen: true,
+            filename: snapshot.filename,
+            referenceFilename: snapshot.referenceFilename,
+            eol: snapshot.eol,
+            items: snapshot.items,
+            savedAt: snapshot.savedAt,
+            mtProvider: snapshot.meta.provider || preferredProvider(),
+            targetLanguage: snapshot.meta.targetLanguage || codeFromFilename(snapshot.filename),
+            spellcheck: snapshot.meta.spellcheck,
+            autocompleteEnabled: snapshot.meta.autocompleteEnabled,
+            view: "editor",
+            filter: "missing",
+            pendingRecovery: null,
+          }));
+          scheduleSave();
+          toast.success(t("toast.progressRestored"));
+        } catch (error) {
+          toast.error(
+            t("err.readFile", { msg: error instanceof Error ? error.message : t("err.generic") }),
+          );
         }
-        const snapshot = deserializeProgress(JSON.parse(text));
-        dismissPendingRecovery();
-        markFullReplace(buildRowIndexMap(snapshot.items, stateRef.current.glossaries));
-        setState((current) => ({
-          ...current,
-          isOpen: true,
-          filename: snapshot.filename,
-          referenceFilename: snapshot.referenceFilename,
-          eol: snapshot.eol,
-          items: snapshot.items,
-          savedAt: snapshot.savedAt,
-          mtProvider: snapshot.meta.provider || preferredProvider(),
-          targetLanguage: snapshot.meta.targetLanguage || codeFromFilename(snapshot.filename),
-          spellcheck: snapshot.meta.spellcheck,
-          autocompleteEnabled: snapshot.meta.autocompleteEnabled,
-          view: "editor",
-          filter: "missing",
-          pendingRecovery: null,
-        }));
-        scheduleSave();
-        toast.success(t("toast.progressRestored"));
-      } catch (error) {
-        toast.error(
-          t("err.readFile", { msg: error instanceof Error ? error.message : t("err.generic") }),
-        );
-      }
+      });
     },
-    [dismissPendingRecovery, markFullReplace, scheduleSave, t],
+    [dismissPendingRecovery, markFullReplace, runWithImportSpinner, scheduleSave, t],
   );
 
-  const continueRecovery = useCallback(() => {
+  const continueRecovery = useCallback(async () => {
     const recovery = state.pendingRecovery;
     if (!recovery) return;
-    markFullReplace(buildRowIndexMap(recovery.items, stateRef.current.glossaries));
-    setState((current) => ({
-      ...current,
-      isOpen: true,
-      filename: recovery.filename,
-      referenceFilename: recovery.referenceFilename,
-      eol: recovery.eol,
-      items: recovery.items,
-      savedAt: recovery.savedAt,
-      mtProvider: recovery.meta.provider || preferredProvider(),
-      targetLanguage: recovery.meta.targetLanguage || codeFromFilename(recovery.filename),
-      spellcheck: recovery.meta.spellcheck,
-      autocompleteEnabled: recovery.meta.autocompleteEnabled,
-      pendingRecovery: null,
-      view: "editor",
-    }));
-    scheduleSave();
-  }, [markFullReplace, scheduleSave, state.pendingRecovery]);
+    await runWithImportSpinner(async () => {
+      // Yield once so the loading state actually paints before the state
+      // update below.
+      await new Promise(requestAnimationFrame);
+      // Hydration already built this recovery snapshot's row index (it needs
+      // it to show progress in the recovery banner) — reuse it instead of
+      // re-running glossary matching over every row a second time, which on
+      // a large file is slow enough to look like a hang.
+      markFullReplace(rowIndexesRef.current);
+      setState((current) => ({
+        ...current,
+        isOpen: true,
+        filename: recovery.filename,
+        referenceFilename: recovery.referenceFilename,
+        eol: recovery.eol,
+        items: recovery.items,
+        savedAt: recovery.savedAt,
+        mtProvider: recovery.meta.provider || preferredProvider(),
+        targetLanguage: recovery.meta.targetLanguage || codeFromFilename(recovery.filename),
+        spellcheck: recovery.meta.spellcheck,
+        autocompleteEnabled: recovery.meta.autocompleteEnabled,
+        pendingRecovery: null,
+        view: "editor",
+      }));
+      scheduleSave();
+    });
+  }, [markFullReplace, runWithImportSpinner, scheduleSave, state.pendingRecovery]);
 
   const startOverRecovery = useCallback(() => {
     dismissPendingRecovery(true);
@@ -1089,6 +1132,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const value: WorkspaceContextValue = {
     ...state,
+    isImportingFile,
     openWorkspaceFromText,
     openLangFile,
     createFromReferenceFile,

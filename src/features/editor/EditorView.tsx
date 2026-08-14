@@ -342,11 +342,9 @@ export function EditorSidebar() {
       {
         id: "same",
         label: t("filter.same"),
-        count: workspace.referenceAvailable ? same : "—",
+        count: same,
         icon: Equal,
         tint: "text-same",
-        disabled: !workspace.referenceAvailable,
-        title: workspace.referenceAvailable ? undefined : t("reference.notLoaded"),
       },
       {
         id: "all",
@@ -365,13 +363,7 @@ export function EditorSidebar() {
         title: t("filter.wsTitle"),
       },
     ];
-  }, [
-    entries.length,
-    t,
-    workspace.referenceAvailable,
-    workspace.rowIndexes,
-    workspace.whitespaceIssueCount,
-  ]);
+  }, [entries.length, t, workspace.rowIndexes, workspace.whitespaceIssueCount]);
 
   const terminologyCount = workspace.terminologyIssueCount;
 
@@ -663,36 +655,54 @@ export function EditorView() {
         </ToolbarHint>
       </Toolbar>
 
-      <VirtualList
-        key={workspace.listRevision}
-        className={LIST_CLASS}
-        apiRef={listApi}
-        items={rows}
-        overscan={18}
-        estimateSize={estimateSize}
-        getKey={(row) => (row.kind === "section" ? `s-${row.name}` : row.entry.id)}
-        empty={
-          <Empty className="border-0">
-            <EmptyHeader className="flex-row">
-              {emptyKey === "empty.allDone" && (
-                <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
-              )}
-              <EmptyDescription>{t(emptyKey)}</EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        }
-        renderItem={(row) =>
-          row.kind === "section" ? (
-            <div className={CARD_ROW_GAP_CLASS}>
-              <div className={SECTION_HEAD_INNER_CLASS} data-section={row.name}>
-                {sectionLabel(row.name)}
+      {workspace.terminologyFilterActive && !workspace.referenceAvailable ? (
+        <Empty className="border-0">
+          <EmptyHeader className="flex-row">
+            <TriangleAlert className="text-warn shrink-0" size={18} aria-hidden="true" />
+            <EmptyDescription>{t("terminology.referenceRequiredCard")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : !workspace.terminologyFilterActive &&
+        workspace.filter === "same" &&
+        !workspace.referenceAvailable ? (
+        <Empty className="border-0">
+          <EmptyHeader className="flex-row">
+            <TriangleAlert className="text-warn shrink-0" size={18} aria-hidden="true" />
+            <EmptyDescription>{t("filter.sameReferenceRequiredCard")}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <VirtualList
+          key={workspace.listRevision}
+          className={LIST_CLASS}
+          apiRef={listApi}
+          items={rows}
+          overscan={18}
+          estimateSize={estimateSize}
+          getKey={(row) => (row.kind === "section" ? `s-${row.name}` : row.entry.id)}
+          empty={
+            <Empty className="border-0">
+              <EmptyHeader className="flex-row">
+                {emptyKey === "empty.allDone" && (
+                  <CircleCheck className="text-success shrink-0" size={18} aria-hidden="true" />
+                )}
+                <EmptyDescription>{t(emptyKey)}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          }
+          renderItem={(row) =>
+            row.kind === "section" ? (
+              <div className={CARD_ROW_GAP_CLASS}>
+                <div className={SECTION_HEAD_INNER_CLASS} data-section={row.name}>
+                  {sectionLabel(row.name)}
+                </div>
               </div>
-            </div>
-          ) : (
-            <EntryCard entry={row.entry} onPin={pinEntry} />
-          )
-        }
-      />
+            ) : (
+              <EntryCard entry={row.entry} onPin={pinEntry} />
+            )
+          }
+        />
+      )}
     </>
   );
 }

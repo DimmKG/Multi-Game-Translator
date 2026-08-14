@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { TriangleAlert } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -350,6 +351,13 @@ export function TerminologyWorkspace() {
                 </div>
               </section>
             </div>
+
+            {!sourceFile && (
+              <section className="border-warn bg-warn-soft text-warn flex items-center gap-2 rounded-lg border p-3 text-sm">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden="true" />
+                <span>{t("terminology.sourceFileRequiredWarning")}</span>
+              </section>
+            )}
 
             {inputProblems.length > 0 && (
               <section className="border-destructive/50 grid gap-2 rounded-lg border p-3">
