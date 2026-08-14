@@ -37,6 +37,23 @@ export interface TerminologyIssue {
   note: string;
 }
 
+/** A glossary rule whose source term matches an entry, whether or not the
+ * translation actually violates it — used to show every applicable rule,
+ * not only the ones currently broken. */
+export interface TerminologyRuleMatch {
+  glossaryId: string;
+  glossaryName: string;
+  source: string;
+  target: string;
+  forms: readonly string[];
+  alternatives: readonly string[];
+  forbidden: readonly string[];
+  category: string;
+  context: string;
+  note: string;
+  issues: readonly TerminologyIssue[];
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -165,21 +182,55 @@ function isSubsumedByLongerEntry(
   });
 }
 
+/**
+ * Every glossary rule that applies to this source text, each carrying its own
+ * (possibly empty) list of issues — the basis for both a pass/fail summary
+ * and a full "here is what applies here" listing.
+ */
+export function matchingTerminologyRules(
+  sourceText: string,
+  targetText: string,
+  glossaries: GlossaryDocument[] = [],
+  key = "",
+): readonly TerminologyRuleMatch[] {
+  const entries = (glossaries || []).flatMap((glossary) =>
+    (glossary.entries || []).map((entry) => ({ entry, glossary })),
+  );
+  const allSources = entries.map((pair) => pair.entry);
+
+  const matches: TerminologyRuleMatch[] = [];
+  for (const { entry, glossary } of entries) {
+    if (!entry || entry.status === "deprecated") continue;
+    if (!entryAppliesToKey(entry, key)) continue;
+    if (!matchingSource(sourceText, entry)) continue;
+    if (isSubsumedByLongerEntry(sourceText, entry, allSources, key)) continue;
+
+    matches.push({
+      glossaryId: glossary.id || "",
+      glossaryName: glossary.name || "",
+      source: entry.source,
+      target: entry.target,
+      forms: Object.freeze([...(entry.forms || [])]),
+      alternatives: Object.freeze([...(entry.alternatives || [])]),
+      forbidden: Object.freeze([...(entry.forbidden || [])]),
+      category: entry.category || "",
+      context: entry.context || "",
+      note: entry.note || "",
+      issues: inspectGlossaryEntry(sourceText, targetText, entry, glossary, key),
+    });
+  }
+  return Object.freeze(matches);
+}
+
 export function inspectTerminology(
   sourceText: string,
   targetText: string,
   glossaries: GlossaryDocument[] = [],
   key = "",
 ): readonly TerminologyIssue[] {
-  const entries = (glossaries || []).flatMap((glossary) =>
-    (glossary.entries || []).map((entry) => ({ entry, glossary })),
+  return Object.freeze(
+    matchingTerminologyRules(sourceText, targetText, glossaries, key).flatMap(
+      (match) => match.issues,
+    ),
   );
-  const allSources = entries.map((pair) => pair.entry);
-
-  const issues: TerminologyIssue[] = [];
-  for (const { entry, glossary } of entries) {
-    if (isSubsumedByLongerEntry(sourceText, entry, allSources, key)) continue;
-    issues.push(...inspectGlossaryEntry(sourceText, targetText, entry, glossary, key));
-  }
-  return Object.freeze(issues);
 }

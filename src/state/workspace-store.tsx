@@ -49,7 +49,12 @@ import {
   sameRowIndex,
   type RowIndex,
 } from "@/core/persistence/row-index";
-import { inspectTerminology, type TerminologyIssue } from "@/core/glossary/matcher";
+import {
+  inspectTerminology,
+  matchingTerminologyRules,
+  type TerminologyIssue,
+  type TerminologyRuleMatch,
+} from "@/core/glossary/matcher";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
 import {
   clearGlossaryAuthoringRecovery,
@@ -205,6 +210,7 @@ interface WorkspaceContextValue extends WorkspaceState {
   terminologyIssueCount: number;
   enabledGlossaries: StoredGlossary[];
   terminologyIssuesFor: (entry: TranslationEntry) => readonly TerminologyIssue[];
+  terminologyMatchesFor: (entry: TranslationEntry) => readonly TerminologyRuleMatch[];
   rowIndexes: ReadonlyMap<number, RowIndex>;
   setGlossaryEnabled: (id: string, enabled: boolean) => void;
   upsertGlossary: (glossary: NormalizedGlossary) => void;
@@ -1090,6 +1096,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [enabledGlossaries],
   );
 
+  const terminologyMatchesFor = useCallback(
+    (entry: TranslationEntry) =>
+      matchingTerminologyRules(sourceText(entry), entry.value, enabledGlossaries, entry.key),
+    [enabledGlossaries],
+  );
+
   const entries = useMemo(
     () => state.items.filter((item): item is TranslationEntry => item.type === "entry"),
     [state.items],
@@ -1191,6 +1203,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     terminologyIssueCount,
     enabledGlossaries,
     terminologyIssuesFor,
+    terminologyMatchesFor,
     rowIndexes,
     // Storage writes stay out of the state updaters: React runs those more than
     // once (StrictMode does it on every change), and a write is not repeatable.
