@@ -57,7 +57,14 @@ export interface GameLoader<TRaw = unknown> {
 
   /** Auto-detect score (0..1) from the given file set. */
   detectGame(input: FileLoaderInput): number;
-  toDocument(raw: TRaw, roles: { role: string }[]): TranslationDocument;
+  /**
+   * `targetLocale` is never guessed by the loader — filename-based detection
+   * is unreliable (nothing stops a translator naming their file whatever they
+   * like), so the host must ask the translator and pass the confirmed value
+   * in. `locale.defaultTargetLocaleHint` exists purely to pre-fill that
+   * prompt, not to feed this call.
+   */
+  toDocument(raw: TRaw, roles: { role: string }[], targetLocale: string): TranslationDocument;
   fromDocument(doc: TranslationDocument): TRaw;
   /**
    * Optional: build a blank TranslationDocument from just a reference file (no
@@ -66,9 +73,10 @@ export interface GameLoader<TRaw = unknown> {
    * translation from a reference alone; the host's "create new" UI action is
    * unavailable for this game. `referenceRaw` is whatever this loader's
    * fileLoaderId produced for the reference file alone (same shape as toDocument's
-   * `raw`, just parsed from a single file).
+   * `raw`, just parsed from a single file). `targetLocale` is the translator's
+   * confirmed choice, same as for toDocument — never guessed here either.
    */
-  createFromReference?(referenceRaw: TRaw): TranslationDocument;
+  createFromReference?(referenceRaw: TRaw, targetLocale: string): TranslationDocument;
 
   /**
    * Each token is classified as "required" (a value substitution — must round-trip,

@@ -20,11 +20,18 @@ import type { TranslationDocument } from "../model/document";
  * that marker to be present for its own status logic to recognize it, which
  * this generic helper has no way to inject — such loaders should implement
  * their own createFromReference instead of relying on this default.
+ *
+ * Only applies to formats with a genuine reference/translation file split.
+ * Single-file source+target formats (e.g. gettext/PO, where each entry
+ * already carries msgid and msgstr in the one file) have no separate
+ * reference file to duplicate — this helper doesn't apply to them at all;
+ * such loaders build a draft directly from the one file instead.
  */
 export function createDraftFromReference<TRaw>(
   fileLoader: FileLoader<TRaw>,
   gameLoader: GameLoader<TRaw>,
   referenceRaw: TRaw,
+  targetLocale: string,
   roles: { role: string }[] = [{ role: "reference" }, { role: "translation" }],
 ): TranslationDocument {
   const referenceInput = fileLoader.serialize(referenceRaw);
@@ -34,5 +41,5 @@ export function createDraftFromReference<TRaw>(
   }
   const combinedInput: FileLoaderInput = { files: [referenceFile, referenceFile] };
   const raw = fileLoader.parse(combinedInput);
-  return gameLoader.toDocument(raw, roles);
+  return gameLoader.toDocument(raw, roles, targetLocale);
 }

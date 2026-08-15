@@ -45,7 +45,11 @@ function readFormatMeta(doc: TranslationDocument): NecesseFormatMeta {
   return { eol, trailingNewline };
 }
 
-function toDocument(raw: IniFileLoaderRaw, roles: { role: string }[]): TranslationDocument {
+function toDocument(
+  raw: IniFileLoaderRaw,
+  roles: { role: string }[],
+  targetLocale: string,
+): TranslationDocument {
   const translationIndex = findRoleIndex(roles, "translation");
   const translation = translationIndex >= 0 ? raw[translationIndex] : undefined;
   if (!translation) {
@@ -122,7 +126,7 @@ function toDocument(raw: IniFileLoaderRaw, roles: { role: string }[]): Translati
     gameLoaderId: "necesse",
     fileLoaderId: "ini",
     sourceLocale: "en",
-    targetLocale: "",
+    targetLocale,
     nodes,
     formatMeta,
     gameMeta: {},
@@ -161,7 +165,10 @@ function fromDocument(doc: TranslationDocument): IniFileLoaderRaw {
  * starts MISSING_TRANSLATION (with the English text as an editable starting
  * point), except an entry the reference itself already tagged SAME_TRANSLATION
  */
-function createFromReference(referenceRaw: IniFileLoaderRaw): TranslationDocument {
+function createFromReference(
+  referenceRaw: IniFileLoaderRaw,
+  targetLocale: string,
+): TranslationDocument {
   const referenceEntry = referenceRaw[0];
   if (!referenceEntry) {
     throw new Error("necesseGameLoader.createFromReference requires a reference file.");
@@ -179,7 +186,11 @@ function createFromReference(referenceRaw: IniFileLoaderRaw): TranslationDocumen
     ini: { eol: referenceEntry.ini.eol, lines: draftLines },
   };
 
-  return toDocument([referenceEntry, draftEntry], [{ role: "reference" }, { role: "translation" }]);
+  return toDocument(
+    [referenceEntry, draftEntry],
+    [{ role: "reference" }, { role: "translation" }],
+    targetLocale,
+  );
 }
 
 function detectGame(input: FileLoaderInput): number {

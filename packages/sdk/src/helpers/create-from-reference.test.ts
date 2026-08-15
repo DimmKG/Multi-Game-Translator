@@ -16,7 +16,7 @@ const stubGameLoader: GameLoader<IniFileLoaderRaw> = {
   fileLoaderId: "ini",
   requiredFiles: [],
   detectGame: () => 0,
-  toDocument(raw, roles) {
+  toDocument(raw, roles, targetLocale) {
     const translationIndex = roles.findIndex((role) => role.role === "translation");
     const referenceIndex = roles.findIndex((role) => role.role === "reference");
     const translation = raw[translationIndex];
@@ -46,7 +46,7 @@ const stubGameLoader: GameLoader<IniFileLoaderRaw> = {
       gameLoaderId: "stub",
       fileLoaderId: "ini",
       sourceLocale: "en",
-      targetLocale: "",
+      targetLocale,
       nodes,
       formatMeta: {},
       gameMeta: {},
@@ -66,7 +66,8 @@ describe("createDraftFromReference", () => {
     const referenceRaw = iniFileLoader.parse({
       files: [{ name: "en.lang", text: "hello=Hello\n" }],
     });
-    const doc = createDraftFromReference(iniFileLoader, stubGameLoader, referenceRaw);
+    const doc = createDraftFromReference(iniFileLoader, stubGameLoader, referenceRaw, "ru");
+    expect(doc.targetLocale).toBe("ru");
     expect(doc.nodes).toEqual([
       {
         type: "entry",
@@ -83,21 +84,21 @@ describe("createDraftFromReference", () => {
     const referenceRaw = iniFileLoader.parse({
       files: [{ name: "en.lang", text: "hello=Hello\n" }],
     });
-    const doc = createDraftFromReference(iniFileLoader, stubGameLoader, referenceRaw);
+    const doc = createDraftFromReference(iniFileLoader, stubGameLoader, referenceRaw, "ru");
     const [node] = doc.nodes;
     expect(node && node.type === "entry" ? node.entry.status : undefined).toBe("translated");
   });
 
   it("throws when the reference serializes to no files", () => {
     const emptyRaw: IniFileLoaderRaw = [];
-    expect(() => createDraftFromReference(iniFileLoader, stubGameLoader, emptyRaw)).toThrow(
+    expect(() => createDraftFromReference(iniFileLoader, stubGameLoader, emptyRaw, "ru")).toThrow(
       /requires a reference file/,
     );
   });
 
   it("supports custom roles for loaders that name them differently", () => {
     const referenceRaw = iniFileLoader.parse({ files: [{ name: "en.lang", text: "a=1\n" }] });
-    const doc = createDraftFromReference(iniFileLoader, stubGameLoader, referenceRaw, [
+    const doc = createDraftFromReference(iniFileLoader, stubGameLoader, referenceRaw, "ru", [
       { role: "reference" },
       { role: "translation" },
     ]);

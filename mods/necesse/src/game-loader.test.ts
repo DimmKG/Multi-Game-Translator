@@ -12,9 +12,10 @@ import { necesseStatusStrategy, type NecesseEntryExt } from "./status";
 function toDoc(
   files: Array<{ name: string; text: string }>,
   roles: Array<{ role: string }>,
+  targetLocale = "ru",
 ): TranslationDocument {
   const raw = iniFileLoader.parse({ files });
-  return necesseGameLoader.toDocument(raw, roles);
+  return necesseGameLoader.toDocument(raw, roles, targetLocale);
 }
 
 function entries(doc: TranslationDocument): TranslationEntry[] {

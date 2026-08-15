@@ -8,12 +8,12 @@ import {
 import { describe, expect, it } from "vitest";
 import { necesseGameLoader } from "./game-loader";
 
-function createDoc(name: string, text: string): TranslationDocument {
+function createDoc(name: string, text: string, targetLocale = "ru"): TranslationDocument {
   const raw = iniFileLoader.parse({ files: [{ name, text }] });
   if (!necesseGameLoader.createFromReference) {
     throw new Error("necesseGameLoader does not implement createFromReference");
   }
-  return necesseGameLoader.createFromReference(raw);
+  return necesseGameLoader.createFromReference(raw, targetLocale);
 }
 
 function entries(doc: TranslationDocument): TranslationEntry[] {
@@ -39,6 +39,7 @@ describe("necesseGameLoader.createFromReference", () => {
     ].join("\r\n");
 
     const doc = createDoc("en.lang", source);
+    expect(doc.targetLocale).toBe("ru");
     const items = entries(doc);
     expect(items).toHaveLength(2);
     for (const entry of items) {
@@ -100,6 +101,8 @@ describe("necesseGameLoader.createFromReference", () => {
   });
 
   it("throws when given an empty raw array", () => {
-    expect(() => necesseGameLoader.createFromReference?.([])).toThrow(/requires a reference file/);
+    expect(() => necesseGameLoader.createFromReference?.([], "ru")).toThrow(
+      /requires a reference file/,
+    );
   });
 });
