@@ -11,7 +11,19 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { buildLangFile } from "@/core/lang/export";
+import {
+  iniFileLoader,
+  type TranslationDocument,
+  type TranslationEntry as SdkTranslationEntry,
+} from "@mgt/sdk";
+import {
+  buildReferenceQueues,
+  necesseGameLoader,
+  necesseStatusStrategy,
+  referenceIdentity,
+  validateEnglishReferenceFile,
+  type NecesseEntryExt,
+} from "@mgt/mod-necesse";
 import type {
   DiffMode,
   FilterMode,
@@ -19,29 +31,18 @@ import type {
   ReviewFilter,
   WorkspaceView,
 } from "@/core/lang/markers";
-import {
-  applyReferenceMap,
-  cleanLangFilename,
-  createTranslationFromReference,
-  parseLangFile,
-  parseReferenceLang,
-} from "@/core/lang/parse";
+import { cleanLangFilename } from "@/core/lang/parse";
 import { normalizeSearchQuery } from "@/core/lang/search-query";
-import { hasUsableReference, type TranslationEntry } from "@/core/lang/status";
+import { hasUsableReference, sourceText, type TranslationEntry } from "@/core/lang/status";
 import {
-  deserializeProgress,
-  serializeProgress,
-  type WorkspaceSnapshot,
+  deserializeProgressV3,
+  serializeProgressV3,
+  type ProgressDocumentV3,
 } from "@/core/persistence/serialize";
-import {
-  clearWorkspaceFromIdb,
-  putWorkspaceLines,
-  replaceWorkspaceInIdb,
-  updateWorkspaceMetaInIdb,
-} from "@/core/persistence/progress-store";
+import { loadWorkspaceDocument, saveWorkspaceDocument } from "@/core/persistence/document-store";
+import type { WorkspaceDocumentRecord, WorkspaceUiFlags } from "@/core/persistence/idb";
 import { removeGlossaryFromIdb, saveGlossaryToIdb } from "@/core/persistence/glossary-store";
-import { clearPendingMirror, writePendingMirror } from "@/core/persistence/pending-mirror";
-import { hydratePersistence } from "@/core/persistence/hydrate";
+import { migrateGlossariesFromLocalStorage } from "@/core/persistence/glossary-store";
 import {
   buildRowIndexMap,
   countFromIndex,
@@ -84,8 +85,6 @@ import {
   translateWithProvider,
 } from "@/core/mt/providers";
 import { resolveProviderSettings } from "@/core/mt/provider-settings";
-import { sourceText } from "@/core/lang/status";
-import { validateEnglishReferenceFile } from "@/core/lang/reference-validation";
 import {
   downloadBlob,
   downloadText,
@@ -104,6 +103,17 @@ setSettingsResolver(resolveProviderSettings);
 const SETTINGS_STORAGE_KEY = "necesse-translator.settings.v1";
 const FONT_STORAGE_KEY = "necesse-translator.font-settings.v1";
 const PREFERRED_PROVIDER_KEY = "necesse-translator.preferred-mt-provider.v1";
+
+/** M4 hardcodes Necesse — the game-selection screen (M6) picks this dynamically later. */
+const EMPTY_DOCUMENT: TranslationDocument = {
+  gameLoaderId: "necesse",
+  fileLoaderId: "ini",
+  sourceLocale: "en",
+  targetLocale: "",
+  nodes: [],
+  formatMeta: { eol: "\r\n", trailingNewline: false },
+  gameMeta: {},
+};
 
 function localBoundaryDate(date = new Date()): string {
   const year = date.getFullYear();
@@ -137,8 +147,7 @@ interface WorkspaceState {
   isOpen: boolean;
   filename: string;
   referenceFilename: string;
-  eol: "\n" | "\r\n";
-  items: LangLine[];
+  document: TranslationDocument;
   filter: FilterMode;
   query: string;
   view: WorkspaceView;
@@ -154,7 +163,6 @@ interface WorkspaceState {
   diffOther: DiffOther | null;
   diffOnly: boolean;
   diffMode: DiffMode;
-  pendingRecovery: WorkspaceSnapshot | null;
   glossaries: StoredGlossary[];
   settings: AppSettings;
   fonts: FontSettings;
@@ -170,6 +178,9 @@ interface WorkspaceState {
 interface WorkspaceContextValue extends WorkspaceState {
   /** True while a picked/dropped file is being read and parsed. */
   isImportingFile: boolean;
+  /** Legacy view over `document` — kept byte-compatible until consumers move to `document` directly. */
+  items: LangLine[];
+  eol: "\n" | "\r\n";
   openWorkspaceFromText: (
     text: string,
     options?: {
@@ -186,8 +197,6 @@ interface WorkspaceContextValue extends WorkspaceState {
   exportLang: () => void;
   saveProgressFile: () => Promise<void>;
   loadProgressFile: (file: File) => Promise<void>;
-  continueRecovery: () => Promise<void>;
-  startOverRecovery: () => void;
   setFilename: (name: string) => void;
   setFilter: (filter: FilterMode) => void;
   setQuery: (query: string) => void;
@@ -291,32 +300,103 @@ function applyFontCss(fonts: FontSettings) {
   else document.documentElement.style.removeProperty("--user-editor-font");
 }
 
-function snapshotFromState(snapshot: WorkspaceState): WorkspaceSnapshot {
+function documentEol(document: TranslationDocument): "\n" | "\r\n" {
+  const meta = document.formatMeta as { eol?: unknown };
+  return meta.eol === "\r\n" ? "\r\n" : meta.eol === "\n" ? "\n" : "\r\n";
+}
+
+/** Single hot-path conversion: one document node -> the legacy LangLine shape consumers still read. */
+function legacyEntryFromNode(
+  entry: SdkTranslationEntry,
+  position: number,
+  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
+): TranslationEntry {
+  const ext = entry.ext as NecesseEntryExt;
+  const flags = uiFlags.get(entry.id);
+  const line: TranslationEntry = {
+    type: "entry",
+    id: position,
+    key: entry.key,
+    english: ext.originalValue,
+    value: entry.target,
+    markedSame: ext.markedSame,
+    wasMissing: ext.wasMissing,
+    touched: flags?.touched ?? false,
+    mtDraft: flags?.mtDraft ?? false,
+    section: entry.namespace ?? "",
+  };
+  if (ext.hasReference) line.ref = entry.source;
+  return line;
+}
+
+/**
+ * Temporary compatibility view: every consumer still reading `items`/`entries`
+ * in the pre-M4 LangLine shape gets it derived from `document` here, so the
+ * public WorkspaceContextValue stays byte-identical while the source of truth
+ * underneath switches to TranslationDocument. Disappears once consumers move
+ * to the native SDK entry shape (a later M4 step).
+ */
+function legacyItemsFromDocument(
+  document: TranslationDocument,
+  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
+): LangLine[] {
+  return document.nodes.map((node, index) => {
+    if (node.type === "section") return { type: "section", raw: node.raw, name: node.name };
+    if (node.type === "blank") return { type: "blank", raw: node.raw };
+    if (node.type === "comment") return { type: "comment", raw: node.raw };
+    if (node.type === "header") return { type: "comment", raw: node.raw ?? "" };
+    return legacyEntryFromNode(node.entry, index, uiFlags);
+  });
+}
+
+/** Recomputes entry.status the same way toDocument does, keeping fromDocument's export correct after an edit. */
+function withUpdatedNecesseEntry(
+  entry: SdkTranslationEntry,
+  patch: { target?: string; markedSame?: boolean },
+): SdkTranslationEntry {
+  const ext = entry.ext as NecesseEntryExt;
+  const nextExt: NecesseEntryExt = {
+    ...ext,
+    ...(patch.markedSame !== undefined ? { markedSame: patch.markedSame } : {}),
+  };
+  const draft = {
+    ...entry,
+    target: patch.target ?? entry.target,
+    ext: nextExt,
+  };
+  const status = necesseStatusStrategy.fromNative(draft, {
+    markedSame: nextExt.markedSame,
+    wasMissing: nextExt.wasMissing,
+    hasReference: nextExt.hasReference,
+  });
+  return { ...draft, status };
+}
+
+function recordFromState(
+  snapshot: WorkspaceState,
+  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
+): WorkspaceDocumentRecord {
   return {
+    document: snapshot.document,
+    uiFlags: Object.fromEntries(uiFlags),
     filename: snapshot.filename,
     referenceFilename: snapshot.referenceFilename,
-    eol: snapshot.eol,
+    view: snapshot.view,
     savedAt: Date.now(),
-    items: snapshot.items,
-    meta: {
-      provider: snapshot.mtProvider,
-      targetLanguage: snapshot.targetLanguage,
-      spellcheck: snapshot.spellcheck,
-      autocompleteEnabled: snapshot.autocompleteEnabled,
-    },
+    provider: snapshot.mtProvider,
+    spellcheck: snapshot.spellcheck,
+    autocompleteEnabled: snapshot.autocompleteEnabled,
   };
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dirtyLineIds = useRef<Set<number>>(new Set());
-  const fullReplace = useRef(false);
-  const metaDirty = useRef(false);
   const readyRef = useRef(false);
   const writeInFlight = useRef(false);
   const rewriteRequested = useRef(false);
-  const inFlightLines = useRef<number[]>([]);
+  /** UI-only state per entry (not loader data) — keyed by the entry's stable SDK id. */
+  const entryUiFlagsRef = useRef<Map<string, WorkspaceUiFlags>>(new Map());
 
   const [rowIndexes, setRowIndexes] = useState<ReadonlyMap<number, RowIndex>>(() => new Map());
   const rowIndexesRef = useRef(rowIndexes);
@@ -328,8 +408,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       isOpen: false,
       filename: "",
       referenceFilename: "",
-      eol: "\r\n",
-      items: [],
+      document: EMPTY_DOCUMENT,
       filter: "missing",
       query: "",
       // A lingering unsaved glossary draft must not hijack the initial screen
@@ -348,7 +427,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       diffOther: null,
       diffOnly: true,
       diffMode: "word",
-      pendingRecovery: null,
       glossaries: [],
       settings: loadSettings(),
       fonts: loadFonts(),
@@ -391,41 +469,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const hydrated = await hydratePersistence();
-        if (cancelled) return;
-        readyRef.current = true;
-        // Never clobber an already-open workspace — hydrate only seeds recovery.
-        if (stateRef.current.isOpen) {
-          setState((current) => ({
-            ...current,
-            glossaries: hydrated.glossaries,
-            ready: true,
-          }));
-          return;
-        }
-        rowIndexesRef.current = hydrated.rowIndexes;
-        setRowIndexes(hydrated.rowIndexes);
-        setState((current) => ({
-          ...current,
-          glossaries: hydrated.glossaries,
-          pendingRecovery: hydrated.pendingRecovery,
-          ready: true,
-        }));
-      } catch {
-        if (cancelled) return;
-        readyRef.current = true;
-        setState((current) => ({ ...current, ready: true }));
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
     applyFontCss(state.fonts);
   }, [state.fonts]);
 
@@ -433,95 +476,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     document.documentElement.classList.toggle("compact-view", state.compactView && state.isOpen);
   }, [state.compactView, state.isOpen]);
 
-  const markFullReplace = useCallback((indexes: ReadonlyMap<number, RowIndex>) => {
-    fullReplace.current = true;
-    dirtyLineIds.current.clear();
-    metaDirty.current = true;
-    // Whatever the mirror holds belongs to the workspace being replaced.
-    clearPendingMirror();
-    setRowIndexes(indexes);
-  }, []);
-
-  /**
-   * One write pass. The pending work is claimed *before* the first `await`, so
-   * edits made while the transaction is in flight stay dirty and are picked up
-   * by the next pass instead of being cleared by this one; a failed write puts
-   * the claim back so it is retried.
-   */
+  /** One write pass — every save now replaces the single stored document record whole. */
   const persistOnce = useCallback(async (snapshot: WorkspaceState) => {
-    const wasFullReplace = fullReplace.current;
-    const wasMetaDirty = metaDirty.current;
-    // A full replace writes every line of this snapshot, so it also covers the
-    // rows that were dirty when it was claimed.
-    const claimedLines = [...dirtyLineIds.current];
-    if (!wasFullReplace && !wasMetaDirty && claimedLines.length === 0) {
-      setState((current) =>
-        current.saveState === "saved" ? current : { ...current, saveState: "saved" },
-      );
-      return true;
-    }
-
-    const indexes = rowIndexesRef.current;
-    fullReplace.current = false;
-    metaDirty.current = false;
-    for (const id of claimedLines) dirtyLineIds.current.delete(id);
-    // Claimed but not committed yet — the unload mirror still has to cover these.
-    inFlightLines.current = claimedLines;
-
+    if (!snapshot.isOpen) return true;
     try {
-      if (wasFullReplace) {
-        await replaceWorkspaceInIdb(snapshotFromState(snapshot), indexes, snapshot.glossaries);
-      } else if (claimedLines.length > 0) {
-        await putWorkspaceLines(snapshot.items, claimedLines, indexes, {
-          filename: snapshot.filename,
-          referenceFilename: snapshot.referenceFilename,
-          eol: snapshot.eol,
-          provider: snapshot.mtProvider,
-          targetLanguage: snapshot.targetLanguage,
-          spellcheck: snapshot.spellcheck,
-          autocompleteEnabled: snapshot.autocompleteEnabled,
-          glossaries: snapshot.glossaries,
-        });
-      } else {
-        await updateWorkspaceMetaInIdb(
-          {
-            filename: snapshot.filename,
-            referenceFilename: snapshot.referenceFilename,
-            eol: snapshot.eol,
-            provider: snapshot.mtProvider,
-            targetLanguage: snapshot.targetLanguage,
-            spellcheck: snapshot.spellcheck,
-            autocompleteEnabled: snapshot.autocompleteEnabled,
-          },
-          snapshot.glossaries,
-        );
-      }
-      inFlightLines.current = [];
-      // Committed to IndexedDB — the unload safety net is no longer needed.
-      if (dirtyLineIds.current.size === 0 && !fullReplace.current) clearPendingMirror();
-      setState((current) => ({
-        ...current,
-        savedAt: Date.now(),
-        saveState: "saved",
-      }));
+      await saveWorkspaceDocument(recordFromState(snapshot, entryUiFlagsRef.current));
+      setState((current) => ({ ...current, savedAt: Date.now(), saveState: "saved" }));
       return true;
     } catch {
-      if (wasFullReplace) fullReplace.current = true;
-      if (wasMetaDirty) metaDirty.current = true;
-      for (const id of claimedLines) dirtyLineIds.current.add(id);
-      inFlightLines.current = [];
-      setState((current) => ({
-        ...current,
-        saveState: "error",
-      }));
+      setState((current) => ({ ...current, saveState: "error" }));
       return false;
     }
   }, []);
 
   /**
    * Serialized entry point: overlapping flushes (debounce + page-hide) would
-   * otherwise interleave a full replace with line writes from a different
-   * workspace. A flush requested mid-write is folded into one follow-up pass.
+   * otherwise interleave two writes from a different workspace. A flush
+   * requested mid-write is folded into one follow-up pass.
    */
   const persistNow = useCallback(
     async (snapshot: WorkspaceState) => {
@@ -562,14 +533,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         clearTimeout(saveTimer.current);
         saveTimer.current = null;
       }
-      // An IndexedDB transaction opened here may never commit, so the pending
-      // rows go to localStorage synchronously first. A pending full replace is
-      // not mirrored: it is a freshly opened file, re-openable by hand, and
-      // mirroring it whole is exactly the quota problem IndexedDB solved.
-      const unsaved = new Set([...dirtyLineIds.current, ...inFlightLines.current]);
-      if (!fullReplace.current && unsaved.size > 0) {
-        writePendingMirror(current.filename, current.items, unsaved);
-      }
+      // IndexedDB is async and a transaction opened here may never commit
+      // before the page goes away — accepted risk (see M4 plan, Decision 2):
+      // no delta mirror anymore, just best-effort immediate flush.
       void persistNow(current);
     };
     const onVisibilityChange = () => {
@@ -583,20 +549,97 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, [persistNow]);
 
-  const dismissPendingRecovery = useCallback((discardStored = false) => {
-    setState((current) => ({ ...current, pendingRecovery: null }));
-    if (discardStored) {
-      // Discarding the stored session also drops whatever was still queued for it.
-      fullReplace.current = false;
-      dirtyLineIds.current.clear();
-      metaDirty.current = false;
-      clearPendingMirror();
-      void clearWorkspaceFromIdb().catch(() => {
-        /* nothing to recover from a failed discard — the next save overwrites */
-      });
-      setRowIndexes(new Map());
-    }
-  }, []);
+  const applyOpenedDocument = useCallback(
+    (
+      document: TranslationDocument,
+      meta: { filename: string; referenceFilename: string; targetLanguage: string },
+    ) => {
+      entryUiFlagsRef.current = new Map();
+      const legacyItems = legacyItemsFromDocument(document, entryUiFlagsRef.current);
+      const indexes = buildRowIndexMap(legacyItems, stateRef.current.glossaries);
+      setRowIndexes(indexes);
+      rowIndexesRef.current = indexes;
+      setState((current) => ({
+        ...current,
+        isOpen: true,
+        document,
+        filename: meta.filename,
+        referenceFilename: meta.referenceFilename,
+        diffOther: null,
+        mtProvider: preferredProvider(),
+        targetLanguage: meta.targetLanguage,
+        filter: "missing",
+        query: "",
+        view: "editor",
+        reviewFilter: "all",
+        reviewQuery: "",
+        compactView: false,
+      }));
+      scheduleSave();
+    },
+    [scheduleSave],
+  );
+
+  /**
+   * Shared by loadProgressFile and the startup hydrate effect — both restore a
+   * full stored record. `glossaries` is taken explicitly rather than read from
+   * `stateRef` because hydrate calls this before the freshly-fetched
+   * glossaries have landed in state — reading `stateRef.current.glossaries`
+   * there would silently index against an empty list.
+   */
+  const applyStoredRecord = useCallback(
+    (record: WorkspaceDocumentRecord, glossaries: StoredGlossary[]) => {
+      entryUiFlagsRef.current = new Map(Object.entries(record.uiFlags));
+      const legacyItems = legacyItemsFromDocument(record.document, entryUiFlagsRef.current);
+      const indexes = buildRowIndexMap(legacyItems, glossaries);
+      setRowIndexes(indexes);
+      rowIndexesRef.current = indexes;
+      setState((current) => ({
+        ...current,
+        isOpen: true,
+        document: record.document,
+        filename: record.filename,
+        referenceFilename: record.referenceFilename,
+        savedAt: record.savedAt,
+        mtProvider: record.provider || preferredProvider(),
+        targetLanguage:
+          normalizeProjectCode(record.document.targetLocale) || codeFromFilename(record.filename),
+        spellcheck: record.spellcheck,
+        autocompleteEnabled: record.autocompleteEnabled,
+        view: record.view,
+        filter: "missing",
+      }));
+    },
+    [],
+  );
+
+  // Restores the last saved session immediately on load — no confirmation
+  // step, resuming on whatever tab was active when it was last saved.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const glossaries = await migrateGlossariesFromLocalStorage();
+        const record = await loadWorkspaceDocument();
+        if (cancelled) return;
+        readyRef.current = true;
+        // Never clobber an already-open workspace with a stale stored one.
+        if (stateRef.current.isOpen) {
+          setState((current) => ({ ...current, glossaries, ready: true }));
+          return;
+        }
+        if (record) applyStoredRecord(record, glossaries);
+        setState((current) => ({ ...current, glossaries, ready: true }));
+      } catch {
+        if (cancelled) return;
+        readyRef.current = true;
+        setState((current) => ({ ...current, ready: true }));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyStoredRecord]);
 
   const openWorkspaceFromText = useCallback(
     (
@@ -609,37 +652,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         targetLang?: string;
       } = {},
     ) => {
-      const parsed = parseLangFile(String(text ?? ""));
-      if (options.referenceSourceText) {
-        applyReferenceMap(parsed.items, parseReferenceLang(options.referenceSourceText));
-      }
       const filename = options.filename ? cleanLangFilename(options.filename) : "";
-      dismissPendingRecovery();
-      const glossaries = stateRef.current.glossaries;
-      markFullReplace(buildRowIndexMap(parsed.items, glossaries));
-      setState((current) => ({
-        ...current,
-        isOpen: true,
-        eol: parsed.eol,
-        items: parsed.items,
+      const targetLanguage = Object.hasOwn(options, "targetLang")
+        ? String(options.targetLang || "")
+        : codeFromFilename(filename);
+      const files: { name: string; text: string }[] = [
+        { name: filename || "translation.lang", text },
+      ];
+      const roles: { role: string }[] = [{ role: "translation" }];
+      if (options.referenceSourceText) {
+        files.push({
+          name: options.referenceFilename || "en.lang",
+          text: options.referenceSourceText,
+        });
+        roles.push({ role: "reference" });
+      }
+      const raw = iniFileLoader.parse({ files });
+      const document = necesseGameLoader.toDocument(raw, roles, targetLanguage || "und");
+      applyOpenedDocument(document, {
         filename,
         referenceFilename: options.referenceFilename ? String(options.referenceFilename) : "",
-        diffOther: null,
-        mtProvider: preferredProvider(),
-        targetLanguage: Object.hasOwn(options, "targetLang")
-          ? String(options.targetLang || "")
-          : codeFromFilename(filename),
-        filter: "missing",
-        query: "",
-        view: "editor",
-        reviewFilter: "all",
-        reviewQuery: "",
-        compactView: false,
-        pendingRecovery: null,
-      }));
-      scheduleSave();
+        targetLanguage,
+      });
     },
-    [dismissPendingRecovery, markFullReplace, scheduleSave],
+    [applyOpenedDocument],
   );
 
   const openLangFile = useCallback(
@@ -686,28 +722,39 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           toast.error(t(validation.messageKey));
           return;
         }
-        const result = createTranslationFromReference(text, validation.filename);
-        if (!result.entryCount) {
+        const referenceRaw = iniFileLoader.parse({ files: [{ name: validation.filename, text }] });
+        if (!necesseGameLoader.createFromReference) {
+          toast.error(t("err.newTranslationNoEntries"));
+          return;
+        }
+        let document: TranslationDocument;
+        try {
+          document = necesseGameLoader.createFromReference(referenceRaw, "und");
+        } catch {
+          toast.error(t("err.newTranslationNoEntries"));
+          return;
+        }
+        const entryCount = document.nodes.filter((node) => node.type === "entry").length;
+        if (!entryCount) {
           toast.error(t("err.newTranslationNoEntries"));
           return;
         }
         // Apply the same English body as the live reference so SAME_TRANSLATION
         // and the reminder button settle in one frame — no pulse flash.
-        openWorkspaceFromText(result.text, {
+        applyOpenedDocument(document, {
           filename: "",
           referenceFilename: validation.filename,
-          referenceSourceText: text,
-          targetLang: "",
+          targetLanguage: "",
         });
         toast.success(
           t("toast.newTranslationCreated", {
             file: validation.filename,
-            n: result.entryCount,
+            n: entryCount,
           }),
         );
       });
     },
-    [openWorkspaceFromText, runWithImportSpinner, t],
+    [applyOpenedDocument, runWithImportSpinner, t],
   );
 
   const loadReferenceFile = useCallback(
@@ -719,23 +766,52 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           toast.error(t(validation.messageKey));
           return;
         }
-        const map = parseReferenceLang(text);
-        // Applied outside the updater: how many entries matched is worth telling
-        // the user, and a toast fired from inside would be repeated every time
-        // React re-ran the updater — three times, in practice.
-        const items = stateRef.current.items.map((item) => ({ ...item }));
-        const matched = applyReferenceMap(items, map);
-        markFullReplace(buildRowIndexMap(items, stateRef.current.glossaries));
-        setState((current) => ({
-          ...current,
-          items,
+        const referenceRaw = iniFileLoader.parse({
+          files: [{ name: validation.filename, text }],
+        });
+        const referenceEntry = referenceRaw[0];
+        const queues = referenceEntry
+          ? buildReferenceQueues(referenceEntry.ini)
+          : new Map<string, string[]>();
+
+        const current = stateRef.current;
+        const occurrenceCounts = new Map<string, number>();
+        let matched = 0;
+        const nextNodes = current.document.nodes.map((node) => {
+          if (node.type !== "entry") return node;
+          const { entry } = node;
+          const ext = entry.ext as NecesseEntryExt;
+          const identity = referenceIdentity(entry.namespace || "", entry.key);
+          const occurrence = occurrenceCounts.get(identity) ?? 0;
+          occurrenceCounts.set(identity, occurrence + 1);
+          const queue = queues.get(identity);
+          const ref = queue && occurrence < queue.length ? queue[occurrence] : undefined;
+          if (ref !== undefined) matched += 1;
+          const nextExt: NecesseEntryExt = { ...ext, hasReference: ref !== undefined };
+          const nextEntry = { ...entry, source: ref ?? ext.originalValue, ext: nextExt };
+          const status = necesseStatusStrategy.fromNative(nextEntry, {
+            markedSame: nextExt.markedSame,
+            wasMissing: nextExt.wasMissing,
+            hasReference: nextExt.hasReference,
+          });
+          return { ...node, entry: { ...nextEntry, status } };
+        });
+
+        const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
+        const legacyItems = legacyItemsFromDocument(nextDocument, entryUiFlagsRef.current);
+        const indexes = buildRowIndexMap(legacyItems, current.glossaries);
+        setRowIndexes(indexes);
+        rowIndexesRef.current = indexes;
+        setState((prev) => ({
+          ...prev,
+          document: nextDocument,
           referenceFilename: validation.filename,
         }));
         toast.success(t("btn.enRefLoaded", { file: validation.filename, n: matched }));
         scheduleSave();
       });
     },
-    [markFullReplace, runWithImportSpinner, scheduleSave, t],
+    [runWithImportSpinner, scheduleSave, t],
   );
 
   const exportLang = useCallback(() => {
@@ -746,16 +822,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return current;
       }
       if (!/\.lang$/i.test(name)) name += ".lang";
-      downloadText(name, buildLangFile(current.items, current.eol));
+      const raw = necesseGameLoader.fromDocument(current.document);
+      const text = iniFileLoader.serialize(raw).files[0]?.text ?? "";
+      downloadText(name, text);
       toast.success(t("toast.exported", { name }));
       return { ...current, filename: name };
     });
   }, [t]);
 
   const saveProgressFile = useCallback(async () => {
-    const snapshot = serializeProgress(snapshotFromState(state));
+    const record = recordFromState(state, entryUiFlagsRef.current);
+    const document: ProgressDocumentV3 = serializeProgressV3(record);
     const base = (state.filename || "translation.lang").replace(/\.lang$/i, "");
-    const text = JSON.stringify(snapshot);
+    const text = JSON.stringify(document);
     if (typeof CompressionStream !== "undefined") {
       try {
         const blob = await gzipText(text);
@@ -785,25 +864,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           } else {
             text = await readFileAsText(file);
           }
-          const snapshot = deserializeProgress(JSON.parse(text));
-          dismissPendingRecovery();
-          markFullReplace(buildRowIndexMap(snapshot.items, stateRef.current.glossaries));
-          setState((current) => ({
-            ...current,
-            isOpen: true,
-            filename: snapshot.filename,
-            referenceFilename: snapshot.referenceFilename,
-            eol: snapshot.eol,
-            items: snapshot.items,
-            savedAt: snapshot.savedAt,
-            mtProvider: snapshot.meta.provider || preferredProvider(),
-            targetLanguage: snapshot.meta.targetLanguage || codeFromFilename(snapshot.filename),
-            spellcheck: snapshot.meta.spellcheck,
-            autocompleteEnabled: snapshot.meta.autocompleteEnabled,
-            view: "editor",
-            filter: "missing",
-            pendingRecovery: null,
-          }));
+          const record = deserializeProgressV3(JSON.parse(text));
+          applyStoredRecord(record, stateRef.current.glossaries);
           scheduleSave();
           toast.success(t("toast.progressRestored"));
         } catch (error) {
@@ -813,75 +875,33 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         }
       });
     },
-    [dismissPendingRecovery, markFullReplace, runWithImportSpinner, scheduleSave, t],
+    [applyStoredRecord, runWithImportSpinner, scheduleSave, t],
   );
-
-  const continueRecovery = useCallback(async () => {
-    const recovery = state.pendingRecovery;
-    if (!recovery) return;
-    await runWithImportSpinner(async () => {
-      // Yield once so the loading state actually paints before the state
-      // update below.
-      await new Promise(requestAnimationFrame);
-      // Hydration already built this recovery snapshot's row index (it needs
-      // it to show progress in the recovery banner) — reuse it instead of
-      // re-running glossary matching over every row a second time, which on
-      // a large file is slow enough to look like a hang.
-      markFullReplace(rowIndexesRef.current);
-      setState((current) => ({
-        ...current,
-        isOpen: true,
-        filename: recovery.filename,
-        referenceFilename: recovery.referenceFilename,
-        eol: recovery.eol,
-        items: recovery.items,
-        savedAt: recovery.savedAt,
-        mtProvider: recovery.meta.provider || preferredProvider(),
-        targetLanguage: recovery.meta.targetLanguage || codeFromFilename(recovery.filename),
-        spellcheck: recovery.meta.spellcheck,
-        autocompleteEnabled: recovery.meta.autocompleteEnabled,
-        pendingRecovery: null,
-        view: "editor",
-      }));
-      scheduleSave();
-    });
-  }, [markFullReplace, runWithImportSpinner, scheduleSave, state.pendingRecovery]);
-
-  const startOverRecovery = useCallback(() => {
-    dismissPendingRecovery(true);
-    // continueRecovery lands on the editor tab; mirror that here so "start
-    // over" doesn't strand the user on whatever tab (e.g. terminology) they
-    // happened to be viewing when the recovery prompt appeared.
-    setState((current) => ({ ...current, view: "editor" }));
-  }, [dismissPendingRecovery]);
 
   const updateEntryValue = useCallback(
     (entryId: number, value: string, options?: { mtDraft?: boolean }) => {
       const current = stateRef.current;
-      const items = current.items.map((item) =>
-        item.type === "entry" && item.id === entryId
-          ? {
-              ...item,
-              value,
-              touched: true,
-              mtDraft: options?.mtDraft ?? false,
-            }
-          : item,
-      );
-      const entry = items.find(
-        (item): item is TranslationEntry => item.type === "entry" && item.id === entryId,
-      );
-      if (entry) {
-        const next = new Map(rowIndexesRef.current);
-        const nextIndex = reindexOne(next, entry, current.glossaries);
-        const prevIndex = rowIndexesRef.current.get(entryId);
-        rowIndexesRef.current = next;
-        dirtyLineIds.current.add(entryId);
-        // Only publish a new Map when filter-relevant flags change — otherwise the
-        // virtual list rebuilds and measure() snaps the scroll mid-fling.
-        if (!sameRowIndex(prevIndex, nextIndex)) setRowIndexes(next);
-      }
-      setState((prev) => ({ ...prev, items }));
+      const node = current.document.nodes[entryId];
+      if (!node || node.type !== "entry") return;
+      const nextEntry = withUpdatedNecesseEntry(node.entry, { target: value });
+      entryUiFlagsRef.current.set(nextEntry.id, {
+        touched: true,
+        mtDraft: options?.mtDraft ?? false,
+      });
+      const nextNodes = current.document.nodes.slice();
+      nextNodes[entryId] = { ...node, entry: nextEntry };
+      const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
+
+      const legacyEntry = legacyEntryFromNode(nextEntry, entryId, entryUiFlagsRef.current);
+      const next = new Map(rowIndexesRef.current);
+      const nextIndex = reindexOne(next, legacyEntry, current.glossaries);
+      const prevIndex = rowIndexesRef.current.get(entryId);
+      rowIndexesRef.current = next;
+      // Only publish a new Map when filter-relevant flags change — otherwise the
+      // virtual list rebuilds and measure() snaps the scroll mid-fling.
+      if (!sameRowIndex(prevIndex, nextIndex)) setRowIndexes(next);
+
+      setState((prev) => ({ ...prev, document: nextDocument }));
       scheduleSave();
     },
     [scheduleSave],
@@ -890,22 +910,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const toggleMarkedSame = useCallback(
     (entryId: number) => {
       const current = stateRef.current;
-      const items = current.items.map((item) =>
-        item.type === "entry" && item.id === entryId && item.ref != null
-          ? { ...item, markedSame: !item.markedSame, touched: true }
-          : item,
-      );
-      const entry = items.find(
-        (item): item is TranslationEntry => item.type === "entry" && item.id === entryId,
-      );
-      if (entry) {
-        const next = new Map(rowIndexesRef.current);
-        reindexOne(next, entry, current.glossaries);
-        rowIndexesRef.current = next;
-        setRowIndexes(next);
-        dirtyLineIds.current.add(entryId);
-      }
-      setState((prev) => ({ ...prev, items }));
+      const node = current.document.nodes[entryId];
+      if (!node || node.type !== "entry") return;
+      const ext = node.entry.ext as NecesseEntryExt;
+      if (!ext.hasReference) return;
+      const nextEntry = withUpdatedNecesseEntry(node.entry, { markedSame: !ext.markedSame });
+      const previousFlags = entryUiFlagsRef.current.get(nextEntry.id);
+      entryUiFlagsRef.current.set(nextEntry.id, {
+        touched: true,
+        mtDraft: previousFlags?.mtDraft ?? false,
+      });
+      const nextNodes = current.document.nodes.slice();
+      nextNodes[entryId] = { ...node, entry: nextEntry };
+      const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
+
+      const legacyEntry = legacyEntryFromNode(nextEntry, entryId, entryUiFlagsRef.current);
+      const next = new Map(rowIndexesRef.current);
+      reindexOne(next, legacyEntry, current.glossaries);
+      rowIndexesRef.current = next;
+      setRowIndexes(next);
+
+      setState((prev) => ({ ...prev, document: nextDocument }));
       scheduleSave();
     },
     [scheduleSave],
@@ -913,16 +938,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const translateEntry = useCallback(
     async (entryId: number) => {
-      const entry = state.items.find(
-        (item): item is TranslationEntry => item.type === "entry" && item.id === entryId,
-      );
-      if (!entry) return;
+      const node = stateRef.current.document.nodes[entryId];
+      if (!node || node.type !== "entry") return;
+      const legacyEntry = legacyEntryFromNode(node.entry, entryId, entryUiFlagsRef.current);
       const target = normalizeProjectCode(state.targetLanguage);
       if (!target) {
         toast.error(t("mt.langTitle"));
         return;
       }
-      const source = sourceText(entry);
+      const source = sourceText(legacyEntry);
       if (!String(source).trim()) {
         toast.error(t("mt.emptySrc"));
         return;
@@ -932,6 +956,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           text: source,
           targetLanguage: target,
           sourceLanguage: "en",
+          tokenizer: necesseGameLoader.placeholders,
         });
         if (suggestion.trim()) updateEntryValue(entryId, suggestion, { mtDraft: true });
       } catch (error) {
@@ -940,7 +965,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [state.items, state.mtProvider, state.targetLanguage, t, updateEntryValue],
+    [state.mtProvider, state.targetLanguage, t, updateEntryValue],
   );
 
   const loadDiffFile = useCallback(async (file: File) => {
@@ -958,15 +983,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
       if (!stateRef.current.isOpen) return;
 
-      const previous = rowIndexesRef.current;
-      const next = buildRowIndexMap(stateRef.current.items, glossaries);
-      // A glossary toggle usually moves a handful of rows out of tens of
-      // thousands, so rewrite those rather than the whole workspace. The meta
-      // record is dirty either way — it carries the glossary fingerprint.
-      for (const [id, row] of next) {
-        if (!sameRowIndex(previous.get(id), row)) dirtyLineIds.current.add(id);
-      }
-      metaDirty.current = true;
+      const legacyItems = legacyItemsFromDocument(
+        stateRef.current.document,
+        entryUiFlagsRef.current,
+      );
+      const next = buildRowIndexMap(legacyItems, glossaries);
       rowIndexesRef.current = next;
       setRowIndexes(next);
       scheduleSave();
@@ -1134,9 +1155,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [enabledGlossaries],
   );
 
+  const legacyItems = useMemo(
+    () => legacyItemsFromDocument(state.document, entryUiFlagsRef.current),
+    [state.document],
+  );
+  const eol = useMemo(() => documentEol(state.document), [state.document]);
+
   const entries = useMemo(
-    () => state.items.filter((item): item is TranslationEntry => item.type === "entry"),
-    [state.items],
+    () => legacyItems.filter((item): item is TranslationEntry => item.type === "entry"),
+    [legacyItems],
   );
 
   const filteredEntries = useMemo(() => {
@@ -1168,8 +1195,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [indexCounts],
   );
   const referenceAvailable = useMemo(
-    () => hasUsableReference(state.items, state.referenceFilename),
-    [state.items, state.referenceFilename],
+    () => hasUsableReference(legacyItems, state.referenceFilename),
+    [legacyItems, state.referenceFilename],
   );
   const whitespaceIssueCount = indexCounts.wsIssues;
   const terminologyIssueCount = indexCounts.glossaryIssues;
@@ -1177,6 +1204,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceContextValue = {
     ...state,
     isImportingFile,
+    items: legacyItems,
+    eol,
     openWorkspaceFromText,
     openLangFile,
     openWorkspaceWithReference,
@@ -1185,11 +1214,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     exportLang,
     saveProgressFile,
     loadProgressFile,
-    continueRecovery,
-    startOverRecovery,
     setFilename: (name) => {
       setState((current) => ({ ...current, filename: name }));
-      metaDirty.current = true;
       scheduleSave();
     },
     setFilter: (filter) => setState((current) => ({ ...current, filter })),
@@ -1199,12 +1225,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setReviewQuery: (reviewQuery) => setState((current) => ({ ...current, reviewQuery })),
     setSpellcheck: (spellcheck) => {
       setState((current) => ({ ...current, spellcheck }));
-      metaDirty.current = true;
       scheduleSave();
     },
     setAutocompleteEnabled: (autocompleteEnabled) => {
       setState((current) => ({ ...current, autocompleteEnabled }));
-      metaDirty.current = true;
       scheduleSave();
     },
     setMtProvider: (mtProvider) => {
@@ -1214,12 +1238,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         /* ignore */
       }
       setState((current) => ({ ...current, mtProvider }));
-      metaDirty.current = true;
       scheduleSave();
     },
     setTargetLanguage: (targetLanguage) => {
-      setState((current) => ({ ...current, targetLanguage: normalizeProjectCode(targetLanguage) }));
-      metaDirty.current = true;
+      const normalized = normalizeProjectCode(targetLanguage);
+      setState((current) => ({
+        ...current,
+        targetLanguage: normalized,
+        document: { ...current.document, targetLocale: normalized || "und" },
+      }));
       scheduleSave();
     },
     setCompactView: (compactView) =>

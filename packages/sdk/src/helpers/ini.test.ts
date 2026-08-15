@@ -57,8 +57,8 @@ describe("parseIniLines / buildIniLines", () => {
 
 describe("comment preservation", () => {
   // Deserializing must never drop or rewrite source comments — this is a
-  // load-bearing invariant (see the architecture doc's note on StructuralNode
-  // "comment" nodes), not an incidental side effect of a general round-trip test.
+  // load-bearing invariant of the "comment" StructuralNode, not an incidental
+  // side effect of a general round-trip test.
 
   it("keeps a comment's exact text, including its original prefix, through parse + build", () => {
     const text = "// keep this exact wording, please!";

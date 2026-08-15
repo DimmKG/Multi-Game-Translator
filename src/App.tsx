@@ -4,7 +4,6 @@ import { Tabs as TabsPrimitive } from "radix-ui";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { CompactBar } from "@/components/layout/CompactBar";
-import { RecoveryBanner } from "@/components/layout/RecoveryBanner";
 import { Badge } from "@/components/ui/badge";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -120,7 +119,6 @@ function WorkspaceShell({
         onThemeChange={onThemeChange}
         onModeChange={onModeChange}
       />
-      <RecoveryBanner />
       <CompactBar />
 
       {!showWorkspace ? (

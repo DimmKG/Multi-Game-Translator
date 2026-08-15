@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { PlaceholderTokenizer } from "@mgt/sdk";
+import { maskPlaceholders } from "@mgt/sdk";
 import { maskProtectedTokens } from "@/core/tokens/protected";
 
 export class MtProviderError extends Error {
@@ -103,6 +105,8 @@ export async function translateWithProvider(
     targetLanguage: string;
     signal?: AbortSignal;
     maskTokens?: boolean;
+    /** SDK-generic placeholder masking; falls back to the legacy Necesse-only masker when absent. */
+    tokenizer?: PlaceholderTokenizer;
   },
 ) {
   const provider = getProvider(id || defaultProviderId);
@@ -122,7 +126,9 @@ export async function translateWithProvider(
   const settings = resolveSettings(provider.id);
   const shouldMask = request.maskTokens !== false;
   const { maskedText, restore } = shouldMask
-    ? maskProtectedTokens(String(request.text || ""))
+    ? request.tokenizer
+      ? maskPlaceholders(String(request.text || ""), request.tokenizer)
+      : maskProtectedTokens(String(request.text || ""))
     : { maskedText: String(request.text || ""), restore: (value: string) => value };
 
   const translated = await provider.translate({

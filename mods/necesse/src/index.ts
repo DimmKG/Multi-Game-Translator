@@ -5,6 +5,7 @@ import { necesseGameLoader } from "./game-loader";
 export { necesseGameLoader } from "./game-loader";
 export { necesseStatusStrategy, type NecesseEntryExt } from "./status";
 export { necessePlaceholderTokenizer } from "./placeholders";
+export { buildReferenceQueues, referenceIdentity } from "./reference";
 export {
   ENGLISH_ENGNAME_VALUE,
   ENGLISH_REFERENCE_FILENAME,
@@ -13,7 +14,7 @@ export {
   validateEnglishReferenceFile,
 } from "./validate-reference";
 
-/** Entry point the host calls after import() — see the architecture doc's Развилка A. */
+/** Entry point the host calls after dynamically import()-ing this mod. */
 export default function register(sdk: ModSdk): void {
   sdk.registerGameLoader(necesseGameLoader);
 }

@@ -9,7 +9,8 @@ export interface IniFileEntry {
 
 /**
  * One parsed ini-family structure per input file, in FileLoaderInput.files
- * order — see the architecture doc's note on multi-file File Loaders.
+ * order — a multi-file File Loader always returns entries positionally
+ * matched to the input files, e.g. [translation, reference].
  */
 export type IniFileLoaderRaw = IniFileEntry[];
 

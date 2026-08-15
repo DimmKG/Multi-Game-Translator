@@ -12,9 +12,9 @@ const NECESSE_PLACEHOLDER_PATTERN = /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|[0-
  * "required": <var> substitutions and the literal \n line-break escape — losing
  * either changes the string's meaning/layout, not just its style.
  * "formatting": [item/ref=...] and §color markers — stylistic/reference tags a
- * translator may freely add, drop, or rearrange (see the architecture doc's
- * Развилка F note on PlaceholderSeverity). \n as "required" is a judgment call,
- * not yet confirmed by the user — flagged there as an open question.
+ * translator may freely add, drop, or rearrange. \n as "required" is a
+ * judgment call: losing it changes text layout, closer to a data loss than a
+ * style choice.
  */
 function classify(match: string): PlaceholderClassification {
   if (match.startsWith("<")) return { kind: "var", severity: "required" };

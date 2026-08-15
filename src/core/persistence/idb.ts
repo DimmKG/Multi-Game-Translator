@@ -1,13 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { TranslationDocument } from "@mgt/sdk";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 import type { StoredLine } from "./line-codec";
+import type { WorkspaceView } from "@/core/lang/markers";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
 import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
 import type { TerminologyReviewState } from "@/core/terminology/review-persistence";
 
 export const DB_NAME = "necesse-translator";
-export const DB_VERSION = 1;
+/** v2 adds the "documents" store (TranslationDocument-based persistence); "lines" is retired once the LangLine-based path is removed. */
+export const DB_VERSION = 2;
+
+export interface WorkspaceUiFlags {
+  touched: boolean;
+  mtDraft: boolean;
+}
+
+export interface WorkspaceDocumentRecord {
+  document: TranslationDocument;
+  uiFlags: Record<string, WorkspaceUiFlags>;
+  filename: string;
+  referenceFilename: string;
+  /** Last active tab — restored on reload so the session resumes exactly where it left off. */
+  view: WorkspaceView;
+  savedAt: number;
+  provider: string;
+  spellcheck: boolean;
+  autocompleteEnabled: boolean;
+}
 
 export interface StoredGlossaryRecord extends NormalizedGlossary {
   enabled: boolean;
@@ -58,6 +79,10 @@ interface NecesseDb extends DBSchema {
     key: string;
     value: StoredGlossaryRecord;
   };
+  documents: {
+    key: string;
+    value: WorkspaceDocumentRecord;
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<NecesseDb>> | null = null;
@@ -75,6 +100,9 @@ export function openNecesseDb(): Promise<IDBPDatabase<NecesseDb>> {
         }
         if (!db.objectStoreNames.contains("glossaries")) {
           db.createObjectStore("glossaries", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("documents")) {
+          db.createObjectStore("documents");
         }
       },
     });
