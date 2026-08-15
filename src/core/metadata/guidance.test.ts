@@ -5,27 +5,27 @@ import { metadataGuidanceFor, metadataGuidanceRules } from "./guidance";
 
 describe("metadata guidance", () => {
   it("known language metadata keys expose localized guidance ids", () => {
-    expect(metadataGuidanceFor({ key: "localname", section: "lang" })?.messageKey).toBe(
+    expect(metadataGuidanceFor({ key: "localname", namespace: "lang" })?.messageKey).toBe(
       "metadata.localname",
     );
-    expect(metadataGuidanceFor({ key: "engname", section: "lang" })?.messageKey).toBe(
+    expect(metadataGuidanceFor({ key: "engname", namespace: "lang" })?.messageKey).toBe(
       "metadata.engname",
     );
-    expect(metadataGuidanceFor({ key: "extrasymbols", section: "lang" })?.messageKey).toBe(
+    expect(metadataGuidanceFor({ key: "extrasymbols", namespace: "lang" })?.messageKey).toBe(
       "metadata.extrasymbols",
     );
   });
 
   it("credits guidance is restricted to the lang section", () => {
-    expect(metadataGuidanceFor({ key: "credits", section: "lang" })?.messageKey).toBe(
+    expect(metadataGuidanceFor({ key: "credits", namespace: "lang" })?.messageKey).toBe(
       "metadata.langCredits",
     );
-    expect(metadataGuidanceFor({ key: "credits", section: "general" })).toBeNull();
+    expect(metadataGuidanceFor({ key: "credits", namespace: "general" })).toBeNull();
     expect(metadataGuidanceFor({ key: "credits" })).toBeNull();
   });
 
   it("matching normalizes section brackets and casing", () => {
-    expect(metadataGuidanceFor({ key: "CREDITS", section: "[LANG]" })?.messageKey).toBe(
+    expect(metadataGuidanceFor({ key: "CREDITS", namespace: "[LANG]" })?.messageKey).toBe(
       "metadata.langCredits",
     );
   });

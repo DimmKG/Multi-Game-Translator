@@ -164,7 +164,7 @@ describe("recovery / persistence contracts", () => {
     await waitFor(() => get().isOpen);
 
     act(() => {
-      get().updateEntryValue(0, "Servus");
+      get().updateEntryValue(get().entries[0].id, "Servus");
     });
     // The debounce is 500ms — dispatch pagehide well before it would fire on its own.
     await act(async () => {

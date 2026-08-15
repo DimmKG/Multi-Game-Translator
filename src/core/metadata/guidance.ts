@@ -23,9 +23,9 @@ function normalizePart(value: unknown) {
     .toLowerCase();
 }
 
-export function metadataGuidanceFor(entry: { key?: string; section?: string }) {
+export function metadataGuidanceFor(entry: { key?: string; namespace?: string }) {
   const key = normalizePart(entry?.key);
-  const section = normalizePart(entry?.section);
+  const section = normalizePart(entry?.namespace);
   return (
     GUIDANCE_RULES.find((rule) => {
       if (normalizePart(rule.key) !== key) return false;

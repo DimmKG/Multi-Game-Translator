@@ -7,7 +7,13 @@ import type { WorkspaceUiFlags } from "@/core/persistence/idb";
 import {
   buildEntryIndex,
   buildWorkspaceEntries,
+  buildWorkspaceLines,
+  buildWorkspaceRowIndex,
   exportedText,
+  findWorkspaceEntry,
+  hasUsableReference,
+  reindexWorkspaceEntry,
+  referenceDisplayText,
   toggleEntryMarkedSame,
   toLegacyStatus,
   updateEntryTarget,
@@ -118,5 +124,96 @@ describe("exportedText", () => {
   it("round-trips a document back to its native .lang text", () => {
     const document = buildDocument("hello=Hallo\n");
     expect(exportedText(document)).toBe("hello=Hallo\n");
+  });
+});
+
+describe("buildWorkspaceLines", () => {
+  it("interleaves sections with their entries, in document order", () => {
+    const document = buildDocument("[greetings]\nhello=Hallo\n[farewells]\nbye=Tschuss\n");
+    const lines = buildWorkspaceLines(document, new Map());
+    expect(lines.map((line) => (line.type === "section" ? line.name : line.entry.key))).toEqual([
+      "greetings",
+      "hello",
+      "farewells",
+      "bye",
+    ]);
+  });
+});
+
+describe("findWorkspaceEntry", () => {
+  it("finds an entry by id straight from the document", () => {
+    const document = buildDocument("hello=Hallo\n");
+    const [expected] = buildWorkspaceEntries(document, new Map());
+    expect(findWorkspaceEntry(document, expected.id, new Map())).toEqual(expected);
+    expect(findWorkspaceEntry(document, "missing-id", new Map())).toBeUndefined();
+  });
+});
+
+describe("referenceDisplayText", () => {
+  it("prefers the matched reference over the frozen original", () => {
+    const document = buildDocument("MISSING_TRANSLATION:hello=Hallo\n", "hello=Hello\n");
+    const [entry] = buildWorkspaceEntries(document, new Map());
+    expect(referenceDisplayText(entry)).toBe("Hello");
+  });
+
+  it("falls back to the frozen original when missing but unmatched", () => {
+    const document = buildDocument("MISSING_TRANSLATION:hello=Hallo\n");
+    const [entry] = buildWorkspaceEntries(document, new Map());
+    expect(referenceDisplayText(entry)).toBe("Hallo");
+  });
+
+  it("is null for an already-translated entry with no matched reference", () => {
+    const document = buildDocument("hello=Hallo\n");
+    const [entry] = buildWorkspaceEntries(document, new Map());
+    expect(referenceDisplayText(entry)).toBeNull();
+  });
+});
+
+describe("hasUsableReference", () => {
+  it("requires both a reference filename and at least one matched entry", () => {
+    const withMatch = buildWorkspaceEntries(
+      buildDocument("MISSING_TRANSLATION:hello=Hallo\n", "hello=Hello\n"),
+      new Map(),
+    );
+    const withoutMatch = buildWorkspaceEntries(
+      buildDocument("MISSING_TRANSLATION:hello=Hallo\n"),
+      new Map(),
+    );
+    expect(hasUsableReference(withMatch, "en.lang")).toBe(true);
+    expect(hasUsableReference(withMatch, "")).toBe(false);
+    expect(hasUsableReference(withoutMatch, "en.lang")).toBe(false);
+  });
+});
+
+describe("row indexing", () => {
+  it("buildWorkspaceRowIndex flags token/whitespace issues per entry", () => {
+    const document = buildDocument(
+      "MISSING_TRANSLATION:hello=Hallo\nbye=Tschuss \n",
+      "hello=<name> Hello\nbye=Bye\n",
+    );
+    const entries = buildWorkspaceEntries(document, new Map());
+    const index = buildWorkspaceRowIndex(entries, []);
+
+    const hello = entries.find((e) => e.key === "hello")!;
+    expect(index.get(hello.id)?.tokenIssue).toBe(true);
+    expect(index.get(hello.id)?.hasRef).toBe(true);
+
+    const bye = entries.find((e) => e.key === "bye")!;
+    expect(index.get(bye.id)?.wsIssue).toBe(true);
+  });
+
+  it("reindexWorkspaceEntry updates only the targeted entry's row", () => {
+    const document = buildDocument("MISSING_TRANSLATION:hello=Hallo\nbye=Tschuss\n");
+    const entries = buildWorkspaceEntries(document, new Map());
+    const index = buildWorkspaceRowIndex(entries, []);
+
+    const hello = entries.find((e) => e.key === "hello")!;
+    const edited = { ...hello, target: "Hallo!", legacyStatus: "done" as const };
+    const updated = reindexWorkspaceEntry(index, edited, []);
+
+    expect(updated.status).toBe("done");
+    expect(index.get(hello.id)?.status).toBe("done");
+    const bye = entries.find((e) => e.key === "bye")!;
+    expect(index.get(bye.id)?.status).toBe("done");
   });
 });

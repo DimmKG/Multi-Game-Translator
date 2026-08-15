@@ -56,10 +56,10 @@ import {
 import { TerminologyRuleDialog } from "@/features/editor/TerminologyRuleDialog";
 
 import type { FilterMode } from "@/core/lang/markers";
-import { statusOf, type TranslationEntry } from "@/core/lang/status";
 import { metadataGuidanceFor } from "@/core/metadata/guidance";
-import { missingTokens, tokenKind, tokensOf } from "@/core/tokens/protected";
-import { fixWhitespace, scanWhitespace } from "@/core/tokens/whitespace";
+import { checkPlaceholders, tokenKind, tokensOf } from "@/core/tokens/protected";
+import { fixWhitespace, scanWhitespace } from "@/core/model/whitespace";
+import { referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import {
   clearPendingScroll,
@@ -128,8 +128,8 @@ function renderTokenized(text: string): ReactNode[] {
   return nodes;
 }
 
-function whitespaceLabels(entry: TranslationEntry, t: (key: string) => string) {
-  const flags = scanWhitespace(entry);
+function whitespaceLabels(entry: WorkspaceEntry, t: (key: string) => string) {
+  const flags = scanWhitespace(entry.target, referenceDisplayText(entry));
   const labels: string[] = [];
   if (flags.lead) labels.push(t("ws.lead"));
   if (flags.trail) labels.push(t("ws.trail"));
@@ -143,14 +143,15 @@ const EntryCard = memo(function EntryCard({
   entry,
   onPin,
 }: {
-  entry: TranslationEntry;
-  onPin: (entryId: number) => void;
+  entry: WorkspaceEntry;
+  onPin: (entryId: string) => void;
 }) {
   const { t } = useI18n();
   const workspace = useWorkspace();
-  const status = statusOf(entry);
-  const missing = missingTokens(entry);
-  const whitespace = scanWhitespace(entry);
+  const status = entry.legacyStatus;
+  const missing = checkPlaceholders(entry.source, entry.target);
+  const reference = referenceDisplayText(entry);
+  const whitespace = scanWhitespace(entry.target, reference);
   const guidance = metadataGuidanceFor(entry);
   const terminologyMatches = workspace.terminologyMatchesFor(entry);
   const terminologyIssueCount = terminologyMatches.reduce(
@@ -158,7 +159,6 @@ const EntryCard = memo(function EntryCard({
     0,
   );
   const [terminologyDialogOpen, setTerminologyDialogOpen] = useState(false);
-  const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
   const badge = STATUS_BADGE[status];
 
   return (
@@ -204,7 +204,7 @@ const EntryCard = memo(function EntryCard({
 
         <Textarea
           className={TEXTAREA_CLASS}
-          value={entry.value}
+          value={entry.target}
           spellCheck={workspace.spellcheck}
           onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
           onKeyDown={(event) => {
@@ -212,7 +212,7 @@ const EntryCard = memo(function EntryCard({
               event.preventDefault();
               const entries = workspace.filteredEntries;
               const index = entries.findIndex((item) => item.id === entry.id);
-              const next = entries.slice(index + 1).find((item) => statusOf(item) === "missing");
+              const next = entries.slice(index + 1).find((item) => item.legacyStatus === "missing");
               if (next) requestEditorScroll({ type: "key", key: next.key });
             }
           }}
@@ -233,7 +233,7 @@ const EntryCard = memo(function EntryCard({
                 "hover:bg-warn-soft/70",
               )}
               title={t("tokens.insertMissing")}
-              onClick={() => workspace.updateEntryValue(entry.id, `${entry.value}${token}`)}
+              onClick={() => workspace.updateEntryValue(entry.id, `${entry.target}${token}`)}
             >
               ⚠ {token}
             </Button>
@@ -248,7 +248,9 @@ const EntryCard = memo(function EntryCard({
                 "hover:bg-warn-soft/70",
               )}
               title={t("review.wsFixTitle", { list: whitespaceLabels(entry, t).join(", ") })}
-              onClick={() => workspace.updateEntryValue(entry.id, fixWhitespace(entry))}
+              onClick={() =>
+                workspace.updateEntryValue(entry.id, fixWhitespace(entry.target, reference))
+              }
             >
               {t("review.wsFix")}
             </Button>
@@ -295,7 +297,7 @@ const EntryCard = memo(function EntryCard({
               {t("terminology.filter")}
             </Button>
           )}
-          {entry.ref != null && (
+          {entry.referenceText != null && (
             <Button
               type="button"
               variant="outline"
@@ -332,10 +334,7 @@ export function EditorSidebar() {
   const workspace = useWorkspace();
   const { setOpenMobile } = useSidebar();
 
-  const entries = useMemo(
-    () => workspace.items.filter((item): item is TranslationEntry => item.type === "entry"),
-    [workspace.items],
-  );
+  const { entries } = workspace;
 
   const filters: Array<{
     id: FilterMode;
@@ -401,7 +400,7 @@ export function EditorSidebar() {
   const sections = useMemo(() => {
     const list: Array<{ name: string; count: number }> = [];
     let current: { name: string; count: number } | null = null;
-    for (const item of workspace.items) {
+    for (const item of workspace.lines) {
       if (item.type === "section") {
         current = { name: item.name, count: 0 };
         list.push(current);
@@ -410,7 +409,7 @@ export function EditorSidebar() {
       }
     }
     return list;
-  }, [workspace.items]);
+  }, [workspace.lines]);
 
   return (
     // Below 860px `Sidebar` renders itself as a Sheet — see use-mobile.
@@ -510,9 +509,9 @@ export function EditorView() {
   const workspace = useWorkspace();
   // Keep cards that were opened for editing in the list until the user leaves
   // this view — otherwise a "missing"/search filter drops the row mid-typing.
-  const [stickyIds, setStickyIds] = useState<ReadonlySet<number>>(() => new Set());
+  const [stickyIds, setStickyIds] = useState<ReadonlySet<string>>(() => new Set());
 
-  const pinEntry = useCallback((entryId: number) => {
+  const pinEntry = useCallback((entryId: string) => {
     setStickyIds((current) => {
       if (current.has(entryId)) return current;
       const next = new Set(current);
@@ -531,23 +530,22 @@ export function EditorView() {
   const rows = useMemo(() => {
     const visible = new Set(workspace.filteredEntries.map((entry) => entry.id));
     for (const entryId of stickyIds) visible.add(entryId);
-    const out: Array<
-      { kind: "section"; name: string } | { kind: "entry"; entry: TranslationEntry }
-    > = [];
+    const out: Array<{ kind: "section"; name: string } | { kind: "entry"; entry: WorkspaceEntry }> =
+      [];
     let pendingSection: string | null = null;
-    for (const item of workspace.items) {
+    for (const item of workspace.lines) {
       if (item.type === "section") {
         pendingSection = item.name;
-      } else if (item.type === "entry" && visible.has(item.id)) {
+      } else if (item.type === "entry" && visible.has(item.entry.id)) {
         if (pendingSection) {
           out.push({ kind: "section", name: pendingSection });
           pendingSection = null;
         }
-        out.push({ kind: "entry", entry: item });
+        out.push({ kind: "entry", entry: item.entry });
       }
     }
     return out;
-  }, [workspace.items, workspace.filteredEntries, stickyIds]);
+  }, [workspace.lines, workspace.filteredEntries, stickyIds]);
 
   const terminologyCount = workspace.terminologyIssueCount;
 

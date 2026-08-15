@@ -17,8 +17,6 @@ import { ReviewView } from "@/features/review/ReviewView";
 import { Dropzone } from "@/features/workspace/Dropzone";
 import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { WorkspaceProvider, useWorkspace } from "@/state/workspace-store";
-import { statusOf, type TranslationEntry } from "@/core/lang/status";
-import { scanWhitespace } from "@/core/tokens/whitespace";
 import { cn } from "@/lib/utils";
 import { applyTheme, loadStoredMode, loadStoredTheme, type ThemeMode } from "@/themes/themes";
 
@@ -26,10 +24,10 @@ function Footnote() {
   const { t } = useI18n();
   const workspace = useWorkspace();
 
-  const entries = workspace.items.filter((item): item is TranslationEntry => item.type === "entry");
-  const missing = entries.filter((entry) => statusOf(entry) === "missing").length;
-  const same = entries.filter((entry) => statusOf(entry) === "same").length;
-  const whitespace = entries.filter((entry) => scanWhitespace(entry).any).length;
+  const { entries } = workspace;
+  const missing = entries.filter((entry) => entry.legacyStatus === "missing").length;
+  const same = entries.filter((entry) => entry.legacyStatus === "same").length;
+  const whitespace = workspace.whitespaceIssueCount;
 
   let text = t("footnote.main", {
     file: workspace.filename || "—",
@@ -89,9 +87,7 @@ function WorkspaceShell({
     }
   }, [railOpen]);
 
-  const reviewCount = workspace.items.filter(
-    (item) => item.type === "entry" && item.touched,
-  ).length;
+  const reviewCount = workspace.entries.filter((entry) => entry.touched).length;
   const showWorkspace = workspace.isOpen || workspace.view === "terminology";
 
   if (!workspace.ready) {

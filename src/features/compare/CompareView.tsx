@@ -22,7 +22,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import { compareEntryPair, diffRows, summarizeRows } from "@/core/compare/token-aware-diff";
 import type { DiffSegment } from "@/core/compare/token-aware-diff";
-import { buildLangFile } from "@/core/lang/export";
+import { exportedText } from "@/state/entries";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
@@ -80,8 +80,8 @@ export function CompareView() {
   // so "add" reads as "present in my translation", matching the original layout.
   const leftLines = useMemo(() => workspace.diffOther?.lines ?? [], [workspace.diffOther]);
   const rightLines = useMemo(
-    () => buildLangFile(workspace.items, workspace.eol).split(/\r\n|\n/),
-    [workspace.items, workspace.eol],
+    () => exportedText(workspace.document).split(/\r\n|\n/),
+    [workspace.document],
   );
 
   const allRows = useMemo(

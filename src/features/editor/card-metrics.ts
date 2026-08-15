@@ -2,8 +2,8 @@
 import { badgeVariants } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { createWrapMeasurer, type WrapMeasurer } from "@/core/layout/text-wrap";
-import type { TranslationEntry } from "@/core/lang/status";
 import { metadataGuidanceFor } from "@/core/metadata/guidance";
+import { referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
 import {
   CARD_CLASS,
   CARD_ROW_GAP_CLASS,
@@ -166,7 +166,7 @@ export function calibrateCardMetrics(listElement: HTMLElement): CardMetrics | nu
  * so ordinary typing never triggers a recompute.
  */
 export class CardHeightCache {
-  private readonly cache = new Map<number, { fingerprint: string; height: number }>();
+  private readonly cache = new Map<string, { fingerprint: string; height: number }>();
 
   constructor(
     private readonly metrics: CardMetrics,
@@ -174,8 +174,8 @@ export class CardHeightCache {
     private readonly translate: (key: string) => string,
   ) {}
 
-  heightOf(entry: TranslationEntry, warningCount: number) {
-    const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
+  heightOf(entry: WorkspaceEntry, warningCount: number) {
+    const reference = referenceDisplayText(entry);
     const rule = metadataGuidanceFor(entry);
     // Card renders `ⓘ ${t(messageKey)}` — count the same string for wrap.
     const guidanceText = rule ? `ⓘ ${this.translate(rule.messageKey)}` : null;

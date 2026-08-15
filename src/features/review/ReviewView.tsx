@@ -12,9 +12,9 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { REVIEW_TEXTAREA_CLASS } from "@/features/editor/card-classes";
 
 import type { ReviewFilter } from "@/core/lang/markers";
-import { statusOf, type TranslationEntry } from "@/core/lang/status";
-import { missingTokens } from "@/core/tokens/protected";
-import { fixWhitespace, scanWhitespace } from "@/core/tokens/whitespace";
+import { checkPlaceholders } from "@/core/tokens/protected";
+import { fixWhitespace, scanWhitespace } from "@/core/model/whitespace";
+import { referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { requestEditorScroll } from "@/features/editor/scroll-requests";
 import { useWorkspace } from "@/state/workspace-store";
@@ -35,8 +35,8 @@ const COLUMN_LABEL_CLASS =
 const REVIEW_ROW_CHROME = 92;
 const REVIEW_CHARS_PER_LINE = 46; // each of the two text columns is roughly a third of the row
 
-function whitespaceLabels(entry: TranslationEntry, t: (key: string) => string) {
-  const flags = scanWhitespace(entry);
+function whitespaceLabels(entry: WorkspaceEntry, t: (key: string) => string) {
+  const flags = scanWhitespace(entry.target, referenceDisplayText(entry));
   const labels: string[] = [];
   if (flags.lead) labels.push(t("ws.lead"));
   if (flags.trail) labels.push(t("ws.trail"));
@@ -49,9 +49,9 @@ function whitespaceLabels(entry: TranslationEntry, t: (key: string) => string) {
 export function ReviewView() {
   const { t } = useI18n();
   const workspace = useWorkspace();
-  const [stickyIds, setStickyIds] = useState<ReadonlySet<number>>(() => new Set());
+  const [stickyIds, setStickyIds] = useState<ReadonlySet<string>>(() => new Set());
 
-  const pinEntry = useCallback((entryId: number) => {
+  const pinEntry = useCallback((entryId: string) => {
     setStickyIds((current) => {
       if (current.has(entryId)) return current;
       const next = new Set(current);
@@ -67,11 +67,8 @@ export function ReviewView() {
   }, [workspace.view, workspace.reviewFilter]);
 
   const touched = useMemo(
-    () =>
-      workspace.items.filter(
-        (item): item is TranslationEntry => item.type === "entry" && item.touched,
-      ),
-    [workspace.items],
+    () => workspace.entries.filter((entry) => entry.touched),
+    [workspace.entries],
   );
 
   const counts = useMemo(() => {
@@ -96,7 +93,7 @@ export function ReviewView() {
       if (workspace.reviewFilter === "issues" && !hasIssues) return false;
       if (workspace.reviewFilter === "same" && indexed?.status !== "same") return false;
       if (query) {
-        const haystack = `${entry.key}\n${entry.value}`.toLowerCase();
+        const haystack = `${entry.key}\n${entry.target}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -114,10 +111,10 @@ export function ReviewView() {
     // Three columns side by side, so the tallest of source/translation wins.
     const entry = rowsRef.current[index];
     if (!entry) return REVIEW_ROW_CHROME;
-    const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
+    const reference = referenceDisplayText(entry);
     const lines = Math.max(
       reference ? Math.ceil(reference.length / REVIEW_CHARS_PER_LINE) : 1,
-      Math.ceil((entry.value.length || 1) / REVIEW_CHARS_PER_LINE),
+      Math.ceil((entry.target.length || 1) / REVIEW_CHARS_PER_LINE),
     );
     return REVIEW_ROW_CHROME + lines * 20;
   }, []);
@@ -181,12 +178,12 @@ export function ReviewView() {
           </Empty>
         }
         renderItem={(entry) => {
-          const missing = missingTokens(entry);
-          const whitespace = scanWhitespace(entry);
+          const reference = referenceDisplayText(entry);
+          const missing = checkPlaceholders(entry.source, entry.target);
+          const whitespace = scanWhitespace(entry.target, reference);
           const terminology = workspace.terminologyIssuesFor(entry);
-          const status = statusOf(entry);
+          const status = entry.legacyStatus;
           const flagged = missing.length > 0 || whitespace.any || terminology.length > 0;
-          const reference = entry.ref ?? (entry.wasMissing ? entry.english : null);
 
           return (
             <div
@@ -260,7 +257,7 @@ export function ReviewView() {
                 <span className={COLUMN_LABEL_CLASS}>{t("review.trLabel")}</span>
                 <Textarea
                   className={REVIEW_TEXTAREA_CLASS}
-                  value={entry.value}
+                  value={entry.target}
                   spellCheck={workspace.spellcheck}
                   onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
                 />
@@ -275,7 +272,7 @@ export function ReviewView() {
                         className="border-warn bg-warn-soft text-warn hover:bg-warn-soft/70 font-mono"
                         title={t("tokens.insertMissing")}
                         onClick={() =>
-                          workspace.updateEntryValue(entry.id, `${entry.value}${token}`)
+                          workspace.updateEntryValue(entry.id, `${entry.target}${token}`)
                         }
                       >
                         ⚠ {token}
@@ -308,7 +305,7 @@ export function ReviewView() {
                     size="sm"
                     className="hover:border-success hover:text-success"
                     title={t("review.checkedTitle")}
-                    onClick={() => workspace.updateEntryValue(entry.id, entry.value)}
+                    onClick={() => workspace.updateEntryValue(entry.id, entry.target)}
                   >
                     {t("review.checked")}
                   </Button>
@@ -322,7 +319,9 @@ export function ReviewView() {
                     title={t("review.wsFixTitle", {
                       list: whitespaceLabels(entry, t).join(", "),
                     })}
-                    onClick={() => workspace.updateEntryValue(entry.id, fixWhitespace(entry))}
+                    onClick={() =>
+                      workspace.updateEntryValue(entry.id, fixWhitespace(entry.target, reference))
+                    }
                   >
                     {t("review.wsFix")}
                   </Button>

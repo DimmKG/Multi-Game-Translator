@@ -30,6 +30,20 @@ export function missingTokens(entry: TranslationEntry): string[] {
   return [...new Set(missing)];
 }
 
+/** Multiset-aware: tokens present in `source` but missing from `target`. Entry-shape-agnostic version of missingTokens. */
+export function checkPlaceholders(source: string, target: string): string[] {
+  const sourceTokens = tokensOf(source);
+  if (!sourceTokens.length) return [];
+  const available = tokensOf(target).slice();
+  const missing: string[] = [];
+  for (const token of sourceTokens) {
+    const index = available.indexOf(token);
+    if (index === -1) missing.push(token);
+    else available.splice(index, 1);
+  }
+  return [...new Set(missing)];
+}
+
 const PLACEHOLDER_PREFIX = "\uE000";
 const PLACEHOLDER_SUFFIX = "\uE001";
 

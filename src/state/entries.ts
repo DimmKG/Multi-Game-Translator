@@ -11,14 +11,29 @@ import {
   necesseStatusStrategy,
   type NecesseEntryExt,
 } from "@mgt/mod-necesse";
+import { checkPlaceholders } from "@/core/tokens/protected";
+import { scanWhitespace } from "@/core/model/whitespace";
 import type { EntryStatus as LegacyStatus } from "@/core/lang/markers";
 import type { WorkspaceUiFlags } from "@/core/persistence/idb";
+import {
+  countFromIndex,
+  glossaryFingerprint,
+  sameRowIndex,
+  type GlossaryLike,
+  type RowIndex,
+} from "@/core/persistence/row-index";
+import { inspectTerminology } from "@/core/glossary/matcher";
+
+export type { GlossaryLike, RowIndex };
+export { countFromIndex, glossaryFingerprint, sameRowIndex };
 
 export interface WorkspaceEntry {
   /** Native SDK entry id — stable across edits, unlike the old positional LangLine.id. */
   id: string;
   key: string;
   namespace: string;
+  /** Matched reference, or the frozen original — always populated (== SDK entry.source). Feeds placeholder checks & MT. */
+  source: string;
   target: string;
   /** RHS as originally parsed (frozen) — used to tell "still untouched" from "edited". */
   originalValue: string;
@@ -30,6 +45,9 @@ export interface WorkspaceEntry {
   mtDraft: boolean;
   legacyStatus: LegacyStatus;
 }
+
+export type WorkspaceLine =
+  { type: "section"; name: string } | { type: "entry"; entry: WorkspaceEntry };
 
 /**
  * Collapses the SDK's 6-way EntryStatus to the app's 3-way vocabulary
@@ -60,6 +78,7 @@ function toWorkspaceEntry(
     id: entry.id,
     key: entry.key,
     namespace: entry.namespace ?? "",
+    source: entry.source,
     target: entry.target,
     originalValue: ext.originalValue,
     referenceText: ext.hasReference ? entry.source : null,
@@ -83,10 +102,55 @@ export function buildWorkspaceEntries(
   return entries;
 }
 
+/** Interleaved section/entry stream the editor groups its virtual list by (blank/comment/header nodes carry nothing the UI shows). */
+export function buildWorkspaceLines(
+  document: TranslationDocument,
+  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
+): WorkspaceLine[] {
+  const lines: WorkspaceLine[] = [];
+  for (const node of document.nodes) {
+    if (node.type === "section") lines.push({ type: "section", name: node.name });
+    else if (node.type === "entry") {
+      lines.push({
+        type: "entry",
+        entry: toWorkspaceEntry(node.entry, uiFlags.get(node.entry.id)),
+      });
+    }
+  }
+  return lines;
+}
+
 export function buildEntryIndex(
   entries: readonly WorkspaceEntry[],
 ): ReadonlyMap<string, WorkspaceEntry> {
   return new Map(entries.map((entry) => [entry.id, entry]));
+}
+
+/** Finds one entry by id straight from the document — handy right after a mutation, without rebuilding the full list. */
+export function findWorkspaceEntry(
+  document: TranslationDocument,
+  entryId: string,
+  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
+): WorkspaceEntry | undefined {
+  const node = document.nodes.find((n) => n.type === "entry" && n.entry.id === entryId);
+  return node?.type === "entry" ? toWorkspaceEntry(node.entry, uiFlags.get(entryId)) : undefined;
+}
+
+/**
+ * The reference block shown above the textarea, and the baseline whitespace
+ * checks compare against — non-null only when a reference was actually
+ * matched, or the entry was flagged missing (its frozen original then stands
+ * in). An already-translated entry with neither gets no reference at all.
+ */
+export function referenceDisplayText(entry: WorkspaceEntry): string | null {
+  return entry.referenceText ?? (entry.wasMissing ? entry.originalValue : null);
+}
+
+export function hasUsableReference(
+  entries: readonly WorkspaceEntry[],
+  referenceFilename: string,
+): boolean {
+  return Boolean(referenceFilename) && entries.some((entry) => entry.referenceText != null);
 }
 
 /** Recomputes entry.status the same way toDocument does, keeping fromDocument's export correct after an edit. */
@@ -108,17 +172,19 @@ function withUpdatedNecesseEntry(
   return { ...draft, status };
 }
 
-/** Immutable — returns a new document with just the targeted node's entry replaced. */
+/** Immutable — no-op (returns the same document reference) if entryId doesn't match any node. */
 export function updateEntryTarget(
   document: TranslationDocument,
   entryId: string,
   target: string,
 ): TranslationDocument {
+  let changed = false;
   const nodes = document.nodes.map((node) => {
     if (node.type !== "entry" || node.entry.id !== entryId) return node;
+    changed = true;
     return { ...node, entry: withUpdatedNecesseEntry(node.entry, { target }) };
   });
-  return { ...document, nodes };
+  return changed ? { ...document, nodes } : document;
 }
 
 /** No-op (returns the same document reference) if the entry has no matched reference to mark same against. */
@@ -141,4 +207,38 @@ export function toggleEntryMarkedSame(
 export function exportedText(document: TranslationDocument): string {
   const raw = necesseGameLoader.fromDocument(document);
   return iniFileLoader.serialize(raw).files[0]?.text ?? "";
+}
+
+function enabledOnly(glossaries: readonly GlossaryLike[]): GlossaryLike[] {
+  return glossaries.filter((glossary) => glossary.enabled !== false);
+}
+
+function indexWorkspaceEntry(entry: WorkspaceEntry, enabled: GlossaryLike[]): RowIndex {
+  return {
+    status: entry.legacyStatus,
+    tokenIssue: checkPlaceholders(entry.source, entry.target).length > 0,
+    wsIssue: scanWhitespace(entry.target, referenceDisplayText(entry)).any,
+    glossaryIssue: inspectTerminology(entry.source, entry.target, enabled, entry.key).length > 0,
+    hasRef: entry.referenceText != null,
+  };
+}
+
+export function buildWorkspaceRowIndex(
+  entries: readonly WorkspaceEntry[],
+  glossaries: readonly GlossaryLike[],
+): Map<string, RowIndex> {
+  const enabled = enabledOnly(glossaries);
+  const map = new Map<string, RowIndex>();
+  for (const entry of entries) map.set(entry.id, indexWorkspaceEntry(entry, enabled));
+  return map;
+}
+
+export function reindexWorkspaceEntry(
+  map: Map<string, RowIndex>,
+  entry: WorkspaceEntry,
+  glossaries: readonly GlossaryLike[],
+): RowIndex {
+  const next = indexWorkspaceEntry(entry, enabledOnly(glossaries));
+  map.set(entry.id, next);
+  return next;
 }

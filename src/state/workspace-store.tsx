@@ -11,11 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import {
-  iniFileLoader,
-  type TranslationDocument,
-  type TranslationEntry as SdkTranslationEntry,
-} from "@mgt/sdk";
+import { iniFileLoader, type TranslationDocument } from "@mgt/sdk";
 import {
   buildReferenceQueues,
   necesseEntryExt,
@@ -25,16 +21,25 @@ import {
   validateEnglishReferenceFile,
   type NecesseEntryExt,
 } from "@mgt/mod-necesse";
-import type {
-  DiffMode,
-  FilterMode,
-  LangLine,
-  ReviewFilter,
-  WorkspaceView,
-} from "@/core/lang/markers";
+import type { DiffMode, FilterMode, ReviewFilter, WorkspaceView } from "@/core/lang/markers";
 import { cleanLangFilename } from "@/core/lang/parse";
 import { normalizeSearchQuery } from "@/core/lang/search-query";
-import { hasUsableReference, sourceText, type TranslationEntry } from "@/core/lang/status";
+import {
+  buildWorkspaceEntries,
+  buildWorkspaceLines,
+  buildWorkspaceRowIndex,
+  countFromIndex,
+  exportedText,
+  findWorkspaceEntry,
+  hasUsableReference,
+  reindexWorkspaceEntry,
+  sameRowIndex,
+  toggleEntryMarkedSame,
+  updateEntryTarget,
+  type RowIndex,
+  type WorkspaceEntry,
+  type WorkspaceLine,
+} from "@/state/entries";
 import {
   deserializeProgressV3,
   serializeProgressV3,
@@ -44,13 +49,6 @@ import { loadWorkspaceDocument, saveWorkspaceDocument } from "@/core/persistence
 import type { WorkspaceDocumentRecord, WorkspaceUiFlags } from "@/core/persistence/idb";
 import { removeGlossaryFromIdb, saveGlossaryToIdb } from "@/core/persistence/glossary-store";
 import { migrateGlossariesFromLocalStorage } from "@/core/persistence/glossary-store";
-import {
-  buildRowIndexMap,
-  countFromIndex,
-  reindexOne,
-  sameRowIndex,
-  type RowIndex,
-} from "@/core/persistence/row-index";
 import {
   inspectTerminology,
   matchingTerminologyRules,
@@ -179,9 +177,10 @@ interface WorkspaceState {
 interface WorkspaceContextValue extends WorkspaceState {
   /** True while a picked/dropped file is being read and parsed. */
   isImportingFile: boolean;
-  /** Legacy view over `document` — kept byte-compatible until consumers move to `document` directly. */
-  items: LangLine[];
-  eol: "\n" | "\r\n";
+  /** Interleaved section/entry stream the editor groups its virtual list by. */
+  lines: WorkspaceLine[];
+  /** Flat entry list, in document order. */
+  entries: WorkspaceEntry[];
   openWorkspaceFromText: (
     text: string,
     options?: {
@@ -212,17 +211,17 @@ interface WorkspaceContextValue extends WorkspaceState {
   setDiffOnly: (value: boolean) => void;
   setDiffMode: (mode: DiffMode) => void;
   loadDiffFile: (file: File) => Promise<void>;
-  updateEntryValue: (entryId: number, value: string, options?: { mtDraft?: boolean }) => void;
-  toggleMarkedSame: (entryId: number) => void;
-  translateEntry: (entryId: number) => Promise<void>;
+  updateEntryValue: (entryId: string, value: string, options?: { mtDraft?: boolean }) => void;
+  toggleMarkedSame: (entryId: string) => void;
+  translateEntry: (entryId: string) => Promise<void>;
   progress: { done: number; total: number };
   referenceAvailable: boolean;
   whitespaceIssueCount: number;
   terminologyIssueCount: number;
   enabledGlossaries: StoredGlossary[];
-  terminologyIssuesFor: (entry: TranslationEntry) => readonly TerminologyIssue[];
-  terminologyMatchesFor: (entry: TranslationEntry) => readonly TerminologyRuleMatch[];
-  rowIndexes: ReadonlyMap<number, RowIndex>;
+  terminologyIssuesFor: (entry: WorkspaceEntry) => readonly TerminologyIssue[];
+  terminologyMatchesFor: (entry: WorkspaceEntry) => readonly TerminologyRuleMatch[];
+  rowIndexes: ReadonlyMap<string, RowIndex>;
   setGlossaryEnabled: (id: string, enabled: boolean) => void;
   upsertGlossary: (glossary: NormalizedGlossary) => void;
   removeGlossary: (id: string) => void;
@@ -236,7 +235,7 @@ interface WorkspaceContextValue extends WorkspaceState {
   setSettings: (patch: Partial<AppSettings>) => void;
   setFonts: (patch: Partial<FontSettings>) => void;
   setTerminologyFilterActive: (active: boolean) => void;
-  filteredEntries: TranslationEntry[];
+  filteredEntries: WorkspaceEntry[];
   providers: ReturnType<typeof getAllProviders>;
 }
 
@@ -301,78 +300,6 @@ function applyFontCss(fonts: FontSettings) {
   else document.documentElement.style.removeProperty("--user-editor-font");
 }
 
-function documentEol(document: TranslationDocument): "\n" | "\r\n" {
-  const meta = document.formatMeta as { eol?: unknown };
-  return meta.eol === "\r\n" ? "\r\n" : meta.eol === "\n" ? "\n" : "\r\n";
-}
-
-/** Single hot-path conversion: one document node -> the legacy LangLine shape consumers still read. */
-function legacyEntryFromNode(
-  entry: SdkTranslationEntry,
-  position: number,
-  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
-): TranslationEntry {
-  const ext = necesseEntryExt(entry);
-  const flags = uiFlags.get(entry.id);
-  const line: TranslationEntry = {
-    type: "entry",
-    id: position,
-    key: entry.key,
-    english: ext.originalValue,
-    value: entry.target,
-    markedSame: ext.markedSame,
-    wasMissing: ext.wasMissing,
-    touched: flags?.touched ?? false,
-    mtDraft: flags?.mtDraft ?? false,
-    section: entry.namespace ?? "",
-  };
-  if (ext.hasReference) line.ref = entry.source;
-  return line;
-}
-
-/**
- * Temporary compatibility view: every consumer still reading `items`/`entries`
- * in the pre-M4 LangLine shape gets it derived from `document` here, so the
- * public WorkspaceContextValue stays byte-identical while the source of truth
- * underneath switches to TranslationDocument. Disappears once consumers move
- * to the native SDK entry shape (a later M4 step).
- */
-function legacyItemsFromDocument(
-  document: TranslationDocument,
-  uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
-): LangLine[] {
-  return document.nodes.map((node, index) => {
-    if (node.type === "section") return { type: "section", raw: node.raw, name: node.name };
-    if (node.type === "blank") return { type: "blank", raw: node.raw };
-    if (node.type === "comment") return { type: "comment", raw: node.raw };
-    if (node.type === "header") return { type: "comment", raw: node.raw ?? "" };
-    return legacyEntryFromNode(node.entry, index, uiFlags);
-  });
-}
-
-/** Recomputes entry.status the same way toDocument does, keeping fromDocument's export correct after an edit. */
-function withUpdatedNecesseEntry(
-  entry: SdkTranslationEntry,
-  patch: { target?: string; markedSame?: boolean },
-): SdkTranslationEntry {
-  const ext = necesseEntryExt(entry);
-  const nextExt: NecesseEntryExt = {
-    ...ext,
-    ...(patch.markedSame !== undefined ? { markedSame: patch.markedSame } : {}),
-  };
-  const draft = {
-    ...entry,
-    target: patch.target ?? entry.target,
-    ext: nextExt,
-  };
-  const status = necesseStatusStrategy.fromNative(draft, {
-    markedSame: nextExt.markedSame,
-    wasMissing: nextExt.wasMissing,
-    hasReference: nextExt.hasReference,
-  });
-  return { ...draft, status };
-}
-
 function recordFromState(
   snapshot: WorkspaceState,
   uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
@@ -399,7 +326,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /** UI-only state per entry (not loader data) — keyed by the entry's stable SDK id. */
   const entryUiFlagsRef = useRef<Map<string, WorkspaceUiFlags>>(new Map());
 
-  const [rowIndexes, setRowIndexes] = useState<ReadonlyMap<number, RowIndex>>(() => new Map());
+  const [rowIndexes, setRowIndexes] = useState<ReadonlyMap<string, RowIndex>>(() => new Map());
   const rowIndexesRef = useRef(rowIndexes);
   rowIndexesRef.current = rowIndexes;
 
@@ -556,8 +483,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       meta: { filename: string; referenceFilename: string; targetLanguage: string },
     ) => {
       entryUiFlagsRef.current = new Map();
-      const legacyItems = legacyItemsFromDocument(document, entryUiFlagsRef.current);
-      const indexes = buildRowIndexMap(legacyItems, stateRef.current.glossaries);
+      const entries = buildWorkspaceEntries(document, entryUiFlagsRef.current);
+      const indexes = buildWorkspaceRowIndex(entries, stateRef.current.glossaries);
       setRowIndexes(indexes);
       rowIndexesRef.current = indexes;
       setState((current) => ({
@@ -591,8 +518,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const applyStoredRecord = useCallback(
     (record: WorkspaceDocumentRecord, glossaries: StoredGlossary[]) => {
       entryUiFlagsRef.current = new Map(Object.entries(record.uiFlags));
-      const legacyItems = legacyItemsFromDocument(record.document, entryUiFlagsRef.current);
-      const indexes = buildRowIndexMap(legacyItems, glossaries);
+      const entries = buildWorkspaceEntries(record.document, entryUiFlagsRef.current);
+      const indexes = buildWorkspaceRowIndex(entries, glossaries);
       setRowIndexes(indexes);
       rowIndexesRef.current = indexes;
       setState((current) => ({
@@ -799,8 +726,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         });
 
         const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
-        const legacyItems = legacyItemsFromDocument(nextDocument, entryUiFlagsRef.current);
-        const indexes = buildRowIndexMap(legacyItems, current.glossaries);
+        const nextEntries = buildWorkspaceEntries(nextDocument, entryUiFlagsRef.current);
+        const indexes = buildWorkspaceRowIndex(nextEntries, current.glossaries);
         setRowIndexes(indexes);
         rowIndexesRef.current = indexes;
         setState((prev) => ({
@@ -823,9 +750,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return current;
       }
       if (!/\.lang$/i.test(name)) name += ".lang";
-      const raw = necesseGameLoader.fromDocument(current.document);
-      const text = iniFileLoader.serialize(raw).files[0]?.text ?? "";
-      downloadText(name, text);
+      downloadText(name, exportedText(current.document));
       toast.success(t("toast.exported", { name }));
       return { ...current, filename: name };
     });
@@ -880,22 +805,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const updateEntryValue = useCallback(
-    (entryId: number, value: string, options?: { mtDraft?: boolean }) => {
+    (entryId: string, value: string, options?: { mtDraft?: boolean }) => {
       const current = stateRef.current;
-      const node = current.document.nodes[entryId];
-      if (!node || node.type !== "entry") return;
-      const nextEntry = withUpdatedNecesseEntry(node.entry, { target: value });
-      entryUiFlagsRef.current.set(nextEntry.id, {
+      const nextDocument = updateEntryTarget(current.document, entryId, value);
+      if (nextDocument === current.document) return;
+      entryUiFlagsRef.current.set(entryId, {
         touched: true,
         mtDraft: options?.mtDraft ?? false,
       });
-      const nextNodes = current.document.nodes.slice();
-      nextNodes[entryId] = { ...node, entry: nextEntry };
-      const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
 
-      const legacyEntry = legacyEntryFromNode(nextEntry, entryId, entryUiFlagsRef.current);
+      const nextEntry = findWorkspaceEntry(nextDocument, entryId, entryUiFlagsRef.current);
       const next = new Map(rowIndexesRef.current);
-      const nextIndex = reindexOne(next, legacyEntry, current.glossaries);
+      const nextIndex = nextEntry
+        ? reindexWorkspaceEntry(next, nextEntry, current.glossaries)
+        : undefined;
       const prevIndex = rowIndexesRef.current.get(entryId);
       rowIndexesRef.current = next;
       // Only publish a new Map when filter-relevant flags change — otherwise the
@@ -909,25 +832,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleMarkedSame = useCallback(
-    (entryId: number) => {
+    (entryId: string) => {
       const current = stateRef.current;
-      const node = current.document.nodes[entryId];
-      if (!node || node.type !== "entry") return;
-      const ext = necesseEntryExt(node.entry);
-      if (!ext.hasReference) return;
-      const nextEntry = withUpdatedNecesseEntry(node.entry, { markedSame: !ext.markedSame });
-      const previousFlags = entryUiFlagsRef.current.get(nextEntry.id);
-      entryUiFlagsRef.current.set(nextEntry.id, {
+      const nextDocument = toggleEntryMarkedSame(current.document, entryId);
+      if (nextDocument === current.document) return;
+      const previousFlags = entryUiFlagsRef.current.get(entryId);
+      entryUiFlagsRef.current.set(entryId, {
         touched: true,
         mtDraft: previousFlags?.mtDraft ?? false,
       });
-      const nextNodes = current.document.nodes.slice();
-      nextNodes[entryId] = { ...node, entry: nextEntry };
-      const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
 
-      const legacyEntry = legacyEntryFromNode(nextEntry, entryId, entryUiFlagsRef.current);
+      const nextEntry = findWorkspaceEntry(nextDocument, entryId, entryUiFlagsRef.current);
       const next = new Map(rowIndexesRef.current);
-      reindexOne(next, legacyEntry, current.glossaries);
+      if (nextEntry) reindexWorkspaceEntry(next, nextEntry, current.glossaries);
       rowIndexesRef.current = next;
       setRowIndexes(next);
 
@@ -938,17 +855,18 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const translateEntry = useCallback(
-    async (entryId: number) => {
-      const node = stateRef.current.document.nodes[entryId];
+    async (entryId: string) => {
+      const node = stateRef.current.document.nodes.find(
+        (candidate) => candidate.type === "entry" && candidate.entry.id === entryId,
+      );
       if (!node || node.type !== "entry") return;
-      const legacyEntry = legacyEntryFromNode(node.entry, entryId, entryUiFlagsRef.current);
       const target = normalizeProjectCode(state.targetLanguage);
       if (!target) {
         toast.error(t("mt.langTitle"));
         return;
       }
-      const source = sourceText(legacyEntry);
-      if (!String(source).trim()) {
+      const source = node.entry.source;
+      if (!source.trim()) {
         toast.error(t("mt.emptySrc"));
         return;
       }
@@ -984,11 +902,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
       if (!stateRef.current.isOpen) return;
 
-      const legacyItems = legacyItemsFromDocument(
-        stateRef.current.document,
-        entryUiFlagsRef.current,
-      );
-      const next = buildRowIndexMap(legacyItems, glossaries);
+      const entries = buildWorkspaceEntries(stateRef.current.document, entryUiFlagsRef.current);
+      const next = buildWorkspaceRowIndex(entries, glossaries);
       rowIndexesRef.current = next;
       setRowIndexes(next);
       scheduleSave();
@@ -1145,26 +1060,25 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const terminologyIssuesFor = useCallback(
-    (entry: TranslationEntry) =>
-      inspectTerminology(sourceText(entry), entry.value, enabledGlossaries, entry.key),
+    (entry: WorkspaceEntry) =>
+      inspectTerminology(entry.source, entry.target, enabledGlossaries, entry.key),
     [enabledGlossaries],
   );
 
   const terminologyMatchesFor = useCallback(
-    (entry: TranslationEntry) =>
-      matchingTerminologyRules(sourceText(entry), entry.value, enabledGlossaries, entry.key),
+    (entry: WorkspaceEntry) =>
+      matchingTerminologyRules(entry.source, entry.target, enabledGlossaries, entry.key),
     [enabledGlossaries],
   );
 
-  const legacyItems = useMemo(
-    () => legacyItemsFromDocument(state.document, entryUiFlagsRef.current),
+  const lines = useMemo(
+    () => buildWorkspaceLines(state.document, entryUiFlagsRef.current),
     [state.document],
   );
-  const eol = useMemo(() => documentEol(state.document), [state.document]);
 
   const entries = useMemo(
-    () => legacyItems.filter((item): item is TranslationEntry => item.type === "entry"),
-    [legacyItems],
+    () => buildWorkspaceEntries(state.document, entryUiFlagsRef.current),
+    [state.document],
   );
 
   const filteredEntries = useMemo(() => {
@@ -1183,7 +1097,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       }
       if (query) {
         const haystack =
-          `${entry.key}\n${entry.value}\n${entry.english}\n${entry.ref || ""}`.toLowerCase();
+          `${entry.key}\n${entry.target}\n${entry.originalValue}\n${entry.referenceText || ""}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -1196,8 +1110,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [indexCounts],
   );
   const referenceAvailable = useMemo(
-    () => hasUsableReference(legacyItems, state.referenceFilename),
-    [legacyItems, state.referenceFilename],
+    () => hasUsableReference(entries, state.referenceFilename),
+    [entries, state.referenceFilename],
   );
   const whitespaceIssueCount = indexCounts.wsIssues;
   const terminologyIssueCount = indexCounts.glossaryIssues;
@@ -1205,8 +1119,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceContextValue = {
     ...state,
     isImportingFile,
-    items: legacyItems,
-    eol,
+    lines,
+    entries,
     openWorkspaceFromText,
     openLangFile,
     openWorkspaceWithReference,

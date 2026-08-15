@@ -123,9 +123,7 @@ export function WorkspaceMenu({
             })
           : t("save.saved");
 
-  const referenceMatches = workspace.items.filter(
-    (item) => item.type === "entry" && item.ref != null,
-  ).length;
+  const referenceMatches = workspace.entries.filter((entry) => entry.referenceText != null).length;
 
   const needsReference = workspace.settings.referenceReminder && !workspace.referenceAvailable;
 

@@ -130,7 +130,7 @@ export function reindexOne(
   return next;
 }
 
-export function countFromIndex(map: ReadonlyMap<number, RowIndex>): {
+export function countFromIndex<K>(map: ReadonlyMap<K, RowIndex>): {
   done: number;
   total: number;
   wsIssues: number;
