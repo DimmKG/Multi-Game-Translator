@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-3.0-or-later
 import type { FileLoaderInput } from "./file-loader";
 import type { PluralCategory, TranslationDocument, TranslationEntry } from "./model/document";
 import type { PlaceholderTokenizer } from "./tokenizer";

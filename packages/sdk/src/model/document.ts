@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 /** The 6 CLDR plural categories — https://www.unicode.org/cldr/charts/48/supplemental/language_plural_rules.html */
 export type PluralCategory = "zero" | "one" | "two" | "few" | "many" | "other";

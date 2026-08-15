@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-3.0-or-later
 import { FileLoaderParseError, type FileLoader, type FileLoaderInput } from "../file-loader";
 import { buildIniLines, parseIniLines, type IniRaw } from "../helpers/ini";
 

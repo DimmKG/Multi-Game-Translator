@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-License-Identifier: LGPL-3.0-or-later
 
 /** A line's own trailing terminator; "" only for a final line with no trailing newline. */
 export type LineEol = "\n" | "\r\n" | "";
