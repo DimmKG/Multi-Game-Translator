@@ -26,8 +26,10 @@ export interface NecesseNativeState {
  * Validates entry.ext actually has the shape necesseGameLoader.toDocument()
  * produces before trusting it — an unchecked cast here degrades to silently
  * wrong output (e.g. a dropped/garbled status marker) instead of a clear error.
+ * Exported so host code reading entry.ext (outside this module's own
+ * fromNative/toNative) gets the same validation instead of a bare cast.
  */
-function ext(entry: TranslationEntry): NecesseEntryExt {
+export function necesseEntryExt(entry: TranslationEntry): NecesseEntryExt {
   const value = entry.ext;
   if (
     typeof value?.markedSame !== "boolean" ||
@@ -52,7 +54,8 @@ export const necesseStatusStrategy: StatusStrategy = {
     const state = nativeState as NecesseNativeState;
     if (state.markedSame && state.hasReference) return "same";
     if (state.wasMissing) {
-      const untouched = entry.target.trim() === "" || entry.target === ext(entry).originalValue;
+      const untouched =
+        entry.target.trim() === "" || entry.target === necesseEntryExt(entry).originalValue;
       return untouched ? "missing" : "translated";
     }
     return entry.target.trim() === "" ? "missing" : "translated";
@@ -64,7 +67,7 @@ export const necesseStatusStrategy: StatusStrategy = {
    * MISSING_TRANSLATION prefix, and anything else gets no prefix at all.
    */
   toNative(entry, status: EntryStatus) {
-    if (ext(entry).markedSame) return "same";
+    if (necesseEntryExt(entry).markedSame) return "same";
     if (status === "missing") return "missing";
     return "none";
   },

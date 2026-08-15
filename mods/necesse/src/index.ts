@@ -3,7 +3,7 @@ import type { ModSdk } from "@mgt/sdk";
 import { necesseGameLoader } from "./game-loader";
 
 export { necesseGameLoader } from "./game-loader";
-export { necesseStatusStrategy, type NecesseEntryExt } from "./status";
+export { necesseEntryExt, necesseStatusStrategy, type NecesseEntryExt } from "./status";
 export { necessePlaceholderTokenizer } from "./placeholders";
 export { buildReferenceQueues, referenceIdentity } from "./reference";
 export {

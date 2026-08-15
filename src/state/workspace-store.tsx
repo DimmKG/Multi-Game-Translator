@@ -18,6 +18,7 @@ import {
 } from "@mgt/sdk";
 import {
   buildReferenceQueues,
+  necesseEntryExt,
   necesseGameLoader,
   necesseStatusStrategy,
   referenceIdentity,
@@ -311,7 +312,7 @@ function legacyEntryFromNode(
   position: number,
   uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
 ): TranslationEntry {
-  const ext = entry.ext as NecesseEntryExt;
+  const ext = necesseEntryExt(entry);
   const flags = uiFlags.get(entry.id);
   const line: TranslationEntry = {
     type: "entry",
@@ -354,7 +355,7 @@ function withUpdatedNecesseEntry(
   entry: SdkTranslationEntry,
   patch: { target?: string; markedSame?: boolean },
 ): SdkTranslationEntry {
-  const ext = entry.ext as NecesseEntryExt;
+  const ext = necesseEntryExt(entry);
   const nextExt: NecesseEntryExt = {
     ...ext,
     ...(patch.markedSame !== undefined ? { markedSame: patch.markedSame } : {}),
@@ -780,7 +781,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const nextNodes = current.document.nodes.map((node) => {
           if (node.type !== "entry") return node;
           const { entry } = node;
-          const ext = entry.ext as NecesseEntryExt;
+          const ext = necesseEntryExt(entry);
           const identity = referenceIdentity(entry.namespace || "", entry.key);
           const occurrence = occurrenceCounts.get(identity) ?? 0;
           occurrenceCounts.set(identity, occurrence + 1);
@@ -912,7 +913,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const current = stateRef.current;
       const node = current.document.nodes[entryId];
       if (!node || node.type !== "entry") return;
-      const ext = node.entry.ext as NecesseEntryExt;
+      const ext = necesseEntryExt(node.entry);
       if (!ext.hasReference) return;
       const nextEntry = withUpdatedNecesseEntry(node.entry, { markedSame: !ext.markedSame });
       const previousFlags = entryUiFlagsRef.current.get(nextEntry.id);
