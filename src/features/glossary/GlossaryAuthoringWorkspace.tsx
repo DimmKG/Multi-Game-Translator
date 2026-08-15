@@ -499,6 +499,36 @@ export function GlossaryAuthoringWorkspace() {
                 </div>
               </div>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-1 text-sm">
+                  <span>{t("glossary.authoringIncludeRegex")}</span>
+                  <input
+                    className="border-input bg-background h-9 rounded-md border px-3 font-mono"
+                    value={selected.entry.includeRegex}
+                    onChange={(event) =>
+                      updateEntry(selected.index, (entry) => {
+                        entry.includeRegex = event.target.value;
+                      })
+                    }
+                  />
+                </label>
+                <label className="grid gap-1 text-sm">
+                  <span>{t("glossary.authoringExcludeRegex")}</span>
+                  <input
+                    className="border-input bg-background h-9 rounded-md border px-3 font-mono"
+                    value={selected.entry.excludeRegex}
+                    onChange={(event) =>
+                      updateEntry(selected.index, (entry) => {
+                        entry.excludeRegex = event.target.value;
+                      })
+                    }
+                  />
+                </label>
+                <span className="text-muted-foreground text-xs sm:col-span-2">
+                  {t("glossary.authoringRegexHint")}
+                </span>
+              </div>
+
               <label className="grid gap-1 text-sm">
                 <span>{t("glossary.authoringContext")}</span>
                 <textarea

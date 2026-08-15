@@ -181,4 +181,53 @@ describe("glossary authoring sessions", () => {
     expect(clearGlossaryAuthoringRecovery(storage)).toBe(true);
     expect(storage.length).toBe(0);
   });
+
+  it("defaults includeRegex/excludeRegex on a recovery blob saved before those fields existed", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      GLOSSARY_AUTHORING_RECOVERY_KEY,
+      JSON.stringify({
+        version: 1,
+        session: {
+          draft: {
+            format: "necesse-glossary",
+            version: 2,
+            id: "necesse-bg",
+            name: "Bulgarian glossary",
+            sourceLanguage: "en",
+            targetLanguage: "bg",
+            game: "Necesse",
+            authors: [],
+            updatedAt: "",
+            entries: [
+              {
+                source: "Settler",
+                target: "Заселник",
+                forms: [],
+                alternatives: [],
+                forbidden: [],
+                caseSensitive: false,
+                wholeWord: true,
+                status: "draft",
+                category: "",
+                context: "",
+                note: "",
+                // includeRegex/excludeRegex intentionally absent — pre-dates the fields.
+              },
+            ],
+          },
+          origin: "new",
+          savedFingerprint: null,
+          lastBoundaryDate: "",
+        },
+      }),
+    );
+
+    const recovered = loadGlossaryAuthoringRecovery(storage);
+    expect(recovered?.draft.entries[0]).toMatchObject({
+      source: "Settler",
+      includeRegex: "",
+      excludeRegex: "",
+    });
+  });
 });

@@ -27,6 +27,8 @@ function canonicalEntry(entry: Readonly<GlossaryDraftEntry>) {
     ...(entry.category ? { category: entry.category } : {}),
     ...(entry.context ? { context: entry.context } : {}),
     ...(entry.note ? { note: entry.note } : {}),
+    ...(entry.includeRegex ? { includeRegex: entry.includeRegex } : {}),
+    ...(entry.excludeRegex ? { excludeRegex: entry.excludeRegex } : {}),
   };
 }
 

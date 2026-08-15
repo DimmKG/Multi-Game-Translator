@@ -65,6 +65,30 @@ describe("glossary authoring drafts", () => {
     expect(draft.entries[0].forms).toEqual(["Заселникът", "Заселници"]);
   });
 
+  it("carries includeRegex/excludeRegex through from a normalized entry", () => {
+    const runtime = normalizeGlossary({
+      format: "necesse-glossary",
+      version: 2,
+      id: "necesse-bg",
+      name: "Bulgarian glossary",
+      sourceLanguage: "en",
+      targetLanguage: "bg",
+      authors: [],
+      entries: [
+        {
+          source: "Hat",
+          target: "Шапка",
+          includeRegex: "^item\\.",
+          excludeRegex: "^sound\\.",
+        },
+      ],
+    });
+
+    const draft = glossaryDraftFromNormalized(runtime);
+    expect(draft.entries[0].includeRegex).toBe("^item\\.");
+    expect(draft.entries[0].excludeRegex).toBe("^sound\\.");
+  });
+
   it("does not share array references with entry input", () => {
     const forms = ["Заселникът"];
     const entry = createGlossaryDraftEntry({ source: "Settler", target: "Заселник", forms });

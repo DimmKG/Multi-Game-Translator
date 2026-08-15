@@ -15,6 +15,8 @@ export interface GlossaryDraftEntry {
   category: string;
   context: string;
   note: string;
+  includeRegex: string;
+  excludeRegex: string;
 }
 
 export interface GlossaryDraft {
@@ -56,6 +58,8 @@ export function createGlossaryDraftEntry(input: GlossaryDraftEntryInput = {}): G
     category: input.category ?? "",
     context: input.context ?? "",
     note: input.note ?? "",
+    includeRegex: input.includeRegex ?? "",
+    excludeRegex: input.excludeRegex ?? "",
   };
 }
 

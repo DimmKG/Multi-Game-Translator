@@ -6,6 +6,11 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  clearTerminologyExtractionFromIdb,
+  loadTerminologyExtractionFromIdb,
+  saveTerminologyExtractionToIdb,
+} from "@/core/persistence/terminology-extraction-store";
+import {
   buildTerminologyCandidateExport,
   extractTerminologyCandidates,
   type TerminologyCandidate,
@@ -62,6 +67,12 @@ async function readCorpusFile(file: File, languageCode = ""): Promise<LoadedCorp
 export function TerminologyWorkspace() {
   const { t } = useI18n();
   const workspace = useWorkspace();
+  // The tab stays mounted (via App.tsx's `forceMount`) so its work survives
+  // switching away and back, but the merge/authoring panels below each hold a
+  // heavy, unvirtualized list and independently subscribe to the workspace
+  // context — mounting them only while this tab is actually visible keeps
+  // them from re-rendering on every keystroke made elsewhere (e.g. Editor).
+  const isTabActive = workspace.view === "terminology";
   const [section, setSection] = useState<TerminologySection>(() =>
     workspace.glossaryAuthoringSession ? "authoring" : "sources",
   );
@@ -74,9 +85,34 @@ export function TerminologyWorkspace() {
     emptyTerminologyReviewState,
   );
 
+  // Blocks the save-below effect until the restore attempt below has finished,
+  // so restoring doesn't immediately overwrite the very record it just read.
+  const [restoring, setRestoring] = useState(true);
+
   useEffect(() => {
     if (workspace.glossaryAuthoringFocusToken > 0) setSection("authoring");
   }, [workspace.glossaryAuthoringFocusToken]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadTerminologyExtractionFromIdb()
+      .then((stored) => {
+        if (cancelled || !stored) return;
+        setSourceLanguageCode(stored.sourceLanguageCode);
+        setSourceFile(stored.sourceFile);
+        setTranslatedFiles(stored.translatedFiles);
+        setMinimumFrequency(stored.minimumFrequency);
+        setCandidates(stored.candidates);
+        setReviewState(stored.reviewState);
+        setSection(stored.section);
+      })
+      .finally(() => {
+        if (!cancelled) setRestoring(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const conflictCount = useMemo(
     () =>
@@ -189,6 +225,36 @@ export function TerminologyWorkspace() {
     setReviewState(nextReviewState);
     setSection("review");
   };
+
+  useEffect(() => {
+    if (restoring) return;
+    if (!sourceFile && translatedFiles.length === 0) {
+      void clearTerminologyExtractionFromIdb();
+      return;
+    }
+    const timer = setTimeout(() => {
+      void saveTerminologyExtractionToIdb({
+        sourceLanguageCode,
+        sourceFile,
+        translatedFiles,
+        minimumFrequency,
+        candidates,
+        reviewState,
+        section,
+        savedAt: Date.now(),
+      });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [
+    restoring,
+    sourceLanguageCode,
+    sourceFile,
+    translatedFiles,
+    minimumFrequency,
+    candidates,
+    reviewState,
+    section,
+  ]);
 
   const exportCandidateJson = () => {
     if (!normalizedSource) return;
@@ -423,9 +489,9 @@ export function TerminologyWorkspace() {
           }}
         />
       ) : section === "merge" ? (
-        <TerminologyGlossaryMergeWorkspace review={reviewExport} />
+        isTabActive && <TerminologyGlossaryMergeWorkspace review={reviewExport} />
       ) : (
-        <GlossaryAuthoringWorkspace />
+        isTabActive && <GlossaryAuthoringWorkspace />
       )}
     </section>
   );

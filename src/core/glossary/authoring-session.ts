@@ -174,6 +174,11 @@ function decodeDraftEntry(value: unknown): GlossaryDraftEntry | null {
     category: entry.category,
     context: entry.context,
     note: entry.note,
+    // Optional rather than required like the fields above: a session saved by
+    // an older build won't have these, and that must not drop the whole
+    // recovery — default instead of rejecting the entry.
+    includeRegex: typeof entry.includeRegex === "string" ? entry.includeRegex : "",
+    excludeRegex: typeof entry.excludeRegex === "string" ? entry.excludeRegex : "",
   });
 }
 

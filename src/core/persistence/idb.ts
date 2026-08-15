@@ -3,6 +3,8 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 import type { StoredLine } from "./line-codec";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
+import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
+import type { TerminologyReviewState } from "@/core/terminology/review-persistence";
 
 export const DB_NAME = "necesse-translator";
 export const DB_VERSION = 1;
@@ -22,10 +24,28 @@ export interface WorkspaceMetaRecord {
   autocompleteEnabled: boolean;
 }
 
+export interface TerminologyCorpusFileRecord {
+  id: string;
+  languageCode: string;
+  filename: string;
+  text: string;
+}
+
+export interface TerminologyExtractionRecord {
+  sourceLanguageCode: string;
+  sourceFile: TerminologyCorpusFileRecord | null;
+  translatedFiles: TerminologyCorpusFileRecord[];
+  minimumFrequency: number;
+  candidates: TerminologyCandidate[];
+  reviewState: TerminologyReviewState;
+  section: "sources" | "review" | "merge" | "authoring";
+  savedAt: number;
+}
+
 interface NecesseDb extends DBSchema {
   meta: {
     key: string;
-    value: number | string | WorkspaceMetaRecord;
+    value: number | string | WorkspaceMetaRecord | TerminologyExtractionRecord;
   };
   lines: {
     key: number;

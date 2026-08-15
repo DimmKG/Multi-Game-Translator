@@ -821,6 +821,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const startOverRecovery = useCallback(() => {
     dismissPendingRecovery(true);
+    // continueRecovery lands on the editor tab; mirror that here so "start
+    // over" doesn't strand the user on whatever tab (e.g. terminology) they
+    // happened to be viewing when the recovery prompt appeared.
+    setState((current) => ({ ...current, view: "editor" }));
   }, [dismissPendingRecovery]);
 
   const updateEntryValue = useCallback(
