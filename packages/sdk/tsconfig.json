@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "declaration": true,
     "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
