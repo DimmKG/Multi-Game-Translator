@@ -12,9 +12,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { REVIEW_TEXTAREA_CLASS } from "@/features/editor/card-classes";
 
 import type { ReviewFilter } from "@/core/lang/markers";
-import { checkPlaceholders } from "@/core/tokens/protected";
 import { fixWhitespace, scanWhitespace } from "@/core/model/whitespace";
-import { referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
+import { placeholderIssues, referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { requestEditorScroll } from "@/features/editor/scroll-requests";
 import { useWorkspace } from "@/state/workspace-store";
@@ -179,11 +178,15 @@ export function ReviewView() {
         }
         renderItem={(entry) => {
           const reference = referenceDisplayText(entry);
-          const missing = checkPlaceholders(entry.source, entry.target);
+          const placeholders = placeholderIssues(entry.source, entry.target);
           const whitespace = scanWhitespace(entry.target, reference);
           const terminology = workspace.terminologyIssuesFor(entry);
           const status = entry.legacyStatus;
-          const flagged = missing.length > 0 || whitespace.any || terminology.length > 0;
+          const flagged =
+            placeholders.missingRequired.length > 0 ||
+            placeholders.missingFormattingKinds.length > 0 ||
+            whitespace.any ||
+            terminology.length > 0;
 
           return (
             <div
@@ -222,9 +225,16 @@ export function ReviewView() {
                       {t("rflag.sameRef")}
                     </span>
                   )}
-                  {missing.length > 0 && (
+                  {placeholders.missingRequired.length > 0 && (
                     <span className={cn(FLAG_CLASS, WARN_FLAG)}>
-                      {t("rflag.token", { list: missing.join(" ") })}
+                      {t("rflag.token", { list: placeholders.missingRequired.join(" ") })}
+                    </span>
+                  )}
+                  {placeholders.missingFormattingKinds.length > 0 && (
+                    <span className={cn(FLAG_CLASS, WARN_FLAG)}>
+                      {t("tokens.missingKind", {
+                        list: placeholders.missingFormattingKinds.join(", "),
+                      })}
                     </span>
                   )}
                   {whitespace.any && (
@@ -261,9 +271,9 @@ export function ReviewView() {
                   spellCheck={workspace.spellcheck}
                   onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
                 />
-                {missing.length > 0 && (
+                {placeholders.missingRequired.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {missing.map((token) => (
+                    {placeholders.missingRequired.map((token) => (
                       <Button
                         type="button"
                         key={token}

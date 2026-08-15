@@ -5,8 +5,9 @@ import {
   type PlaceholderTokenizer,
 } from "@mgt/sdk";
 
-/** Same pattern as today's PROTECTED_TOKEN_PATTERN. */
-const NECESSE_PLACEHOLDER_PATTERN = /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|[0-9A-Za-z])|\\n/g;
+/** Matches a Necesse `.lang` protected token: `<var>`, `[item/ref=...]`, `§color`, or a literal `\n`. */
+export const NECESSE_PLACEHOLDER_PATTERN =
+  /<[^>]+>|\[[^\]]+\]|§(?:#[0-9a-fA-F]{6}|[0-9A-Za-z])|\\n/g;
 
 /**
  * "required": <var> substitutions and the literal \n line-break escape — losing

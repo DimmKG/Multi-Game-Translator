@@ -2,15 +2,14 @@
 import type { TranslationDocument } from "@mgt/sdk";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
-import type { StoredLine } from "./line-codec";
 import type { WorkspaceView } from "@/core/lang/markers";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
 import type { TerminologyCandidate } from "@/core/terminology/extract-candidates";
 import type { TerminologyReviewState } from "@/core/terminology/review-persistence";
 
 export const DB_NAME = "necesse-translator";
-/** v2 adds the "documents" store (TranslationDocument-based persistence); "lines" is retired once the LangLine-based path is removed. */
-export const DB_VERSION = 2;
+/** v3 drops the pre-M4 "lines" store — persistence now lives entirely in "documents" (TranslationDocument-based). */
+export const DB_VERSION = 3;
 
 export interface WorkspaceUiFlags {
   touched: boolean;
@@ -34,17 +33,6 @@ export interface StoredGlossaryRecord extends NormalizedGlossary {
   enabled: boolean;
 }
 
-export interface WorkspaceMetaRecord {
-  filename: string;
-  referenceFilename: string;
-  eol: "\n" | "\r\n";
-  savedAt: number;
-  provider: string;
-  targetLanguage: string;
-  spellcheck: boolean;
-  autocompleteEnabled: boolean;
-}
-
 export interface TerminologyCorpusFileRecord {
   id: string;
   languageCode: string;
@@ -66,14 +54,7 @@ export interface TerminologyExtractionRecord {
 interface NecesseDb extends DBSchema {
   meta: {
     key: string;
-    value: number | string | WorkspaceMetaRecord | TerminologyExtractionRecord;
-  };
-  lines: {
-    key: number;
-    value: StoredLine;
-    indexes: {
-      "by-status": string;
-    };
+    value: number | string | TerminologyExtractionRecord;
   };
   glossaries: {
     key: string;
@@ -94,9 +75,11 @@ export function openNecesseDb(): Promise<IDBPDatabase<NecesseDb>> {
         if (!db.objectStoreNames.contains("meta")) {
           db.createObjectStore("meta");
         }
-        if (!db.objectStoreNames.contains("lines")) {
-          const lines = db.createObjectStore("lines", { keyPath: "id" });
-          lines.createIndex("by-status", "idx.status");
+        // Pre-M4 LangLine-based store — persistence now lives entirely in "documents".
+        // Cast to the native type: "lines" isn't a store the current schema knows about.
+        const native = db as unknown as IDBDatabase;
+        if (native.objectStoreNames.contains("lines")) {
+          native.deleteObjectStore("lines");
         }
         if (!db.objectStoreNames.contains("glossaries")) {
           db.createObjectStore("glossaries", { keyPath: "id" });

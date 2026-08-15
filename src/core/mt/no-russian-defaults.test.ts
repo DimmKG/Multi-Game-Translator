@@ -3,21 +3,32 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 import { codeFromFilename, normalizeProjectCode } from "@/core/mt/target-language";
-import { deserializeProgress } from "@/core/persistence/serialize";
+import { deserializeProgressV3 } from "@/core/persistence/serialize";
 
 describe("no Russian restore / language defaults", () => {
-  it("restoring progress never invents a Russian filename", () => {
-    const restored = deserializeProgress({
-      v: 2,
-      f: "",
-      e: 0,
-      s: 1,
-      n: "",
-      m: { p: "google", t: "", s: 1, a: 1 },
-      i: [],
+  it("restoring progress never invents a Russian filename or target locale", () => {
+    const restored = deserializeProgressV3({
+      v: 3,
+      document: {
+        gameLoaderId: "necesse",
+        fileLoaderId: "ini",
+        sourceLocale: "en",
+        targetLocale: "",
+        nodes: [],
+        formatMeta: {},
+        gameMeta: {},
+      },
+      uiFlags: {},
+      filename: "",
+      referenceFilename: "",
+      view: "editor",
+      savedAt: 1,
+      provider: "google",
+      spellcheck: true,
+      autocompleteEnabled: true,
     });
     expect(restored.filename).toBe("");
-    expect(restored.meta.targetLanguage).toBe("");
+    expect(restored.document.targetLocale).toBe("");
   });
 
   it("machine translation and spellcheck have no implicit Russian target", async () => {

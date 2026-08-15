@@ -16,7 +16,6 @@ import { I18nProvider } from "@/features/i18n/I18nProvider";
 import { WorkspaceProvider, useWorkspace } from "@/state/workspace-store";
 import { closeNecesseDb, DB_NAME, resetNecesseDbCache } from "./idb";
 import { saveWorkspaceDocument, loadWorkspaceDocument } from "./document-store";
-import { deserializeProgress, serializeProgress } from "./serialize";
 
 // Required by React's `act()` outside of a dedicated testing-library setup.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -177,25 +176,6 @@ describe("recovery / persistence contracts", () => {
       const node = stored?.document.nodes[0];
       return !!node && node.type === "entry" && node.entry.target === "Servus";
     });
-  });
-
-  it("serialize keeps neutral filename fallbacks", () => {
-    const document = serializeProgress({
-      filename: "",
-      referenceFilename: "",
-      eol: "\n",
-      savedAt: 1,
-      items: [],
-      meta: {
-        provider: "google",
-        targetLanguage: "",
-        spellcheck: true,
-        autocompleteEnabled: true,
-      },
-    });
-    const restored = deserializeProgress(document);
-    expect(restored.filename).toBe("");
-    expect(restored.meta.targetLanguage).toBe("");
   });
 
   // The overlapping-write re-entrancy guard (writeInFlight/rewriteRequested)

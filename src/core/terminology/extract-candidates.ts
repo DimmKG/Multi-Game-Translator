@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { parseLangFile } from "../lang/parse";
+import { parseNecesseRawFile } from "@mgt/mod-necesse";
 import {
   alignPhraseFamily,
   discoverPhraseFamilies,
@@ -154,7 +154,7 @@ function occurrenceIdentity(key: string, occurrence: number): string {
 
 function collectOccurrences(file: TerminologyCorpusFile): CorpusOccurrence[] {
   const counts = new Map<string, number>();
-  return parseLangFile(file.text).items.flatMap((item) => {
+  return parseNecesseRawFile(file.text).items.flatMap((item) => {
     if (item.type !== "entry" || item.wasMissing) return [];
     const occurrence = counts.get(item.key) ?? 0;
     counts.set(item.key, occurrence + 1);

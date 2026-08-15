@@ -104,6 +104,8 @@
     "tokens.label": "tokens:",
     "tokens.insertMissing": "Missing from the translation — click to insert",
     "tokens.insert": "Insert the token into the translation",
+    "tokens.missingKind": "⚠ formatting: {list}",
+    "tokens.missingKindHint": "This formatting marker type is entirely absent from the translation — it's fine to rephrase or drop individual markers, but the kind should appear somewhere",
     "mt.btnTitle": "Draft machine translation of the source text shown on this card (tokens are preserved). Always review it.",
     "mt.emptySrc": "Nothing to translate — source text is empty",
     "ws.fixTitle": "Click to remove the stray whitespace",

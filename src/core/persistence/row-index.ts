@@ -1,16 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { inspectTerminology } from "@/core/glossary/matcher";
 import type { NormalizedGlossary } from "@/core/glossary/loader";
-import type { EntryStatus, LangLine } from "@/core/lang/markers";
-import { statusOf, sourceText, type TranslationEntry } from "@/core/lang/status";
-import { missingTokens } from "@/core/tokens/protected";
-import { scanWhitespace } from "@/core/tokens/whitespace";
-
-/** Bump when IndexedDB object-store shape changes. */
-export const SCHEMA_VERSION = 1;
-
-/** Bump when status / token / whitespace / glossary indexing logic changes. */
-export const INDEXER_VERSION = 2;
+import type { EntryStatus } from "@/core/lang/markers";
 
 export interface RowIndex {
   status: EntryStatus;
@@ -78,22 +68,6 @@ export function glossaryFingerprint(glossaries: readonly GlossaryLike[]): string
     .join("|");
 }
 
-export function indexEntry(entry: TranslationEntry, glossaries: readonly GlossaryLike[]): RowIndex {
-  return indexEntryWith(entry, enabledOnly(glossaries));
-}
-
-/** Same as `indexEntry`, for callers that already filtered the enabled set. */
-function indexEntryWith(entry: TranslationEntry, enabled: GlossaryLike[]): RowIndex {
-  return {
-    status: statusOf(entry),
-    tokenIssue: missingTokens(entry).length > 0,
-    wsIssue: scanWhitespace(entry).any,
-    glossaryIssue:
-      inspectTerminology(sourceText(entry), entry.value, enabled, entry.key).length > 0,
-    hasRef: entry.ref != null,
-  };
-}
-
 /** True when both rows carry the same filter-relevant flags. */
 export function sameRowIndex(a: RowIndex | undefined, b: RowIndex | undefined): boolean {
   if (!a || !b) return a === b;
@@ -104,30 +78,6 @@ export function sameRowIndex(a: RowIndex | undefined, b: RowIndex | undefined): 
     a.glossaryIssue === b.glossaryIssue &&
     a.hasRef === b.hasRef
   );
-}
-
-export function buildRowIndexMap(
-  items: readonly LangLine[],
-  glossaries: readonly GlossaryLike[],
-): Map<number, RowIndex> {
-  const map = new Map<number, RowIndex>();
-  // Filtered once — this runs over every line of the file.
-  const enabled = enabledOnly(glossaries);
-  for (const item of items) {
-    if (item.type !== "entry") continue;
-    map.set(item.id, indexEntryWith(item, enabled));
-  }
-  return map;
-}
-
-export function reindexOne(
-  map: Map<number, RowIndex>,
-  entry: TranslationEntry,
-  glossaries: readonly GlossaryLike[],
-): RowIndex {
-  const next = indexEntry(entry, glossaries);
-  map.set(entry.id, next);
-  return next;
 }
 
 export function countFromIndex<K>(map: ReadonlyMap<K, RowIndex>): {

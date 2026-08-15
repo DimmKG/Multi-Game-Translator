@@ -2,6 +2,7 @@
 import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { GitCompareArrows } from "lucide-react";
 
+import { necesseLineDialect } from "@mgt/mod-necesse";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
 import { BarOptions } from "@/components/layout/BarOptions";
@@ -85,7 +86,7 @@ export function CompareView() {
   );
 
   const allRows = useMemo(
-    () => (leftLines.length ? diffRows(leftLines, rightLines) : []),
+    () => (leftLines.length ? diffRows(leftLines, rightLines, necesseLineDialect) : []),
     [leftLines, rightLines],
   );
 
@@ -148,7 +149,8 @@ export function CompareView() {
   );
 
   const summary = useMemo(
-    () => (leftLines.length ? summarizeRows(allRows, leftLines, rightLines) : null),
+    () =>
+      leftLines.length ? summarizeRows(allRows, leftLines, rightLines, necesseLineDialect) : null,
     [allRows, leftLines, rightLines],
   );
 
@@ -289,7 +291,7 @@ export function CompareView() {
             const right = row.rightIndex >= 0 ? rightLines[row.rightIndex] : "";
             const detail =
               row.kind === "change" && row.leftIndex >= 0 && row.rightIndex >= 0
-                ? compareEntryPair(left, right, workspace.diffMode)
+                ? compareEntryPair(left, right, necesseLineDialect, workspace.diffMode)
                 : null;
 
             // Highlight only the differing run; the status prefix and key stay literal.

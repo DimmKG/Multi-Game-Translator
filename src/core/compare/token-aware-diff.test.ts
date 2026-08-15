@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { necesseLineDialect } from "@mgt/mod-necesse";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,15 +11,18 @@ import {
   tokenizeProtected,
 } from "./token-aware-diff";
 
+// This tool is game-agnostic — every call below plugs in Necesse's dialect
+// (status prefixes + protected-token pattern) explicitly, the same way a real
+// caller would, rather than the tool assuming any one game's format.
 describe("token-aware-diff", () => {
   it("status prefixes are ignored for alignment but remain visible as changes", () => {
     const left = ["MISSING_TRANSLATION:greeting=Hello"];
     const right = ["greeting=Hello"];
-    const rows = diffRows(left, right);
+    const rows = diffRows(left, right, necesseLineDialect);
     expect(rows).toHaveLength(1);
     expect(rows[0].kind).toBe("change");
     expect(rows[0].prefixOnly).toBe(true);
-    expect(summarizeRows(rows, left, right)).toEqual({
+    expect(summarizeRows(rows, left, right, necesseLineDialect)).toEqual({
       added: 0,
       deleted: 0,
       changed: 1,
@@ -29,7 +33,7 @@ describe("token-aware-diff", () => {
   });
 
   it("entry comparison reports key and value changes separately", () => {
-    const detail = compareEntryPair("oldkey=Old value", "newkey=New value");
+    const detail = compareEntryPair("oldkey=Old value", "newkey=New value", necesseLineDialect);
     expect(detail.type).toBe("entry");
     if (detail.type === "entry") {
       expect(detail.statusChanged).toBe(false);
@@ -39,7 +43,7 @@ describe("token-aware-diff", () => {
   });
 
   it("protected placeholders remain atomic in word mode", () => {
-    const result = inlineSegments("Hello <name>!", "Hi <name>!", "word");
+    const result = inlineSegments("Hello <name>!", "Hi <name>!", necesseLineDialect, "word");
     const leftEqual = result.left
       .filter((segment) => segment.kind === "equal")
       .map((segment) => segment.text)
@@ -56,18 +60,24 @@ describe("token-aware-diff", () => {
 
   it("references, formatting codes and literal newlines remain atomic in character mode", () => {
     const text = "[item=wood] §aValue\\n";
-    const units = tokenizeProtected(text, "character");
+    const units = tokenizeProtected(text, necesseLineDialect, "character");
     const protectedValues = units.filter((unit) => unit.protected).map((unit) => unit.value);
     expect(protectedValues).toEqual(["[item=wood]", "§a", "\\n"]);
   });
 
   it("comments and section headers stay on the ordinary text path", () => {
-    expect(parseLangLine("// comment").type).toBe("text");
-    expect(parseLangLine("[lang]").type).toBe("text");
+    expect(parseLangLine("// comment", necesseLineDialect).type).toBe("text");
+    expect(parseLangLine("[lang]", necesseLineDialect).type).toBe("text");
   });
 
   it("large inline comparisons use a safe fallback", () => {
-    const result = inlineSegments("a".repeat(300), "b".repeat(300), "character", 1000);
+    const result = inlineSegments(
+      "a".repeat(300),
+      "b".repeat(300),
+      necesseLineDialect,
+      "character",
+      1000,
+    );
     expect(result.fallback).toBe(true);
   });
 });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
+  checkPlaceholders,
   iniFileLoader,
   type EntryStatus as SdkEntryStatus,
   type TranslationDocument,
@@ -8,10 +9,10 @@ import {
 import {
   necesseEntryExt,
   necesseGameLoader,
+  necessePlaceholderTokenizer,
   necesseStatusStrategy,
   type NecesseEntryExt,
 } from "@mgt/mod-necesse";
-import { checkPlaceholders } from "@/core/tokens/protected";
 import { scanWhitespace } from "@/core/model/whitespace";
 import type { EntryStatus as LegacyStatus } from "@/core/lang/markers";
 import type { WorkspaceUiFlags } from "@/core/persistence/idb";
@@ -146,6 +147,25 @@ export function referenceDisplayText(entry: WorkspaceEntry): string | null {
   return entry.referenceText ?? (entry.wasMissing ? entry.originalValue : null);
 }
 
+export interface PlaceholderIssues {
+  /** Required tokens (e.g. `<var>`) missing from target — exact instances, safe to insert verbatim. */
+  missingRequired: string[];
+  /**
+   * Formatting kinds (e.g. `[item/ref=...]`, `§color`) whose kind is entirely
+   * absent from target — no single canonical instance, so nothing to insert.
+   */
+  missingFormattingKinds: string[];
+}
+
+/** Necesse-specific placeholder check: required tokens block, formatting kinds only warn on total absence. */
+export function placeholderIssues(source: string, target: string): PlaceholderIssues {
+  const result = checkPlaceholders(source, target, necessePlaceholderTokenizer);
+  return {
+    missingRequired: result.missingRequired.map((token) => token.raw),
+    missingFormattingKinds: result.missingFormattingKinds,
+  };
+}
+
 export function hasUsableReference(
   entries: readonly WorkspaceEntry[],
   referenceFilename: string,
@@ -214,9 +234,11 @@ function enabledOnly(glossaries: readonly GlossaryLike[]): GlossaryLike[] {
 }
 
 function indexWorkspaceEntry(entry: WorkspaceEntry, enabled: GlossaryLike[]): RowIndex {
+  const placeholders = placeholderIssues(entry.source, entry.target);
   return {
     status: entry.legacyStatus,
-    tokenIssue: checkPlaceholders(entry.source, entry.target).length > 0,
+    tokenIssue:
+      placeholders.missingRequired.length > 0 || placeholders.missingFormattingKinds.length > 0,
     wsIssue: scanWhitespace(entry.target, referenceDisplayText(entry)).any,
     glossaryIssue: inspectTerminology(entry.source, entry.target, enabled, entry.key).length > 0,
     hasRef: entry.referenceText != null,

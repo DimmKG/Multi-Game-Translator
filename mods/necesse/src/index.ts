@@ -4,7 +4,7 @@ import { necesseGameLoader } from "./game-loader";
 
 export { necesseGameLoader } from "./game-loader";
 export { necesseEntryExt, necesseStatusStrategy, type NecesseEntryExt } from "./status";
-export { necessePlaceholderTokenizer } from "./placeholders";
+export { NECESSE_PLACEHOLDER_PATTERN, necessePlaceholderTokenizer } from "./placeholders";
 export { buildReferenceQueues, referenceIdentity } from "./reference";
 export {
   ENGLISH_ENGNAME_VALUE,
@@ -13,6 +13,14 @@ export {
   normalizeEnglishReferenceFilename,
   validateEnglishReferenceFile,
 } from "./validate-reference";
+export { MISSING_TRANSLATION_PREFIX, SAME_TRANSLATION_PREFIX, stripStatusPrefix } from "./markers";
+export {
+  cleanNecesseFilename,
+  parseNecesseRawFile,
+  type NecesseRawFile,
+  type NecesseRawLine,
+} from "./raw-lines";
+export { necesseLineDialect } from "./line-dialect";
 
 /** Entry point the host calls after dynamically import()-ing this mod. */
 export default function register(sdk: ModSdk): void {

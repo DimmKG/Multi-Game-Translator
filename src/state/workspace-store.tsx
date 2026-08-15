@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { iniFileLoader, type TranslationDocument } from "@mgt/sdk";
 import {
   buildReferenceQueues,
+  cleanNecesseFilename,
   necesseEntryExt,
   necesseGameLoader,
   necesseStatusStrategy,
@@ -22,7 +23,6 @@ import {
   type NecesseEntryExt,
 } from "@mgt/mod-necesse";
 import type { DiffMode, FilterMode, ReviewFilter, WorkspaceView } from "@/core/lang/markers";
-import { cleanLangFilename } from "@/core/lang/parse";
 import { normalizeSearchQuery } from "@/core/lang/search-query";
 import {
   buildWorkspaceEntries,
@@ -580,7 +580,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         targetLang?: string;
       } = {},
     ) => {
-      const filename = options.filename ? cleanLangFilename(options.filename) : "";
+      const filename = options.filename ? cleanNecesseFilename(options.filename) : "";
       const targetLanguage = Object.hasOwn(options, "targetLang")
         ? String(options.targetLang || "")
         : codeFromFilename(filename);

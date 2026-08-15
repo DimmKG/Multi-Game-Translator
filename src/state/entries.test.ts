@@ -12,6 +12,7 @@ import {
   exportedText,
   findWorkspaceEntry,
   hasUsableReference,
+  placeholderIssues,
   reindexWorkspaceEntry,
   referenceDisplayText,
   toggleEntryMarkedSame,
@@ -182,6 +183,44 @@ describe("hasUsableReference", () => {
     expect(hasUsableReference(withMatch, "en.lang")).toBe(true);
     expect(hasUsableReference(withMatch, "")).toBe(false);
     expect(hasUsableReference(withoutMatch, "en.lang")).toBe(false);
+  });
+});
+
+describe("placeholderIssues", () => {
+  it("flags a missing required token (var)", () => {
+    expect(placeholderIssues("Hello <name>", "Hallo")).toEqual({
+      missingRequired: ["<name>"],
+      missingFormattingKinds: [],
+    });
+  });
+
+  it("returns nothing when every required token is present", () => {
+    expect(placeholderIssues("Hello <name>", "Hallo <name>")).toEqual({
+      missingRequired: [],
+      missingFormattingKinds: [],
+    });
+  });
+
+  it("is multiset-aware for required tokens: two occurrences need two matches", () => {
+    expect(placeholderIssues("<a> and <a>", "<a>").missingRequired).toEqual(["<a>"]);
+    expect(placeholderIssues("<a> and <a>", "<a> und <a>").missingRequired).toEqual([]);
+  });
+
+  it("does not flag a formatting kind that is merely reordered or reduced in count", () => {
+    const issues = placeholderIssues("[item/ref=sword] and [item/ref=shield]", "[item/ref=shield]");
+    expect(issues.missingFormattingKinds).toEqual([]);
+  });
+
+  it("flags a formatting kind only when it is entirely absent from target", () => {
+    const issues = placeholderIssues("Take the [item/ref=sword]", "Take it");
+    expect(issues.missingFormattingKinds).toEqual(["ref"]);
+  });
+
+  it("returns nothing when source has no protected tokens", () => {
+    expect(placeholderIssues("Hello", "Hallo")).toEqual({
+      missingRequired: [],
+      missingFormattingKinds: [],
+    });
   });
 });
 

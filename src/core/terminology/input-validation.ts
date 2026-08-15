@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { parseLangFile } from "../lang/parse";
+import { parseNecesseRawFile } from "@mgt/mod-necesse";
 import type { TerminologyCorpusFile } from "./extract-candidates";
 
 export type TerminologyInputProblemCode =
@@ -29,7 +29,7 @@ function normalizedFilename(value: string): string {
 
 function entryKeys(file: TerminologyCorpusFile): Set<string> {
   return new Set(
-    parseLangFile(file.text).items.flatMap((item) =>
+    parseNecesseRawFile(file.text).items.flatMap((item) =>
       item.type === "entry" && !item.wasMissing ? [item.key] : [],
     ),
   );

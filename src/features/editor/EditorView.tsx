@@ -57,9 +57,9 @@ import { TerminologyRuleDialog } from "@/features/editor/TerminologyRuleDialog";
 
 import type { FilterMode } from "@/core/lang/markers";
 import { metadataGuidanceFor } from "@/core/metadata/guidance";
-import { checkPlaceholders, tokenKind, tokensOf } from "@/core/tokens/protected";
+import { tokenKind, tokensOf } from "@/core/tokens/protected";
 import { fixWhitespace, scanWhitespace } from "@/core/model/whitespace";
-import { referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
+import { placeholderIssues, referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import {
   clearPendingScroll,
@@ -149,7 +149,7 @@ const EntryCard = memo(function EntryCard({
   const { t } = useI18n();
   const workspace = useWorkspace();
   const status = entry.legacyStatus;
-  const missing = checkPlaceholders(entry.source, entry.target);
+  const placeholders = placeholderIssues(entry.source, entry.target);
   const reference = referenceDisplayText(entry);
   const whitespace = scanWhitespace(entry.target, reference);
   const guidance = metadataGuidanceFor(entry);
@@ -219,10 +219,10 @@ const EntryCard = memo(function EntryCard({
         />
 
         <div className={ROW3_CLASS}>
-          {missing.length > 0 && (
+          {placeholders.missingRequired.length > 0 && (
             <span className="text-foreground-faint me-0.5 text-[11px]">{t("tokens.label")}</span>
           )}
-          {missing.map((token) => (
+          {placeholders.missingRequired.map((token) => (
             <Button
               type="button"
               key={token}
@@ -238,6 +238,14 @@ const EntryCard = memo(function EntryCard({
               ⚠ {token}
             </Button>
           ))}
+          {placeholders.missingFormattingKinds.length > 0 && (
+            <Badge
+              className={cn(ENTRY_BADGE_CLASS, "bg-warn-soft/60 text-warn font-mono")}
+              title={t("tokens.missingKindHint")}
+            >
+              {t("tokens.missingKind", { list: placeholders.missingFormattingKinds.join(", ") })}
+            </Badge>
+          )}
           {whitespace.any && (
             <Button
               type="button"

@@ -2,8 +2,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-import { buildLangFile } from "@/core/lang/export";
-import { parseLangFile } from "@/core/lang/parse";
+import { iniFileLoader } from "@mgt/sdk";
+import { necesseGameLoader, necesseLineDialect } from "@mgt/mod-necesse";
+import { exportedText } from "@/state/entries";
 import { diffRows, summarizeRows } from "./token-aware-diff";
 
 // Committed synthetic fixture — not a copyrighted game localization file.
@@ -20,10 +21,11 @@ const lines = raw.split(/\r\n|\n/);
  */
 describe("alignment on real-sized files", () => {
   it("reports no differences between a file and its own export", () => {
-    const parsed = parseLangFile(raw);
-    const rebuilt = buildLangFile(parsed.items, parsed.eol).split(/\r\n|\n/);
-    const rows = diffRows(lines, rebuilt);
-    const summary = summarizeRows(rows, lines, rebuilt);
+    const parsedRaw = iniFileLoader.parse({ files: [{ name: "translation.lang", text: raw }] });
+    const document = necesseGameLoader.toDocument(parsedRaw, [{ role: "translation" }], "de");
+    const rebuilt = exportedText(document).split(/\r\n|\n/);
+    const rows = diffRows(lines, rebuilt, necesseLineDialect);
+    const summary = summarizeRows(rows, lines, rebuilt, necesseLineDialect);
 
     expect(lines.length).toBeGreaterThan(5000);
     expect(rows.every((row) => row.kind === "equal")).toBe(true);
@@ -37,8 +39,8 @@ describe("alignment on real-sized files", () => {
     edited.splice(3000, 1);
     edited.splice(5000, 0, "addedkey=Added");
 
-    const rows = diffRows(lines, edited);
-    const summary = summarizeRows(rows, lines, edited);
+    const rows = diffRows(lines, edited, necesseLineDialect);
+    const summary = summarizeRows(rows, lines, edited, necesseLineDialect);
 
     expect(summary.changed).toBe(2);
     expect(summary.added).toBe(1);
@@ -48,7 +50,7 @@ describe("alignment on real-sized files", () => {
 
   it("still aligns when one side is truncated", () => {
     const half = lines.slice(0, Math.floor(lines.length / 2));
-    const rows = diffRows(lines, half);
+    const rows = diffRows(lines, half, necesseLineDialect);
     const equal = rows.filter((row) => row.kind === "equal").length;
     expect(equal).toBeGreaterThan(half.length - 10);
   });

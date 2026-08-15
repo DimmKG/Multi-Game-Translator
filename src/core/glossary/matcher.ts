@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { PROTECTED_TOKEN_PATTERN } from "@/core/lang/markers";
+import { NECESSE_PLACEHOLDER_PATTERN } from "@mgt/mod-necesse";
 
 export interface GlossaryEntry {
   source: string;
@@ -66,7 +66,7 @@ function termPattern(term: string, wholeWord: boolean) {
 
 export function stripProtectedTokens(text: string): string {
   if (typeof text !== "string") return "";
-  return text.replace(PROTECTED_TOKEN_PATTERN, " ");
+  return text.replace(NECESSE_PLACEHOLDER_PATTERN, " ");
 }
 
 export function containsGlossaryTerm(
