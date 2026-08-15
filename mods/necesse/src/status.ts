@@ -22,8 +22,24 @@ export interface NecesseNativeState {
   hasReference: boolean;
 }
 
+/**
+ * Validates entry.ext actually has the shape necesseGameLoader.toDocument()
+ * produces before trusting it — an unchecked cast here degrades to silently
+ * wrong output (e.g. a dropped/garbled status marker) instead of a clear error.
+ */
 function ext(entry: TranslationEntry): NecesseEntryExt {
-  return entry.ext as NecesseEntryExt;
+  const value = entry.ext;
+  if (
+    typeof value?.markedSame !== "boolean" ||
+    typeof value.wasMissing !== "boolean" ||
+    typeof value.originalValue !== "string" ||
+    typeof value.hasReference !== "boolean"
+  ) {
+    throw new TypeError(
+      `Entry "${entry.id}" is missing the Necesse ext fields (markedSame/wasMissing/originalValue/hasReference) — was it produced by necesseGameLoader.toDocument()?`,
+    );
+  }
+  return value as NecesseEntryExt;
 }
 
 /**

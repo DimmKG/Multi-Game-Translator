@@ -9,4 +9,5 @@ export * from "./helpers/tokenizer";
 export * from "./helpers/identity";
 export * from "./helpers/plural";
 export * from "./helpers/ini";
+export * from "./helpers/create-from-reference";
 export * from "./loaders/ini-file-loader";

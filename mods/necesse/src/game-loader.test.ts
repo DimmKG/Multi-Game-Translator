@@ -248,6 +248,20 @@ describe("necesseGameLoader.fromDocument", () => {
     const output = iniFileLoader.serialize(raw);
     expect(output.files[0]?.text).toBe(text);
   });
+
+  it("throws instead of silently corrupting output when formatMeta is foreign/malformed", () => {
+    const doc = toDoc([{ name: "t.lang", text: "key=value\n" }], [{ role: "translation" }]);
+    const foreign: TranslationDocument = { ...doc, formatMeta: {} };
+    expect(() => necesseGameLoader.fromDocument(foreign)).toThrow(/formatMeta/);
+  });
+
+  it("throws instead of silently corrupting output when an entry's ext is foreign/malformed", () => {
+    const doc = toDoc([{ name: "t.lang", text: "key=value\n" }], [{ role: "translation" }]);
+    const [hello] = entries(doc);
+    if (!hello) throw new Error("expected an entry");
+    hello.ext = {};
+    expect(() => necesseGameLoader.fromDocument(doc)).toThrow(/ext fields/);
+  });
 });
 
 describe("necesseGameLoader.detectGame", () => {

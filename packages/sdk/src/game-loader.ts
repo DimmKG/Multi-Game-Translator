@@ -59,6 +59,16 @@ export interface GameLoader<TRaw = unknown> {
   detectGame(input: FileLoaderInput): number;
   toDocument(raw: TRaw, roles: { role: string }[]): TranslationDocument;
   fromDocument(doc: TranslationDocument): TRaw;
+  /**
+   * Optional: build a blank TranslationDocument from just a reference file (no
+   * translation file yet) — every entry starts in whatever "untranslated" state
+   * this format uses. Absent = this loader has no notion of starting a
+   * translation from a reference alone; the host's "create new" UI action is
+   * unavailable for this game. `referenceRaw` is whatever this loader's
+   * fileLoaderId produced for the reference file alone (same shape as toDocument's
+   * `raw`, just parsed from a single file).
+   */
+  createFromReference?(referenceRaw: TRaw): TranslationDocument;
 
   /**
    * Each token is classified as "required" (a value substitution — must round-trip,

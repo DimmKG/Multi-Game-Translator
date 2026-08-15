@@ -27,6 +27,24 @@ function findRoleIndex(roles: { role: string }[], role: string): number {
   return roles.findIndex((entry) => entry.role === role);
 }
 
+/**
+ * Validates doc.formatMeta actually has the shape toDocument() produces
+ * before trusting it — an unchecked cast here degrades to silently wrong
+ * output (e.g. the literal string "undefined" spliced into an exported line)
+ * instead of a clear error.
+ */
+function readFormatMeta(doc: TranslationDocument): NecesseFormatMeta {
+  const meta = doc.formatMeta;
+  const eol = meta.eol;
+  const trailingNewline = meta.trailingNewline;
+  if ((eol !== "\n" && eol !== "\r\n") || typeof trailingNewline !== "boolean") {
+    throw new TypeError(
+      `TranslationDocument.formatMeta is missing valid Necesse fields (eol/trailingNewline) — was this document produced by necesseGameLoader.toDocument()?`,
+    );
+  }
+  return { eol, trailingNewline };
+}
+
 function toDocument(raw: IniFileLoaderRaw, roles: { role: string }[]): TranslationDocument {
   const translationIndex = findRoleIndex(roles, "translation");
   const translation = translationIndex >= 0 ? raw[translationIndex] : undefined;
@@ -112,7 +130,7 @@ function toDocument(raw: IniFileLoaderRaw, roles: { role: string }[]): Translati
 }
 
 function fromDocument(doc: TranslationDocument): IniFileLoaderRaw {
-  const meta = doc.formatMeta as NecesseFormatMeta;
+  const meta = readFormatMeta(doc);
   const lines: IniLine[] = doc.nodes.map((node, index) => {
     const isLast = index === doc.nodes.length - 1;
     const eol: LineEol = isLast ? (meta.trailingNewline ? meta.eol : "") : meta.eol;
@@ -136,6 +154,32 @@ function fromDocument(doc: TranslationDocument): IniFileLoaderRaw {
   });
 
   return [{ name: "translation.lang", ini: { eol: meta.eol, lines } }];
+}
+
+/**
+ * Builds a blank TranslationDocument from just a reference file — every entry
+ * starts MISSING_TRANSLATION (with the English text as an editable starting
+ * point), except an entry the reference itself already tagged SAME_TRANSLATION
+ */
+function createFromReference(referenceRaw: IniFileLoaderRaw): TranslationDocument {
+  const referenceEntry = referenceRaw[0];
+  if (!referenceEntry) {
+    throw new Error("necesseGameLoader.createFromReference requires a reference file.");
+  }
+
+  const draftLines: IniLine[] = referenceEntry.ini.lines.map((line) => {
+    if (line.type !== "pair") return line;
+    const { key: bareKey, markedSame } = stripStatusPrefix(line.key);
+    const key = `${markedSame ? SAME_TRANSLATION_PREFIX : MISSING_TRANSLATION_PREFIX}${bareKey}`;
+    return { ...line, key, raw: `${key}=${line.value}` };
+  });
+
+  const draftEntry = {
+    name: referenceEntry.name,
+    ini: { eol: referenceEntry.ini.eol, lines: draftLines },
+  };
+
+  return toDocument([referenceEntry, draftEntry], [{ role: "reference" }, { role: "translation" }]);
 }
 
 function detectGame(input: FileLoaderInput): number {
@@ -180,6 +224,7 @@ export const necesseGameLoader: GameLoader<IniFileLoaderRaw> = {
   detectGame,
   toDocument,
   fromDocument,
+  createFromReference,
   placeholders: necessePlaceholderTokenizer,
   statusStrategy: necesseStatusStrategy,
   locale: {},
