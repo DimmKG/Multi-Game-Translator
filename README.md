@@ -15,10 +15,6 @@ The editor works locally in the browser and supports reference files, translatio
 - Tailwind CSS + [shadcn/ui](https://ui.shadcn.com/)
 - Vitest, ESLint (recommended), Prettier
 
-## Origin and credits
-
-The project began with a minimal standalone HTML editor created by **DimmKG** and shared in the Necesse Discord community on 30 July 2026. The original baseline is preserved in `legacy/necesse-lang-translator.original.html`.
-
 ## Features
 
 - open and edit Necesse `.lang` files locally;
