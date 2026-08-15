@@ -180,6 +180,7 @@ interface WorkspaceContextValue extends WorkspaceState {
     },
   ) => void;
   openLangFile: (file: File) => Promise<void>;
+  openWorkspaceWithReference: (translationFile: File, referenceFile: File) => Promise<void>;
   createFromReferenceFile: (file: File) => Promise<void>;
   loadReferenceFile: (file: File) => Promise<void>;
   exportLang: () => void;
@@ -331,7 +332,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       items: [],
       filter: "missing",
       query: "",
-      view: glossaryAuthoringSession ? "terminology" : "editor",
+      // A lingering unsaved glossary draft must not hijack the initial screen
+      // on every reload — it stays fully intact either way, the user just
+      // navigates to Terminology themselves when they want it.
+      view: "editor",
       reviewFilter: "all",
       reviewQuery: "",
       spellcheck: true,
@@ -643,6 +647,30 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       await runWithImportSpinner(async () => {
         const text = await readFileAsText(file);
         openWorkspaceFromText(text, { filename: file.name });
+        toast.success(t("toast.fileLoaded"));
+      });
+    },
+    [openWorkspaceFromText, runWithImportSpinner, t],
+  );
+
+  const openWorkspaceWithReference = useCallback(
+    async (translationFile: File, referenceFile: File) => {
+      await runWithImportSpinner(async () => {
+        const [translationText, referenceText] = await Promise.all([
+          readFileAsText(translationFile),
+          readFileAsText(referenceFile),
+        ]);
+        const validation = validateEnglishReferenceFile(referenceFile.name, referenceText);
+        if (!validation.ok) {
+          toast.error(t(validation.messageKey));
+          return;
+        }
+        openWorkspaceFromText(translationText, {
+          filename: translationFile.name,
+          referenceFilename: validation.filename,
+          referenceSourceText: referenceText,
+          targetLang: codeFromFilename(translationFile.name),
+        });
         toast.success(t("toast.fileLoaded"));
       });
     },
@@ -1151,6 +1179,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     isImportingFile,
     openWorkspaceFromText,
     openLangFile,
+    openWorkspaceWithReference,
     createFromReferenceFile,
     loadReferenceFile,
     exportLang,

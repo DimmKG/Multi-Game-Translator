@@ -22,12 +22,102 @@ const LEGEND_ITEMS = [
   { id: "nl", color: "var(--tok-nl)", literal: "\\n" },
 ] as const;
 
+function FileDropBox({
+  testId,
+  inputId,
+  label,
+  hint,
+  file,
+  disabled,
+  pickLabel,
+  onFile,
+}: {
+  testId: string;
+  inputId: string;
+  label: string;
+  hint: string;
+  file: File | null;
+  disabled: boolean;
+  pickLabel: string;
+  onFile: (file: File) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <div
+      data-testid={testId}
+      className={cn(
+        "grid gap-1.5 rounded-lg border-2 border-dashed p-3.5 text-start transition",
+        !disabled && "cursor-pointer",
+        disabled && "border-border opacity-50",
+        !disabled && !file && "border-warn bg-warn-soft",
+        !disabled && file && "border-success bg-success-soft",
+        dragging && !disabled && "border-primary bg-primary-soft",
+      )}
+      onClick={() => !disabled && inputRef.current?.click()}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        if (!disabled) setDragging(true);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        if (!disabled) setDragging(true);
+      }}
+      onDragLeave={(event) => {
+        event.preventDefault();
+        setDragging(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+        if (disabled) return;
+        const dropped = event.dataTransfer.files?.[0];
+        if (dropped) onFile(dropped);
+      }}
+    >
+      <span className="text-sm font-medium">{label}</span>
+      <span className="ltr-isolate text-muted-foreground truncate text-xs">
+        {file ? file.name : hint}
+      </span>
+      <input
+        ref={inputRef}
+        id={inputId}
+        type="file"
+        accept=".lang,.txt"
+        hidden
+        disabled={disabled}
+        onChange={(event) => {
+          const picked = event.target.files?.[0];
+          if (picked) onFile(picked);
+          event.target.value = "";
+        }}
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={disabled}
+        className="mt-1 justify-self-start"
+        onClick={(event) => {
+          event.stopPropagation();
+          inputRef.current?.click();
+        }}
+      >
+        {pickLabel}
+      </Button>
+    </div>
+  );
+}
+
 export function Dropzone() {
   const { t } = useI18n();
-  const { openLangFile, createFromReferenceFile, isImportingFile } = useWorkspace();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const newRef = useRef<HTMLInputElement>(null);
-  const [dragging, setDragging] = useState(false);
+  const { openWorkspaceWithReference, createFromReferenceFile, isImportingFile } = useWorkspace();
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  const [translationFile, setTranslationFile] = useState<File | null>(null);
+
+  const canOpen = originalFile != null && translationFile != null && !isImportingFile;
+  const canCreateNew = originalFile != null && translationFile == null && !isImportingFile;
 
   return (
     <div className="flex flex-1 items-center justify-center p-10">
@@ -35,29 +125,7 @@ export function Dropzone() {
         id="drop"
         data-testid="dropzone"
         aria-busy={isImportingFile}
-        className={cn(
-          "bg-card w-[min(560px,90%)] border-[1.5px] border-dashed px-[34px] py-11 transition",
-          dragging && "border-primary bg-secondary",
-        )}
-        onDragEnter={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={(event) => {
-          event.preventDefault();
-          setDragging(false);
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          if (isImportingFile) return;
-          const file = event.dataTransfer.files?.[0];
-          if (file) void openLangFile(file);
-        }}
+        className="bg-card w-[min(560px,90%)] border-[1.5px] border-dashed px-[34px] py-11 transition"
       >
         <EmptyHeader className="max-w-none">
           <EmptyMedia
@@ -85,22 +153,51 @@ export function Dropzone() {
         </EmptyHeader>
 
         <EmptyContent className="max-w-none gap-0">
+          <div className="mb-4 grid w-full gap-3 sm:grid-cols-2">
+            <FileDropBox
+              testId="dropzone-original"
+              inputId="originalFileInput"
+              label={t("drop.originalLabel")}
+              hint={t("drop.originalHint")}
+              pickLabel={t("drop.pick")}
+              file={originalFile}
+              disabled={isImportingFile}
+              onFile={setOriginalFile}
+            />
+            <FileDropBox
+              testId="dropzone-translation"
+              inputId="translationFileInput"
+              label={t("drop.translationLabel")}
+              hint={originalFile ? t("drop.pick") : t("drop.translationRequiresOriginalHint")}
+              pickLabel={t("drop.pick")}
+              file={translationFile}
+              disabled={isImportingFile || !originalFile}
+              onFile={setTranslationFile}
+            />
+          </div>
+
           <div className="mb-[22px] flex flex-wrap items-center justify-center gap-2">
             <Button
               type="button"
-              id="btnPick"
-              disabled={isImportingFile}
-              onClick={() => inputRef.current?.click()}
+              id="btnOpenTranslation"
+              disabled={!canOpen}
+              onClick={() => {
+                if (originalFile && translationFile) {
+                  void openWorkspaceWithReference(translationFile, originalFile);
+                }
+              }}
             >
-              {t("drop.pick")}
+              {t("drop.open")}
             </Button>
             <Button
               type="button"
               variant="ghost"
               data-new-translation-button=""
               title={t("btn.newTranslationTitle")}
-              disabled={isImportingFile}
-              onClick={() => newRef.current?.click()}
+              disabled={!canCreateNew}
+              onClick={() => {
+                if (originalFile) void createFromReferenceFile(originalFile);
+              }}
             >
               {t("btn.newTranslation")}
             </Button>
@@ -130,31 +227,6 @@ export function Dropzone() {
             ))}
           </div>
         </EmptyContent>
-
-        <input
-          ref={inputRef}
-          id="fileInput"
-          type="file"
-          accept=".lang,.txt"
-          hidden
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void openLangFile(file);
-            event.target.value = "";
-          }}
-        />
-        <input
-          ref={newRef}
-          id="newTranslationInput"
-          type="file"
-          accept=".lang,.txt"
-          hidden
-          onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void createFromReferenceFile(file);
-            event.target.value = "";
-          }}
-        />
       </Empty>
     </div>
   );

@@ -22,7 +22,9 @@ describe("glossary authoring workflow wiring", () => {
     expect(storeSource).toContain(
       "const glossaryAuthoringSession = loadGlossaryAuthoringRecovery()",
     );
-    expect(storeSource).toContain('view: glossaryAuthoringSession ? "terminology" : "editor"');
+    // A recoverable draft must not hijack the initial screen on every reload —
+    // it stays intact regardless of which tab the app opens to.
+    expect(storeSource).toContain('view: "editor"');
     expect(storeSource).toContain("saveGlossaryAuthoringRecovery(session)");
     expect(storeSource).toContain("saveGlossaryAuthoringSession(");
     expect(storeSource).toContain("exportGlossaryAuthoringSession(");
