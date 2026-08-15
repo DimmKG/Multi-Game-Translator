@@ -177,7 +177,12 @@ function WorkspaceShell({
                 <TabsContent value="diff" className={TAB_PANE} tabIndex={-1}>
                   <CompareView />
                 </TabsContent>
-                <TabsContent value="terminology" className={TAB_PANE} tabIndex={-1}>
+                <TabsContent
+                  value="terminology"
+                  className={cn(TAB_PANE, "data-[state=inactive]:hidden")}
+                  tabIndex={-1}
+                  forceMount
+                >
                   <TerminologyWorkspace />
                 </TabsContent>
 
