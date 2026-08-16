@@ -1,19 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 const DEFAULT_MATRIX_LIMIT = 60000;
+const DEFAULT_LINE_MATRIX_LIMIT = 1_500_000;
 
-/**
- * The bits of a game's line format this generic diff tool needs but doesn't
- * hardcode: the status-prefix strings a line diff should align across (so a
- * status-only change doesn't read as a full line replacement), and the
- * protected-token pattern inline diffing should keep atomic. Callers get
- * this from their game loader/mod, e.g. `necesseLineDialect` from `@mgt/mod-necesse`.
- */
-export interface LineDialect {
-  missingPrefix: string;
-  samePrefix: string;
-  protectedTokenPattern: RegExp;
-}
+/** Union of comment styles a bare ini-shaped line might use — a permissive default, not tied to any one game. */
+const DEFAULT_COMMENT_PREFIXES = ["//", "#", ";"];
 
 export type DiffSegmentKind = "equal" | "add" | "delete";
 
@@ -22,61 +13,55 @@ export interface DiffSegment {
   text: string;
 }
 
-export interface TokenUnit {
-  value: string;
-  protected: boolean;
-}
+/** Normalizes a line for alignment purposes — e.g. stripping a game's status marker so a status-only change still aligns as one row. Default: no normalization at all. */
+export type LineIdentity = (line: string) => string;
 
-export function splitStatusPrefix(
+/** Classifies a line as a key/value entry (or null if it's structural — blank/comment/section). A game's status-marker convention, if any, is this callback's job to strip. */
+export type ParseEntryLine = (
   line: string,
-  dialect: LineDialect,
-): {
-  status: "missing" | "same" | "none";
-  prefix: string;
-  body: string;
-} {
-  const text = String(line ?? "");
-  if (text.startsWith(dialect.missingPrefix)) {
-    return {
-      status: "missing",
-      prefix: dialect.missingPrefix,
-      body: text.slice(dialect.missingPrefix.length),
-    };
-  }
-  if (text.startsWith(dialect.samePrefix)) {
-    return {
-      status: "same",
-      prefix: dialect.samePrefix,
-      body: text.slice(dialect.samePrefix.length),
-    };
-  }
-  return { status: "none", prefix: "", body: text };
+) => { status: string | null; prefix: string; key: string; value: string } | null;
+
+export interface DiffOptions {
+  /** Default: identity — no per-game alignment normalization. */
+  identity?: LineIdentity;
+  /** Default: a plain "=" split; comment/section/blank lines are excluded. */
+  parseEntryLine?: ParseEntryLine;
+  mode?: "word" | "character";
+  matrixLimit?: number;
 }
 
-export function parseLangLine(line: string, dialect: LineDialect) {
+function defaultIdentity(line: string): string {
+  return line;
+}
+
+function defaultParseEntryLine(
+  line: string,
+): { status: string | null; prefix: string; key: string; value: string } | null {
   const raw = String(line ?? "");
   const trimmed = raw.trim();
-  if (!trimmed || trimmed.startsWith("//") || /^\[.*\]$/.test(trimmed)) {
-    return { type: "text" as const, raw };
-  }
+  if (!trimmed) return null;
+  if (DEFAULT_COMMENT_PREFIXES.some((prefix) => trimmed.startsWith(prefix))) return null;
+  if (/^\[.*\]$/.test(trimmed)) return null;
 
-  const status = splitStatusPrefix(raw, dialect);
-  const separator = status.body.indexOf("=");
-  if (separator < 0) return { type: "text" as const, raw };
-
+  const separator = raw.indexOf("=");
+  if (separator < 0) return null;
   return {
-    type: "entry" as const,
-    raw,
-    status: status.status,
-    prefix: status.prefix,
-    body: status.body,
-    key: status.body.slice(0, separator),
-    value: status.body.slice(separator + 1),
+    status: null,
+    prefix: "",
+    key: raw.slice(0, separator),
+    value: raw.slice(separator + 1),
   };
 }
 
-export function alignmentIdentity(line: string, dialect: LineDialect): string {
-  return splitStatusPrefix(line, dialect).body;
+export function parseLine(line: string, parseEntryLine: ParseEntryLine = defaultParseEntryLine) {
+  const raw = String(line ?? "");
+  const entry = parseEntryLine(raw);
+  if (!entry) return { type: "text" as const, raw };
+  return { type: "entry" as const, raw, ...entry };
+}
+
+export function alignmentIdentity(line: string, identity: LineIdentity = defaultIdentity): string {
+  return identity(String(line ?? ""));
 }
 
 function lcsPairs(left: string[], right: string[], matrixLimit = DEFAULT_MATRIX_LIMIT) {
@@ -180,10 +165,10 @@ function uniqueAnchors(
 /**
  * Aligns a region into ascending index pairs.
  *
- * Real .lang files run to thousands of lines, where a full LCS matrix is far
- * out of reach. Shaving the identical head and tail usually removes almost
- * everything; whatever is left is split on unique anchor lines until the pieces
- * are small enough for the exact algorithm.
+ * Real translation files run to thousands of lines, where a full LCS matrix
+ * is far out of reach. Shaving the identical head and tail usually removes
+ * almost everything; whatever is left is split on unique anchor lines until
+ * the pieces are small enough for the exact algorithm.
  */
 function alignRegion(
   left: string[],
@@ -242,39 +227,25 @@ function alignRegion(
   for (const pair of tail) out.push(pair);
 }
 
-function pushPlainUnits(units: TokenUnit[], text: string, mode: "word" | "character") {
-  if (!text) return;
-  if (mode === "character") {
-    for (const value of Array.from(text)) units.push({ value, protected: false });
-    return;
-  }
-  const parts = text.match(/\s+|[^\s]+/g) || [];
-  for (const value of parts) units.push({ value, protected: false });
-}
+/**
+ * Splits text into word/whitespace/punctuation runs — Unicode-aware, so a
+ * Cyrillic or CJK word counts as one run, not one run per character. No
+ * per-game input: this is what makes a placeholder like `<name>` or
+ * `[item/ref=x]` read as one visual unit when unchanged (its punctuation and
+ * word runs all align as consecutive "equal" and merge back together below),
+ * without the tool needing to know that "this is a placeholder" at all.
+ */
+const WORD_TOKEN_PATTERN = /[\p{L}\p{M}\p{N}_]+|\s+|[^\s\p{L}\p{M}\p{N}_]+/gu;
 
-export function tokenizeProtected(
-  text: string,
-  dialect: LineDialect,
-  mode: "word" | "character" = "word",
-): TokenUnit[] {
+export function tokenizeUnits(text: string, mode: "word" | "character" = "word"): string[] {
   const source = String(text ?? "");
-  const units: TokenUnit[] = [];
-  let index = 0;
-  const pattern = dialect.protectedTokenPattern;
-  pattern.lastIndex = 0;
-
-  for (let match = pattern.exec(source); match; match = pattern.exec(source)) {
-    if (match.index > index) pushPlainUnits(units, source.slice(index, match.index), mode);
-    units.push({ value: match[0], protected: true });
-    index = match.index + match[0].length;
-  }
-  if (index < source.length) pushPlainUnits(units, source.slice(index), mode);
-  return units;
+  if (mode === "character") return Array.from(source);
+  return source.match(WORD_TOKEN_PATTERN) ?? [];
 }
 
-function appendSegment(target: DiffSegment[], kind: DiffSegmentKind, units: TokenUnit[]) {
+function appendSegment(target: DiffSegment[], kind: DiffSegmentKind, units: string[]) {
   if (!units.length) return;
-  const text = units.map((unit) => unit.value).join("");
+  const text = units.join("");
   const previous = target[target.length - 1];
   if (previous && previous.kind === kind) previous.text += text;
   else target.push({ kind, text });
@@ -283,17 +254,13 @@ function appendSegment(target: DiffSegment[], kind: DiffSegmentKind, units: Toke
 export function inlineSegments(
   leftText: string,
   rightText: string,
-  dialect: LineDialect,
-  mode: "word" | "character" = "word",
-  matrixLimit = DEFAULT_MATRIX_LIMIT,
+  options: Pick<DiffOptions, "mode" | "matrixLimit"> = {},
 ) {
-  const left = tokenizeProtected(leftText, dialect, mode);
-  const right = tokenizeProtected(rightText, dialect, mode);
-  const pairs = lcsPairs(
-    left.map((unit) => unit.value),
-    right.map((unit) => unit.value),
-    matrixLimit,
-  );
+  const mode = options.mode ?? "word";
+  const matrixLimit = options.matrixLimit ?? DEFAULT_MATRIX_LIMIT;
+  const left = tokenizeUnits(leftText, mode);
+  const right = tokenizeUnits(rightText, mode);
+  const pairs = lcsPairs(left, right, matrixLimit);
 
   if (pairs === null) {
     return {
@@ -322,21 +289,15 @@ export function inlineSegments(
   return { fallback: false, left: leftSegments, right: rightSegments };
 }
 
-export function compareEntryPair(
-  leftLine: string,
-  rightLine: string,
-  dialect: LineDialect,
-  mode: "word" | "character" = "word",
-  matrixLimit = DEFAULT_MATRIX_LIMIT,
-) {
-  const left = parseLangLine(leftLine, dialect);
-  const right = parseLangLine(rightLine, dialect);
+export function compareEntryPair(leftLine: string, rightLine: string, options: DiffOptions = {}) {
+  const left = parseLine(leftLine, options.parseEntryLine);
+  const right = parseLine(rightLine, options.parseEntryLine);
   if (left.type !== "entry" || right.type !== "entry") {
     return {
       type: "text" as const,
       left,
       right,
-      inline: inlineSegments(leftLine, rightLine, dialect, mode, matrixLimit),
+      inline: inlineSegments(leftLine, rightLine, options),
     };
   }
 
@@ -347,8 +308,8 @@ export function compareEntryPair(
     statusChanged: left.status !== right.status,
     keyChanged: left.key !== right.key,
     valueChanged: left.value !== right.value,
-    keyInline: inlineSegments(left.key, right.key, dialect, mode, matrixLimit),
-    valueInline: inlineSegments(left.value, right.value, dialect, mode, matrixLimit),
+    keyInline: inlineSegments(left.key, right.key, options),
+    valueInline: inlineSegments(left.value, right.value, options),
   };
 }
 
@@ -362,11 +323,12 @@ export interface DiffRow {
 export function diffRows(
   leftLines: string[],
   rightLines: string[],
-  dialect: LineDialect,
-  matrixLimit = 1_500_000,
+  options: Pick<DiffOptions, "identity" | "matrixLimit"> = {},
 ): DiffRow[] {
-  const leftIdentity = leftLines.map((line) => alignmentIdentity(line, dialect));
-  const rightIdentity = rightLines.map((line) => alignmentIdentity(line, dialect));
+  const identity = options.identity ?? defaultIdentity;
+  const matrixLimit = options.matrixLimit ?? DEFAULT_LINE_MATRIX_LIMIT;
+  const leftIdentity = leftLines.map((line) => alignmentIdentity(line, identity));
+  const rightIdentity = rightLines.map((line) => alignmentIdentity(line, identity));
   const pairs: Array<[number, number]> = [];
   alignRegion(
     leftIdentity,
@@ -408,8 +370,8 @@ export function diffRows(
       rightIndex: rightMatch,
       prefixOnly:
         prefixChanged &&
-        alignmentIdentity(leftLines[leftMatch], dialect) ===
-          alignmentIdentity(rightLines[rightMatch], dialect),
+        alignmentIdentity(leftLines[leftMatch], identity) ===
+          alignmentIdentity(rightLines[rightMatch], identity),
     });
     leftIndex = leftMatch + 1;
     rightIndex = rightMatch + 1;
@@ -424,7 +386,7 @@ export function summarizeRows(
   rows: DiffRow[],
   leftLines: string[],
   rightLines: string[],
-  dialect: LineDialect,
+  options: DiffOptions = {},
 ) {
   const summary = {
     added: 0,
@@ -444,7 +406,7 @@ export function summarizeRows(
         const detail = compareEntryPair(
           leftLines[row.leftIndex],
           rightLines[row.rightIndex],
-          dialect,
+          options,
         );
         if (detail.type === "entry") {
           if (detail.keyChanged) summary.changedKeys += 1;

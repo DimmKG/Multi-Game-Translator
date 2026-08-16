@@ -291,7 +291,7 @@ export function CompareView() {
             const right = row.rightIndex >= 0 ? rightLines[row.rightIndex] : "";
             const detail =
               row.kind === "change" && row.leftIndex >= 0 && row.rightIndex >= 0
-                ? compareEntryPair(left, right, necesseLineDialect, workspace.diffMode)
+                ? compareEntryPair(left, right, { ...necesseLineDialect, mode: workspace.diffMode })
                 : null;
 
             // Highlight only the differing run; the status prefix and key stay literal.

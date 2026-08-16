@@ -20,7 +20,7 @@ export {
   type NecesseRawFile,
   type NecesseRawLine,
 } from "./raw-lines";
-export { necesseLineDialect } from "./line-dialect";
+export { necesseIdentity, necesseLineDialect, necesseParseEntryLine } from "./line-dialect";
 
 /** Entry point the host calls after dynamically import()-ing this mod. */
 export default function register(sdk: ModSdk): void {
