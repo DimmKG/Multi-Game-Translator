@@ -30,8 +30,6 @@
     "side.sections": "Seccions",
     "drop.text": "Arrossega un fitxer de traducció de Necesse aquí, o tria'n un manualment.<br>El fitxer es processa localment al teu navegador.",
     "drop.pick": "Tria un fitxer .lang",
-    "legend.var": "&lt;variable&gt;",
-    "legend.fmt": "§format",
     "tab.editor": "Editor",
     "tab.review": "Revisió",
     "tab.diff": "Comparar",

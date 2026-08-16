@@ -11,17 +11,13 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { iniFileLoader, type TranslationDocument } from "@mgt/sdk";
 import {
-  buildReferenceQueues,
-  cleanNecesseFilename,
-  necesseEntryExt,
-  necesseGameLoader,
-  necesseStatusStrategy,
-  referenceIdentity,
-  validateEnglishReferenceFile,
-  type NecesseEntryExt,
-} from "@mgt/mod-necesse";
+  cleanDownloadedFilename,
+  iniFileLoader,
+  type GameLoader,
+  type TranslationDocument,
+} from "@mgt/sdk";
+import { resolveGameLoader } from "@/state/loaders";
 import type { DiffMode, FilterMode, ReviewFilter, WorkspaceView } from "@/core/lang/markers";
 import { normalizeSearchQuery } from "@/core/lang/search-query";
 import {
@@ -45,7 +41,11 @@ import {
   serializeProgressV3,
   type ProgressDocumentV3,
 } from "@/core/persistence/serialize";
-import { loadWorkspaceDocument, saveWorkspaceDocument } from "@/core/persistence/document-store";
+import {
+  clearWorkspaceDocument,
+  loadWorkspaceDocument,
+  saveWorkspaceDocument,
+} from "@/core/persistence/document-store";
 import type { WorkspaceDocumentRecord, WorkspaceUiFlags } from "@/core/persistence/idb";
 import { removeGlossaryFromIdb, saveGlossaryToIdb } from "@/core/persistence/glossary-store";
 import { migrateGlossariesFromLocalStorage } from "@/core/persistence/glossary-store";
@@ -103,7 +103,7 @@ const SETTINGS_STORAGE_KEY = "necesse-translator.settings.v1";
 const FONT_STORAGE_KEY = "necesse-translator.font-settings.v1";
 const PREFERRED_PROVIDER_KEY = "necesse-translator.preferred-mt-provider.v1";
 
-/** M4 hardcodes Necesse — the game-selection screen (M6) picks this dynamically later. */
+/** Placeholder before any workspace is open — never shown, gameLoaderId is arbitrary (any AVAILABLE_GAME_LOADERS id resolves fine, no entries to act on yet). */
 const EMPTY_DOCUMENT: TranslationDocument = {
   gameLoaderId: "necesse",
   fileLoaderId: "ini",
@@ -142,8 +142,12 @@ interface DiffOther {
   lines: string[];
 }
 
+export type FlowStage = "select-game" | "dropzone" | "editor";
+
 interface WorkspaceState {
   isOpen: boolean;
+  /** Chosen on the game-selection screen, before any file is opened. Kept in sync with document.gameLoaderId for the workspace's whole lifetime (see applyOpenedDocument/applyStoredRecord) — AppHeader's "open another file"/"load reference" actions need to know the active loader even once isOpen is true. */
+  selectedGameLoaderId: string | null;
   filename: string;
   referenceFilename: string;
   document: TranslationDocument;
@@ -181,6 +185,11 @@ interface WorkspaceContextValue extends WorkspaceState {
   lines: WorkspaceLine[];
   /** Flat entry list, in document order. */
   entries: WorkspaceEntry[];
+  /** "editor" also covers the pre-open Terminology tab — same quirk as today's showWorkspace check. */
+  flowStage: FlowStage;
+  /** The active loader, memoized on document.gameLoaderId — resolveGameLoader() throws if the id is unknown, so this stays cheap to call from render. */
+  activeLoader: GameLoader;
+  selectGameLoader: (id: string) => void;
   openWorkspaceFromText: (
     text: string,
     options?: {
@@ -191,9 +200,11 @@ interface WorkspaceContextValue extends WorkspaceState {
     },
   ) => void;
   openLangFile: (file: File) => Promise<void>;
-  openWorkspaceWithReference: (translationFile: File, referenceFile: File) => Promise<void>;
+  openWorkspaceFiles: (files: Record<string, File>) => Promise<void>;
   createFromReferenceFile: (file: File) => Promise<void>;
   loadReferenceFile: (file: File) => Promise<void>;
+  /** Drops the open document (and its persisted record) back to the game-selection screen. Does not save anything — callers must offer that first. */
+  closeWorkspace: () => void;
   exportLang: () => void;
   saveProgressFile: () => Promise<void>;
   loadProgressFile: (file: File) => Promise<void>;
@@ -334,6 +345,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const glossaryAuthoringSession = loadGlossaryAuthoringRecovery();
     return {
       isOpen: false,
+      selectedGameLoaderId: null,
       filename: "",
       referenceFilename: "",
       document: EMPTY_DOCUMENT,
@@ -483,13 +495,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       meta: { filename: string; referenceFilename: string; targetLanguage: string },
     ) => {
       entryUiFlagsRef.current = new Map();
+      const loader = resolveGameLoader(document.gameLoaderId);
       const entries = buildWorkspaceEntries(document, entryUiFlagsRef.current);
-      const indexes = buildWorkspaceRowIndex(entries, stateRef.current.glossaries);
+      const indexes = buildWorkspaceRowIndex(entries, loader, stateRef.current.glossaries);
       setRowIndexes(indexes);
       rowIndexesRef.current = indexes;
       setState((current) => ({
         ...current,
         isOpen: true,
+        selectedGameLoaderId: document.gameLoaderId,
         document,
         filename: meta.filename,
         referenceFilename: meta.referenceFilename,
@@ -518,13 +532,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const applyStoredRecord = useCallback(
     (record: WorkspaceDocumentRecord, glossaries: StoredGlossary[]) => {
       entryUiFlagsRef.current = new Map(Object.entries(record.uiFlags));
+      const loader = resolveGameLoader(record.document.gameLoaderId);
       const entries = buildWorkspaceEntries(record.document, entryUiFlagsRef.current);
-      const indexes = buildWorkspaceRowIndex(entries, glossaries);
+      const indexes = buildWorkspaceRowIndex(entries, loader, glossaries);
       setRowIndexes(indexes);
       rowIndexesRef.current = indexes;
       setState((current) => ({
         ...current,
         isOpen: true,
+        selectedGameLoaderId: record.document.gameLoaderId,
         document: record.document,
         filename: record.filename,
         referenceFilename: record.referenceFilename,
@@ -580,7 +596,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         targetLang?: string;
       } = {},
     ) => {
-      const filename = options.filename ? cleanNecesseFilename(options.filename) : "";
+      const loaderId = stateRef.current.selectedGameLoaderId;
+      if (!loaderId) {
+        throw new Error("openWorkspaceFromText called with no game loader selected");
+      }
+      const loader = resolveGameLoader(loaderId);
+      const filename = options.filename
+        ? cleanDownloadedFilename(options.filename, loader.fileExtension)
+        : "";
       const targetLanguage = Object.hasOwn(options, "targetLang")
         ? String(options.targetLang || "")
         : codeFromFilename(filename);
@@ -596,7 +619,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         roles.push({ role: "reference" });
       }
       const raw = iniFileLoader.parse({ files });
-      const document = necesseGameLoader.toDocument(raw, roles, targetLanguage || "und");
+      const document = loader.toDocument(raw, roles, targetLanguage || "und");
       applyOpenedDocument(document, {
         filename,
         referenceFilename: options.referenceFilename ? String(options.referenceFilename) : "",
@@ -617,47 +640,83 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [openWorkspaceFromText, runWithImportSpinner, t],
   );
 
-  const openWorkspaceWithReference = useCallback(
-    async (translationFile: File, referenceFile: File) => {
+  const openWorkspaceFiles = useCallback(
+    async (files: Record<string, File>) => {
       await runWithImportSpinner(async () => {
-        const [translationText, referenceText] = await Promise.all([
-          readFileAsText(translationFile),
-          readFileAsText(referenceFile),
-        ]);
-        const validation = validateEnglishReferenceFile(referenceFile.name, referenceText);
-        if (!validation.ok) {
-          toast.error(t(validation.messageKey));
-          return;
+        const loaderId = stateRef.current.selectedGameLoaderId;
+        if (!loaderId) {
+          throw new Error("openWorkspaceFiles called with no game loader selected");
         }
-        openWorkspaceFromText(translationText, {
-          filename: translationFile.name,
-          referenceFilename: validation.filename,
-          referenceSourceText: referenceText,
-          targetLang: codeFromFilename(translationFile.name),
+        const loader = resolveGameLoader(loaderId);
+        const picked = await Promise.all(
+          loader.requiredFiles.map(async (rf) => {
+            const file = files[rf.role];
+            if (!file) return null;
+            const text = await readFileAsText(file);
+            const validation = rf.validate?.({ name: file.name, text });
+            return { rf, file, text, validation };
+          }),
+        );
+        for (const entry of picked) {
+          if (entry?.validation && !entry.validation.ok) {
+            toast.error(t(entry.validation.messageKey));
+            return;
+          }
+        }
+        const present = picked.filter(
+          (entry): entry is NonNullable<typeof entry> => entry !== null,
+        );
+        const raw = iniFileLoader.parse({
+          files: present.map(({ file, text }) => ({ name: file.name, text })),
+        });
+        const roles = present.map(({ rf }) => ({ role: rf.role }));
+        // "translation"/"reference" — the shared role-name convention both
+        // current loaders use, not a loader-identity hardcode.
+        const translationFile = files.translation;
+        const translationEntry = present.find(({ rf }) => rf.role === "translation");
+        const referenceEntry = present.find(({ rf }) => rf.role === "reference");
+        const targetLanguage = codeFromFilename(translationFile.name);
+        const document = loader.toDocument(raw, roles, targetLanguage || "und");
+        const translationDisplayName =
+          (translationEntry?.validation?.ok && translationEntry.validation.displayName) ||
+          cleanDownloadedFilename(translationFile.name, loader.fileExtension);
+        const referenceDisplayName =
+          (referenceEntry?.validation?.ok && referenceEntry.validation.displayName) ||
+          referenceEntry?.file.name ||
+          "";
+        applyOpenedDocument(document, {
+          filename: translationDisplayName,
+          referenceFilename: referenceDisplayName,
+          targetLanguage,
         });
         toast.success(t("toast.fileLoaded"));
       });
     },
-    [openWorkspaceFromText, runWithImportSpinner, t],
+    [applyOpenedDocument, runWithImportSpinner, t],
   );
 
   const createFromReferenceFile = useCallback(
     async (file: File) => {
       await runWithImportSpinner(async () => {
-        const text = await readFileAsText(file);
-        const validation = validateEnglishReferenceFile(file.name, text);
-        if (!validation.ok) {
-          toast.error(t(validation.messageKey));
-          return;
-        }
-        const referenceRaw = iniFileLoader.parse({ files: [{ name: validation.filename, text }] });
-        if (!necesseGameLoader.createFromReference) {
+        const loaderId = stateRef.current.selectedGameLoaderId;
+        if (!loaderId) return;
+        const loader = resolveGameLoader(loaderId);
+        if (!loader.createFromReference) {
           toast.error(t("err.newTranslationNoEntries"));
           return;
         }
+        const text = await readFileAsText(file);
+        const referenceRf = loader.requiredFiles.find((rf) => rf.role === "reference");
+        const validation = referenceRf?.validate?.({ name: file.name, text });
+        if (validation && !validation.ok) {
+          toast.error(t(validation.messageKey));
+          return;
+        }
+        const displayName = (validation?.ok && validation.displayName) || file.name;
+        const referenceRaw = iniFileLoader.parse({ files: [{ name: displayName, text }] });
         let document: TranslationDocument;
         try {
-          document = necesseGameLoader.createFromReference(referenceRaw, "und");
+          document = loader.createFromReference(referenceRaw, "und");
         } catch {
           toast.error(t("err.newTranslationNoEntries"));
           return;
@@ -671,12 +730,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         // and the reminder button settle in one frame — no pulse flash.
         applyOpenedDocument(document, {
           filename: "",
-          referenceFilename: validation.filename,
+          referenceFilename: displayName,
           targetLanguage: "",
         });
         toast.success(
           t("toast.newTranslationCreated", {
-            file: validation.filename,
+            file: displayName,
             n: entryCount,
           }),
         );
@@ -688,59 +747,72 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const loadReferenceFile = useCallback(
     async (file: File) => {
       await runWithImportSpinner(async () => {
+        const current = stateRef.current;
+        const loaderId = current.selectedGameLoaderId;
+        if (!loaderId) return;
+        const loader = resolveGameLoader(loaderId);
+        if (!loader.attachReference) {
+          toast.error(t("err.newTranslationNoEntries"));
+          return;
+        }
         const text = await readFileAsText(file);
-        const validation = validateEnglishReferenceFile(file.name, text);
-        if (!validation.ok) {
+        const referenceRf = loader.requiredFiles.find((rf) => rf.role === "reference");
+        const validation = referenceRf?.validate?.({ name: file.name, text });
+        if (validation && !validation.ok) {
           toast.error(t(validation.messageKey));
           return;
         }
-        const referenceRaw = iniFileLoader.parse({
-          files: [{ name: validation.filename, text }],
-        });
-        const referenceEntry = referenceRaw[0];
-        const queues = referenceEntry
-          ? buildReferenceQueues(referenceEntry.ini)
-          : new Map<string, string[]>();
+        const displayName = (validation?.ok && validation.displayName) || file.name;
+        const referenceRaw = iniFileLoader.parse({ files: [{ name: displayName, text }] });
 
-        const current = stateRef.current;
-        const occurrenceCounts = new Map<string, number>();
-        let matched = 0;
-        const nextNodes = current.document.nodes.map((node) => {
-          if (node.type !== "entry") return node;
-          const { entry } = node;
-          const ext = necesseEntryExt(entry);
-          const identity = referenceIdentity(entry.namespace || "", entry.key);
-          const occurrence = occurrenceCounts.get(identity) ?? 0;
-          occurrenceCounts.set(identity, occurrence + 1);
-          const queue = queues.get(identity);
-          const ref = queue && occurrence < queue.length ? queue[occurrence] : undefined;
-          if (ref !== undefined) matched += 1;
-          const nextExt: NecesseEntryExt = { ...ext, hasReference: ref !== undefined };
-          const nextEntry = { ...entry, source: ref ?? ext.originalValue, ext: nextExt };
-          const status = necesseStatusStrategy.fromNative(nextEntry, {
-            markedSame: nextExt.markedSame,
-            wasMissing: nextExt.wasMissing,
-            hasReference: nextExt.hasReference,
-          });
-          return { ...node, entry: { ...nextEntry, status } };
-        });
-
-        const nextDocument: TranslationDocument = { ...current.document, nodes: nextNodes };
+        const nextDocument = loader.attachReference(current.document, referenceRaw);
         const nextEntries = buildWorkspaceEntries(nextDocument, entryUiFlagsRef.current);
-        const indexes = buildWorkspaceRowIndex(nextEntries, current.glossaries);
+        const indexes = buildWorkspaceRowIndex(nextEntries, loader, current.glossaries);
         setRowIndexes(indexes);
         rowIndexesRef.current = indexes;
         setState((prev) => ({
           ...prev,
           document: nextDocument,
-          referenceFilename: validation.filename,
+          referenceFilename: displayName,
         }));
-        toast.success(t("btn.enRefLoaded", { file: validation.filename, n: matched }));
+        // Total matched, same as today's count — not a "newly matched" delta.
+        const matched = nextEntries.filter((entry) => entry.referenceText != null).length;
+        toast.success(t("btn.enRefLoaded", { file: displayName, n: matched }));
         scheduleSave();
       });
     },
     [runWithImportSpinner, scheduleSave, t],
   );
+
+  const closeWorkspace = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    entryUiFlagsRef.current = new Map();
+    rowIndexesRef.current = new Map();
+    setRowIndexes(new Map());
+    setState((current) => ({
+      ...current,
+      isOpen: false,
+      selectedGameLoaderId: null,
+      filename: "",
+      referenceFilename: "",
+      document: EMPTY_DOCUMENT,
+      filter: "missing",
+      query: "",
+      view: "editor",
+      reviewFilter: "all",
+      reviewQuery: "",
+      targetLanguage: "",
+      compactView: false,
+      savedAt: 0,
+      saveState: "saved",
+      diffOther: null,
+      terminologyFilterActive: false,
+    }));
+    void clearWorkspaceDocument();
+  }, []);
 
   const exportLang = useCallback(() => {
     setState((current) => {
@@ -749,7 +821,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         toast.error(t("err.targetFilenameRequired"));
         return current;
       }
-      if (!/\.lang$/i.test(name)) name += ".lang";
+      const extension = resolveGameLoader(current.document.gameLoaderId).fileExtension;
+      if (!name.toLowerCase().endsWith(extension.toLowerCase())) name += extension;
       downloadText(name, exportedText(current.document));
       toast.success(t("toast.exported", { name }));
       return { ...current, filename: name };
@@ -814,10 +887,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         mtDraft: options?.mtDraft ?? false,
       });
 
+      const loader = resolveGameLoader(nextDocument.gameLoaderId);
       const nextEntry = findWorkspaceEntry(nextDocument, entryId, entryUiFlagsRef.current);
       const next = new Map(rowIndexesRef.current);
       const nextIndex = nextEntry
-        ? reindexWorkspaceEntry(next, nextEntry, current.glossaries)
+        ? reindexWorkspaceEntry(next, nextEntry, loader, current.glossaries)
         : undefined;
       const prevIndex = rowIndexesRef.current.get(entryId);
       rowIndexesRef.current = next;
@@ -842,9 +916,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         mtDraft: previousFlags?.mtDraft ?? false,
       });
 
+      const loader = resolveGameLoader(nextDocument.gameLoaderId);
       const nextEntry = findWorkspaceEntry(nextDocument, entryId, entryUiFlagsRef.current);
       const next = new Map(rowIndexesRef.current);
-      if (nextEntry) reindexWorkspaceEntry(next, nextEntry, current.glossaries);
+      if (nextEntry) reindexWorkspaceEntry(next, nextEntry, loader, current.glossaries);
       rowIndexesRef.current = next;
       setRowIndexes(next);
 
@@ -871,11 +946,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
+        const loader = resolveGameLoader(stateRef.current.document.gameLoaderId);
         const suggestion = await translateWithProvider(state.mtProvider, {
           text: source,
           targetLanguage: target,
           sourceLanguage: "en",
-          tokenizer: necesseGameLoader.placeholders,
+          tokenizer: loader.placeholders,
         });
         if (suggestion.trim()) updateEntryValue(entryId, suggestion, { mtDraft: true });
       } catch (error) {
@@ -902,8 +978,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       setState((current) => ({ ...current, listRevision: current.listRevision + 1 }));
       if (!stateRef.current.isOpen) return;
 
+      const loader = resolveGameLoader(stateRef.current.document.gameLoaderId);
       const entries = buildWorkspaceEntries(stateRef.current.document, entryUiFlagsRef.current);
-      const next = buildWorkspaceRowIndex(entries, glossaries);
+      const next = buildWorkspaceRowIndex(entries, loader, glossaries);
       rowIndexesRef.current = next;
       setRowIndexes(next);
       scheduleSave();
@@ -1071,6 +1148,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [enabledGlossaries],
   );
 
+  const activeLoader = useMemo(
+    () => resolveGameLoader(state.document.gameLoaderId),
+    [state.document.gameLoaderId],
+  );
+
+  const flowStage: FlowStage = useMemo(() => {
+    if (state.isOpen || state.view === "terminology") return "editor";
+    if (!state.selectedGameLoaderId) return "select-game";
+    return "dropzone";
+  }, [state.isOpen, state.view, state.selectedGameLoaderId]);
+
   const lines = useMemo(
     () => buildWorkspaceLines(state.document, entryUiFlagsRef.current),
     [state.document],
@@ -1119,13 +1207,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const value: WorkspaceContextValue = {
     ...state,
     isImportingFile,
+    flowStage,
+    activeLoader,
+    selectGameLoader: (id) => setState((current) => ({ ...current, selectedGameLoaderId: id })),
     lines,
     entries,
     openWorkspaceFromText,
     openLangFile,
-    openWorkspaceWithReference,
+    openWorkspaceFiles,
     createFromReferenceFile,
     loadReferenceFile,
+    closeWorkspace,
     exportLang,
     saveProgressFile,
     loadProgressFile,

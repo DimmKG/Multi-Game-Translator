@@ -30,8 +30,6 @@
     "side.sections": "Sections",
     "drop.text": "Déposez un fichier de traduction Necesse ici, ou choisissez-en un manuellement.<br>Le fichier est traité localement dans votre navigateur.",
     "drop.pick": "Choisir un fichier .lang",
-    "legend.var": "&lt;variable&gt;",
-    "legend.fmt": "§format",
     "tab.editor": "Éditeur",
     "tab.review": "Examen",
     "tab.diff": "Comparer",

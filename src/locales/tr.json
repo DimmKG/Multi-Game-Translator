@@ -30,8 +30,6 @@
     "side.sections": "Bölümler",
     "drop.text": "Bir Necesse çeviri dosyasını buraya sürükleyin veya manuel olarak seçin.<br>Dosya tarayıcınızda yerel olarak işlenir.",
     "drop.pick": "Bir .lang dosyası seçin",
-    "legend.var": "&lt;değişken&gt;",
-    "legend.fmt": "§biçim",
     "tab.editor": "Düzenleyici",
     "tab.review": "İnceleme",
     "tab.diff": "Karşılaştır",

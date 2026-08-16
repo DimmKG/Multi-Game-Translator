@@ -30,8 +30,6 @@
     "side.sections": "セクション",
     "drop.text": "Necesse の翻訳ファイルをここにドロップするか、手動で選択してください。<br>ファイルはブラウザ内でローカルに処理されます。",
     "drop.pick": ".lang ファイルを選択",
-    "legend.var": "&lt;変数&gt;",
-    "legend.fmt": "§フォーマット",
     "tab.editor": "エディタ",
     "tab.review": "レビュー",
     "tab.diff": "比較",

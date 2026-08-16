@@ -178,7 +178,11 @@ export function ReviewView() {
         }
         renderItem={(entry) => {
           const reference = referenceDisplayText(entry);
-          const placeholders = placeholderIssues(entry.source, entry.target);
+          const placeholders = placeholderIssues(
+            entry.source,
+            entry.target,
+            workspace.activeLoader.placeholders,
+          );
           const whitespace = scanWhitespace(entry.target, reference);
           const terminology = workspace.terminologyIssuesFor(entry);
           const status = entry.legacyStatus;

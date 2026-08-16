@@ -30,8 +30,6 @@
     "side.sections": "分區",
     "drop.text": "將 Necesse 翻譯檔案拖放到此處，或手動選擇。<br>檔案將在您的瀏覽器中本機處理。",
     "drop.pick": "選擇 .lang 檔案",
-    "legend.var": "&lt;變數&gt;",
-    "legend.fmt": "§格式",
     "tab.editor": "編輯器",
     "tab.review": "審查",
     "tab.diff": "比對",

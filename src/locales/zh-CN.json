@@ -30,8 +30,6 @@
     "side.sections": "章节",
     "drop.text": "将 Necesse 翻译文件拖放到此处，或手动选择。<br>文件将在您的浏览器中本地处理。",
     "drop.pick": "选择 .lang 文件",
-    "legend.var": "&lt;变量&gt;",
-    "legend.fmt": "§格式",
     "tab.editor": "编辑器",
     "tab.review": "审查",
     "tab.diff": "对比",

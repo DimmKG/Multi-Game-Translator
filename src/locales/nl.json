@@ -30,8 +30,6 @@
     "side.sections": "Secties",
     "drop.text": "Sleep hier een Necesse-vertaalbestand naartoe, of kies er handmatig een.<br>Het bestand wordt lokaal in je browser verwerkt — er wordt niets geüpload.",
     "drop.pick": "Kies een .lang-bestand",
-    "legend.var": "&lt;variabele&gt;",
-    "legend.fmt": "§opmaak",
     "tab.editor": "Editor",
     "tab.review": "Controleren",
     "tab.diff": "Vergelijken",

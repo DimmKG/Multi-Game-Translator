@@ -30,8 +30,6 @@
     "side.sections": "Abschnitte",
     "drop.text": "Ziehe eine Necesse-Übersetzungsdatei hierher oder wähle eine manuell aus.<br>Die Datei wird lokal im Browser verarbeitet.",
     "drop.pick": ".lang-Datei auswählen",
-    "legend.var": "&lt;Variable&gt;",
-    "legend.fmt": "§Format",
     "tab.editor": "Editor",
     "tab.review": "Prüfen",
     "tab.diff": "Vergleichen",

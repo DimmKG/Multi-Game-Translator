@@ -128,8 +128,14 @@ describe("recovery / persistence contracts", () => {
       // Fires on first mount, before hydrate's async IndexedDB read resolves —
       // simulates a workspace opened synchronously while hydrate is in flight.
       // A child's effects run before its parent's (WorkspaceProvider owns the
-      // hydrate effect), so this genuinely races ahead of it.
+      // hydrate effect), so this genuinely races ahead of it. selectGameLoader's
+      // state update is async (React batches it), so the open itself has to wait
+      // one more render — same two-step shape the real game-select→dropzone flow has.
       useEffect(() => {
+        if (!value.selectedGameLoaderId) {
+          value.selectGameLoader("necesse");
+          return;
+        }
         if (openedRef.current) return;
         openedRef.current = true;
         value.openWorkspaceFromText("greeting=Hi\n", { filename: "fresh.lang" });
@@ -157,6 +163,9 @@ describe("recovery / persistence contracts", () => {
     const get = await mountWorkspace();
     await waitFor(() => get().ready);
 
+    act(() => {
+      get().selectGameLoader("necesse");
+    });
     act(() => {
       get().openWorkspaceFromText("hello=Hallo\n", { filename: "flush.lang" });
     });

@@ -3,16 +3,13 @@ import {
   checkPlaceholders,
   iniFileLoader,
   type EntryStatus as SdkEntryStatus,
+  type GameLoader,
+  type IniFileLoaderRaw,
+  type PlaceholderTokenizer,
   type TranslationDocument,
   type TranslationEntry as SdkTranslationEntry,
 } from "@mgt/sdk";
-import {
-  necesseEntryExt,
-  necesseGameLoader,
-  necessePlaceholderTokenizer,
-  necesseStatusStrategy,
-  type NecesseEntryExt,
-} from "@mgt/mod-necesse";
+import { resolveGameLoader } from "@/state/loaders";
 import { scanWhitespace } from "@/core/model/whitespace";
 import type { EntryStatus as LegacyStatus } from "@/core/lang/markers";
 import type { WorkspaceUiFlags } from "@/core/persistence/idb";
@@ -42,6 +39,8 @@ export interface WorkspaceEntry {
   referenceText: string | null;
   markedSame: boolean;
   wasMissing: boolean;
+  /** Whether the active loader has a "mark same" concept at all for this entry — distinct from markedSame simply being false. */
+  supportsMarkedSame: boolean;
   touched: boolean;
   mtDraft: boolean;
   legacyStatus: LegacyStatus;
@@ -72,19 +71,21 @@ export function toLegacyStatus(status: SdkEntryStatus): LegacyStatus {
 
 function toWorkspaceEntry(
   entry: SdkTranslationEntry,
+  loader: GameLoader,
   uiFlags: WorkspaceUiFlags | undefined,
 ): WorkspaceEntry {
-  const ext = necesseEntryExt(entry);
+  const hints = loader.entryUiHints?.(entry) ?? {};
   return {
     id: entry.id,
     key: entry.key,
     namespace: entry.namespace ?? "",
     source: entry.source,
     target: entry.target,
-    originalValue: ext.originalValue,
-    referenceText: ext.hasReference ? entry.source : null,
-    markedSame: ext.markedSame,
-    wasMissing: ext.wasMissing,
+    originalValue: hints.originalValue ?? entry.target,
+    referenceText: hints.referenceText ?? null,
+    markedSame: hints.markedSame ?? false,
+    wasMissing: hints.wasMissing ?? false,
+    supportsMarkedSame: hints.markedSame !== undefined,
     touched: uiFlags?.touched ?? false,
     mtDraft: uiFlags?.mtDraft ?? false,
     legacyStatus: toLegacyStatus(entry.status),
@@ -95,10 +96,11 @@ export function buildWorkspaceEntries(
   document: TranslationDocument,
   uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
 ): WorkspaceEntry[] {
+  const loader = resolveGameLoader(document.gameLoaderId);
   const entries: WorkspaceEntry[] = [];
   for (const node of document.nodes) {
     if (node.type !== "entry") continue;
-    entries.push(toWorkspaceEntry(node.entry, uiFlags.get(node.entry.id)));
+    entries.push(toWorkspaceEntry(node.entry, loader, uiFlags.get(node.entry.id)));
   }
   return entries;
 }
@@ -108,13 +110,14 @@ export function buildWorkspaceLines(
   document: TranslationDocument,
   uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
 ): WorkspaceLine[] {
+  const loader = resolveGameLoader(document.gameLoaderId);
   const lines: WorkspaceLine[] = [];
   for (const node of document.nodes) {
     if (node.type === "section") lines.push({ type: "section", name: node.name });
     else if (node.type === "entry") {
       lines.push({
         type: "entry",
-        entry: toWorkspaceEntry(node.entry, uiFlags.get(node.entry.id)),
+        entry: toWorkspaceEntry(node.entry, loader, uiFlags.get(node.entry.id)),
       });
     }
   }
@@ -134,7 +137,9 @@ export function findWorkspaceEntry(
   uiFlags: ReadonlyMap<string, WorkspaceUiFlags>,
 ): WorkspaceEntry | undefined {
   const node = document.nodes.find((n) => n.type === "entry" && n.entry.id === entryId);
-  return node?.type === "entry" ? toWorkspaceEntry(node.entry, uiFlags.get(entryId)) : undefined;
+  if (node?.type !== "entry") return undefined;
+  const loader = resolveGameLoader(document.gameLoaderId);
+  return toWorkspaceEntry(node.entry, loader, uiFlags.get(entryId));
 }
 
 /**
@@ -157,9 +162,13 @@ export interface PlaceholderIssues {
   missingFormattingKinds: string[];
 }
 
-/** Necesse-specific placeholder check: required tokens block, formatting kinds only warn on total absence. */
-export function placeholderIssues(source: string, target: string): PlaceholderIssues {
-  const result = checkPlaceholders(source, target, necessePlaceholderTokenizer);
+/** Required tokens block, formatting kinds only warn on total absence — per the active loader's own placeholder tokenizer. */
+export function placeholderIssues(
+  source: string,
+  target: string,
+  tokenizer: PlaceholderTokenizer,
+): PlaceholderIssues {
+  const result = checkPlaceholders(source, target, tokenizer);
   return {
     missingRequired: result.missingRequired.map((token) => token.raw),
     missingFormattingKinds: result.missingFormattingKinds,
@@ -173,59 +182,49 @@ export function hasUsableReference(
   return Boolean(referenceFilename) && entries.some((entry) => entry.referenceText != null);
 }
 
-/** Recomputes entry.status the same way toDocument does, keeping fromDocument's export correct after an edit. */
-function withUpdatedNecesseEntry(
-  entry: SdkTranslationEntry,
-  patch: { target?: string; markedSame?: boolean },
-): SdkTranslationEntry {
-  const ext = necesseEntryExt(entry);
-  const nextExt: NecesseEntryExt = {
-    ...ext,
-    ...(patch.markedSame !== undefined ? { markedSame: patch.markedSame } : {}),
-  };
-  const draft = { ...entry, target: patch.target ?? entry.target, ext: nextExt };
-  const status = necesseStatusStrategy.fromNative(draft, {
-    markedSame: nextExt.markedSame,
-    wasMissing: nextExt.wasMissing,
-    hasReference: nextExt.hasReference,
-  });
-  return { ...draft, status };
-}
-
 /** Immutable — no-op (returns the same document reference) if entryId doesn't match any node. */
 export function updateEntryTarget(
   document: TranslationDocument,
   entryId: string,
   target: string,
 ): TranslationDocument {
+  const loader = resolveGameLoader(document.gameLoaderId);
   let changed = false;
   const nodes = document.nodes.map((node) => {
     if (node.type !== "entry" || node.entry.id !== entryId) return node;
     changed = true;
-    return { ...node, entry: withUpdatedNecesseEntry(node.entry, { target }) };
+    return { ...node, entry: loader.applyEntryPatch(node.entry, { target }) };
   });
   return changed ? { ...document, nodes } : document;
 }
 
-/** No-op (returns the same document reference) if the entry has no matched reference to mark same against. */
+/** No-op (returns the same document reference) if the active loader has no "mark same" concept, or this entry has no matched reference to mark same against. */
 export function toggleEntryMarkedSame(
   document: TranslationDocument,
   entryId: string,
 ): TranslationDocument {
+  const loader = resolveGameLoader(document.gameLoaderId);
   let changed = false;
   const nodes = document.nodes.map((node) => {
     if (node.type !== "entry" || node.entry.id !== entryId) return node;
-    const ext = necesseEntryExt(node.entry);
-    if (!ext.hasReference) return node;
+    const hints = loader.entryUiHints?.(node.entry);
+    if (hints?.markedSame === undefined || hints.referenceText === undefined) return node;
     changed = true;
-    return { ...node, entry: withUpdatedNecesseEntry(node.entry, { markedSame: !ext.markedSame }) };
+    return {
+      ...node,
+      entry: loader.applyEntryPatch(node.entry, { markedSame: !hints.markedSame }),
+    };
   });
   return changed ? { ...document, nodes } : document;
 }
 
-/** Serializes a document back to its native .lang text, mirroring exportLang's pipeline. */
+/** Serializes a document back to its native text, mirroring exportLang's pipeline. */
 export function exportedText(document: TranslationDocument): string {
-  const raw = necesseGameLoader.fromDocument(document);
+  const loader = resolveGameLoader(document.gameLoaderId);
+  // Both loaders today use fileLoaderId "ini" — a real multi-File-Loader host
+  // would resolve this generically too, but that's out of scope here (see
+  // GameLoader.fileLoaderId's doc comment).
+  const raw = loader.fromDocument(document) as IniFileLoaderRaw;
   return iniFileLoader.serialize(raw).files[0]?.text ?? "";
 }
 
@@ -233,8 +232,12 @@ function enabledOnly(glossaries: readonly GlossaryLike[]): GlossaryLike[] {
   return glossaries.filter((glossary) => glossary.enabled !== false);
 }
 
-function indexWorkspaceEntry(entry: WorkspaceEntry, enabled: GlossaryLike[]): RowIndex {
-  const placeholders = placeholderIssues(entry.source, entry.target);
+function indexWorkspaceEntry(
+  entry: WorkspaceEntry,
+  loader: GameLoader,
+  enabled: GlossaryLike[],
+): RowIndex {
+  const placeholders = placeholderIssues(entry.source, entry.target, loader.placeholders);
   return {
     status: entry.legacyStatus,
     tokenIssue:
@@ -247,20 +250,22 @@ function indexWorkspaceEntry(entry: WorkspaceEntry, enabled: GlossaryLike[]): Ro
 
 export function buildWorkspaceRowIndex(
   entries: readonly WorkspaceEntry[],
+  loader: GameLoader,
   glossaries: readonly GlossaryLike[],
 ): Map<string, RowIndex> {
   const enabled = enabledOnly(glossaries);
   const map = new Map<string, RowIndex>();
-  for (const entry of entries) map.set(entry.id, indexWorkspaceEntry(entry, enabled));
+  for (const entry of entries) map.set(entry.id, indexWorkspaceEntry(entry, loader, enabled));
   return map;
 }
 
 export function reindexWorkspaceEntry(
   map: Map<string, RowIndex>,
   entry: WorkspaceEntry,
+  loader: GameLoader,
   glossaries: readonly GlossaryLike[],
 ): RowIndex {
-  const next = indexWorkspaceEntry(entry, enabledOnly(glossaries));
+  const next = indexWorkspaceEntry(entry, loader, enabledOnly(glossaries));
   map.set(entry.id, next);
   return next;
 }

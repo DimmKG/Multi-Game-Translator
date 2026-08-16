@@ -6,6 +6,7 @@ import {
   FilePlus2,
   FileUp,
   FolderOpen,
+  Gamepad2,
   Maximize2,
   Minimize2,
   Moon,
@@ -82,6 +83,7 @@ export function WorkspaceMenu({
   onPickReference,
   onPickProgress,
   onPickNewTranslation,
+  onChangeGame,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -95,6 +97,7 @@ export function WorkspaceMenu({
   onPickReference: () => void;
   onPickProgress: () => void;
   onPickNewTranslation: () => void;
+  onChangeGame: () => void;
 }) {
   const { t, language, setLanguage, locales } = useI18n();
   const workspace = useWorkspace();
@@ -179,13 +182,21 @@ export function WorkspaceMenu({
                 <Download />
                 {t("btn.export")}
               </Button>
-              <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickLangFile)}>
-                <FolderOpen />
-                {t("btn.newFile")}
-              </Button>
-              <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickNewTranslation)}>
-                <FilePlus2 />
-                {t("btn.newTranslation")}
+              {workspace.selectedGameLoaderId === "necesse" && (
+                <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickLangFile)}>
+                  <FolderOpen />
+                  {t("btn.newFile")}
+                </Button>
+              )}
+              {workspace.activeLoader.createFromReference != null && (
+                <Button variant="ghost" className={MENU_ITEM} onClick={run(onPickNewTranslation)}>
+                  <FilePlus2 />
+                  {t("btn.newTranslation")}
+                </Button>
+              )}
+              <Button variant="ghost" className={MENU_ITEM} onClick={run(onChangeGame)}>
+                <Gamepad2 />
+                {t("btn.changeGame")}
               </Button>
             </Section>
           )}
@@ -205,27 +216,29 @@ export function WorkspaceMenu({
               </p>
               {/* Machine translation without a reference file silently produces
                   nothing useful, so when it is configured this row pulses. */}
-              <Button
-                variant="ghost"
-                className={cn(
-                  MENU_ITEM,
-                  needsReference && [
-                    "animate-attention-pulse border-[color-mix(in_srgb,var(--warn)_72%,var(--border))]",
-                    "motion-reduce:animate-none",
-                    "motion-reduce:shadow-[0_0_0_3px_color-mix(in_srgb,var(--warn)_22%,transparent)]",
-                    "[&_svg]:text-warn",
-                  ],
-                )}
-                onClick={run(onPickReference)}
-              >
-                <BookMarked />
-                {workspace.referenceFilename
-                  ? t("btn.enRefLoaded", {
-                      file: workspace.referenceFilename,
-                      n: referenceMatches,
-                    })
-                  : t("btn.enRef")}
-              </Button>
+              {workspace.activeLoader.attachReference != null && (
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    MENU_ITEM,
+                    needsReference && [
+                      "animate-attention-pulse border-[color-mix(in_srgb,var(--warn)_72%,var(--border))]",
+                      "motion-reduce:animate-none",
+                      "motion-reduce:shadow-[0_0_0_3px_color-mix(in_srgb,var(--warn)_22%,transparent)]",
+                      "[&_svg]:text-warn",
+                    ],
+                  )}
+                  onClick={run(onPickReference)}
+                >
+                  <BookMarked />
+                  {workspace.referenceFilename
+                    ? t("btn.enRefLoaded", {
+                        file: workspace.referenceFilename,
+                        n: referenceMatches,
+                      })
+                    : t("btn.enRef")}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 className={MENU_ITEM}

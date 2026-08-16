@@ -30,8 +30,6 @@
     "side.sections": "Osiot",
     "drop.text": "Pudota Necesse-käännöstiedosto tähän tai valitse se käsin.<br>Tiedosto käsitellään paikallisesti selaimessasi — mitään ei ladata minnekkään.",
     "drop.pick": "Valitse .lang-tiedosto",
-    "legend.var": "&lt;muuttuja&gt;",
-    "legend.fmt": "§muotoilu",
     "tab.editor": "Editori",
     "tab.review": "Tarkista",
     "tab.diff": "Vertaa",

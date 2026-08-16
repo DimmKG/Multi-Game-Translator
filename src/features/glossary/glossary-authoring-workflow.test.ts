@@ -34,7 +34,10 @@ describe("glossary authoring workflow wiring", () => {
   it("opens Manager items in authoring even when no translation workspace is loaded", () => {
     expect(managerSource).toContain("openGlossaryAuthoring(glossary.id)");
     expect(managerSource).toContain("createGlossaryAuthoring()");
-    expect(appSource).toContain('workspace.isOpen || workspace.view === "terminology"');
+    // The tabbed shell (App.tsx) is reachable via workspace-store's flowStage,
+    // which treats the terminology view the same as an open translation.
+    expect(storeSource).toContain('if (state.isOpen || state.view === "terminology")');
+    expect(appSource).toContain('workspace.flowStage === "select-game"');
     expect(terminologySource).toContain('setSection("authoring")');
     expect(terminologySource).toContain("<GlossaryAuthoringWorkspace />");
   });

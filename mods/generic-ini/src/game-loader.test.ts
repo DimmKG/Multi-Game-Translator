@@ -131,6 +131,10 @@ describe("genericIniGameLoader — minimal-by-design surface", () => {
     expect(genericIniGameLoader.createFromReference).toBeUndefined();
   });
 
+  it("has no attachReference — reference is required at open time, no add-later workflow", () => {
+    expect(genericIniGameLoader.attachReference).toBeUndefined();
+  });
+
   it("placeholders.tokenize always returns an empty array", () => {
     expect(genericIniGameLoader.placeholders.tokenize("<x> [y] anything")).toEqual([]);
   });
@@ -138,5 +142,46 @@ describe("genericIniGameLoader — minimal-by-design surface", () => {
   it("has no pluralSelector or identity strategy of its own", () => {
     expect(genericIniGameLoader.pluralSelector).toBeUndefined();
     expect(genericIniGameLoader.identity).toBeUndefined();
+  });
+});
+
+describe("genericIniGameLoader.entryUiHints", () => {
+  it("reports referenceText only for an entry that actually matched a reference", () => {
+    const doc = toDoc(
+      [
+        { name: "en.ini", text: "hello=Hello\n" },
+        { name: "t.ini", text: "hello=Hallo\nbye=Tschuss\n" },
+      ],
+      [{ role: "reference" }, { role: "translation" }],
+    );
+    const [hello, bye] = entries(doc);
+    expect(genericIniGameLoader.entryUiHints?.(hello)).toEqual({ referenceText: "Hello" });
+    expect(genericIniGameLoader.entryUiHints?.(bye)).toEqual({});
+  });
+
+  it("never reports markedSame/wasMissing/originalValue — this format has none of those concepts", () => {
+    const doc = toDoc([{ name: "t.ini", text: "hello=Hallo\n" }], [{ role: "translation" }]);
+    const [hello] = entries(doc);
+    const hints = genericIniGameLoader.entryUiHints?.(hello);
+    expect(hints?.markedSame).toBeUndefined();
+    expect(hints?.wasMissing).toBeUndefined();
+    expect(hints?.originalValue).toBeUndefined();
+  });
+});
+
+describe("genericIniGameLoader.applyEntryPatch", () => {
+  it("updates target and recomputes status", () => {
+    const doc = toDoc([{ name: "t.ini", text: "hello=\n" }], [{ role: "translation" }]);
+    const [hello] = entries(doc);
+    expect(hello.status).toBe("missing");
+    const patched = genericIniGameLoader.applyEntryPatch(hello, { target: "Hallo" });
+    expect(patched).toMatchObject({ target: "Hallo", status: "translated" });
+  });
+
+  it("silently ignores a markedSame patch — no such concept", () => {
+    const doc = toDoc([{ name: "t.ini", text: "hello=Hallo\n" }], [{ role: "translation" }]);
+    const [hello] = entries(doc);
+    const patched = genericIniGameLoader.applyEntryPatch(hello, { markedSame: true });
+    expect(patched).toEqual(hello);
   });
 });

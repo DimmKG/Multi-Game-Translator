@@ -30,8 +30,6 @@
     "side.sections": "Mục",
     "drop.text": "Kéo tệp dịch Necesse vào đây, hoặc chọn thủ công.<br>Tệp được xử lý cục bộ trong trình duyệt của bạn — không có gì được tải lên máy chủ.",
     "drop.pick": "Chọn tệp .lang",
-    "legend.var": "&lt;biến&gt;",
-    "legend.fmt": "§định dạng",
     "tab.editor": "Trình chỉnh sửa",
     "tab.review": "Xem lại",
     "tab.diff": "So sánh",

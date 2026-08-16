@@ -30,8 +30,6 @@
     "side.sections": "Odjeljci",
     "drop.text": "Dovucite datoteku prijevoda za Necesse ovdje ili je odaberite ručno.<br>Datoteka se obrađuje lokalno u vašem pregledniku — ništa se ne prenosi na poslužitelj.",
     "drop.pick": "Odaberi .lang datoteku",
-    "legend.var": "&lt;varijabla&gt;",
-    "legend.fmt": "§format",
     "tab.editor": "Uređivač",
     "tab.review": "Pregled",
     "tab.diff": "Usporedba",

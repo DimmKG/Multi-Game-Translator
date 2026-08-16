@@ -3,6 +3,8 @@ import {
   defaultIdentityStrategy,
   iniFileLoader,
   type DocumentNode,
+  type EntryPatch,
+  type EntryUiHints,
   type FileLoaderInput,
   type GameLoader,
   type IniFileLoaderRaw,
@@ -10,6 +12,7 @@ import {
   type LineEol,
   type RequiredFile,
   type TranslationDocument,
+  type TranslationEntry,
 } from "@mgt/sdk";
 
 type GenericIniFormatMeta = {
@@ -17,6 +20,9 @@ type GenericIniFormatMeta = {
   /** Whether the source translation file's last line had a trailing newline. */
   trailingNewline: boolean;
 };
+
+/** Only tracked native fact: did this entry's source actually come from a matched reference, or its own value as fallback. No markedSame/wasMissing/originalValue — this format has none of those concepts. */
+type GenericIniEntryExt = { hasReference: boolean };
 
 /** Same null-byte join convention as defaultIdentityStrategy — never collides with a real section/key name. */
 const REFERENCE_SEPARATOR = String.fromCharCode(0);
@@ -114,7 +120,9 @@ function toDocument(
     // covers key drift between the two files (or direct toDocument() calls
     // that skip the reference role, e.g. in tests) — not a supported
     // reference-less workflow.
-    const source = referenceMap.get(identity) ?? value;
+    const referenceValue = referenceMap.get(identity);
+    const source = referenceValue ?? value;
+    const ext: GenericIniEntryExt = { hasReference: referenceValue !== undefined };
 
     nodes.push({
       type: "entry",
@@ -125,7 +133,7 @@ function toDocument(
         source,
         target: value,
         status: statusFromTarget(value),
-        ext: {},
+        ext,
       },
     });
   }
@@ -180,6 +188,18 @@ function detectGame(input: FileLoaderInput): number {
   return Number(iniFileLoader.detect(input));
 }
 
+function entryUiHints(entry: TranslationEntry): EntryUiHints {
+  const ext = entry.ext as GenericIniEntryExt;
+  return ext.hasReference ? { referenceText: entry.source } : {};
+}
+
+/** Target-only — no markedSame concept, so patch.markedSame is silently ignored if ever passed. */
+function applyEntryPatch(entry: TranslationEntry, patch: EntryPatch): TranslationEntry {
+  if (patch.target === undefined) return entry;
+  const target = patch.target;
+  return { ...entry, target, status: statusFromTarget(target) };
+}
+
 const requiredFiles: RequiredFile[] = [
   {
     role: "translation",
@@ -198,11 +218,15 @@ const requiredFiles: RequiredFile[] = [
 export const genericIniGameLoader: GameLoader<IniFileLoaderRaw> = {
   id: "generic-ini",
   displayName: "Generic ini/cfg",
+  icon: "generic",
   fileLoaderId: "ini",
+  fileExtension: ".ini",
   requiredFiles,
   detectGame,
   toDocument,
   fromDocument,
+  entryUiHints,
+  applyEntryPatch,
   placeholders: { tokenize: () => [] },
   statusStrategy: {
     fromNative: (entry) => statusFromTarget(entry.target),

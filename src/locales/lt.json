@@ -30,8 +30,6 @@
     "side.sections": "Skiltys",
     "drop.text": "Atvilkite Necesse vertimo failą čia arba pasirinkite rankiniu būdu.<br>Failas apdorojamas lokaliai jūsų naršyklėje — niekas niekur neįkeliama.",
     "drop.pick": "Pasirinkti .lang failą",
-    "legend.var": "&lt;kintamasis&gt;",
-    "legend.fmt": "§formatas",
     "tab.editor": "Redagavimas",
     "tab.review": "Peržiūra",
     "tab.diff": "Palyginimas",

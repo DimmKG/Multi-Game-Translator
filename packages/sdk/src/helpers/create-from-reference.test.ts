@@ -14,6 +14,7 @@ const stubGameLoader: GameLoader<IniFileLoaderRaw> = {
   id: "stub",
   displayName: "Stub",
   fileLoaderId: "ini",
+  fileExtension: ".ini",
   requiredFiles: [],
   detectGame: () => 0,
   toDocument(raw, roles, targetLocale) {
@@ -53,6 +54,7 @@ const stubGameLoader: GameLoader<IniFileLoaderRaw> = {
     };
   },
   fromDocument: () => [],
+  applyEntryPatch: (entry, patch) => ({ ...entry, target: patch.target ?? entry.target }),
   placeholders: { tokenize: () => [] },
   statusStrategy: {
     fromNative: (entry) => (entry.target.trim() === "" ? "missing" : "translated"),

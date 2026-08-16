@@ -30,8 +30,6 @@
     "side.sections": "Sekcje",
     "drop.text": "Upuść plik tłumaczenia Necesse tutaj lub wybierz go ręcznie.<br>Plik jest przetwarzany lokalnie w Twojej przeglądarce.",
     "drop.pick": "Wybierz plik .lang",
-    "legend.var": "&lt;zmienna&gt;",
-    "legend.fmt": "§format",
     "tab.editor": "Edytor",
     "tab.review": "Przegląd",
     "tab.diff": "Porównaj",

@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { SettingsDialog } from "@/features/settings/SettingsDialog";
 import { GlossaryDialog } from "@/features/glossary/GlossaryDialog";
+import { ChangeGameDialog } from "@/features/workspace/ChangeGameDialog";
 import { useWorkspace } from "@/state/workspace-store";
 import type { ThemeMode } from "@/themes/themes";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ export function AppHeader({
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [glossaryOpen, setGlossaryOpen] = useState(false);
+  const [changeGameOpen, setChangeGameOpen] = useState(false);
 
   // New translations start without a target filename — open the menu so the
   // pulsing field is visible instead of waiting for the user to find it.
@@ -84,7 +86,7 @@ export function AppHeader({
             "[text-shadow:0_0_14px_color-mix(in_srgb,var(--primary)_35%,transparent)]",
           )}
         >
-          necesse.lang
+          MGT
         </span>
         <span
           className={cn(
@@ -185,6 +187,7 @@ export function AppHeader({
         onPickReference={() => referenceInput.current?.click()}
         onPickProgress={() => progressInput.current?.click()}
         onPickNewTranslation={() => newTranslationInput.current?.click()}
+        onChangeGame={() => setChangeGameOpen(true)}
       />
 
       <input
@@ -234,6 +237,7 @@ export function AppHeader({
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       <GlossaryDialog open={glossaryOpen} onOpenChange={setGlossaryOpen} />
+      <ChangeGameDialog open={changeGameOpen} onOpenChange={setChangeGameOpen} />
     </header>
   );
 }

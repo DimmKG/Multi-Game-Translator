@@ -12,15 +12,9 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { useI18n } from "@/features/i18n/I18nProvider";
+import { resolveGameLoader } from "@/state/loaders";
 import { useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
-
-const LEGEND_ITEMS = [
-  { id: "var", color: "var(--tok-var)", labelKey: "legend.var", html: true },
-  { id: "ref", color: "var(--tok-ref)", literal: "[item/input=…]" },
-  { id: "fmt", color: "var(--tok-fmt)", labelKey: "legend.fmt", html: false },
-  { id: "nl", color: "var(--tok-nl)", literal: "\\n" },
-] as const;
 
 function FileDropBox({
   testId,
@@ -30,6 +24,7 @@ function FileDropBox({
   file,
   disabled,
   pickLabel,
+  accept,
   onFile,
 }: {
   testId: string;
@@ -39,6 +34,7 @@ function FileDropBox({
   file: File | null;
   disabled: boolean;
   pickLabel: string;
+  accept: string[];
   onFile: (file: File) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -84,7 +80,7 @@ function FileDropBox({
         ref={inputRef}
         id={inputId}
         type="file"
-        accept=".lang,.txt"
+        accept={accept.join(",")}
         hidden
         disabled={disabled}
         onChange={(event) => {
@@ -112,12 +108,22 @@ function FileDropBox({
 
 export function Dropzone() {
   const { t } = useI18n();
-  const { openWorkspaceWithReference, createFromReferenceFile, isImportingFile } = useWorkspace();
-  const [originalFile, setOriginalFile] = useState<File | null>(null);
-  const [translationFile, setTranslationFile] = useState<File | null>(null);
+  const { selectedGameLoaderId, openWorkspaceFiles, createFromReferenceFile, isImportingFile } =
+    useWorkspace();
+  // App.tsx only renders Dropzone once flowStage === "dropzone", i.e. a game is already
+  // selected — NOT `activeLoader` here, that reflects the currently *open document's*
+  // loader (stays a meaningless placeholder until a document actually exists).
+  const selectedLoader = resolveGameLoader(selectedGameLoaderId!);
+  const [files, setFiles] = useState<Record<string, File | null>>({});
 
-  const canOpen = originalFile != null && translationFile != null && !isImportingFile;
-  const canCreateNew = originalFile != null && translationFile == null && !isImportingFile;
+  const canOpen =
+    selectedLoader.requiredFiles.every((rf) => !rf.required || files[rf.role] != null) &&
+    !isImportingFile;
+  const canCreateNew =
+    selectedLoader.createFromReference != null &&
+    files.reference != null &&
+    selectedLoader.requiredFiles.every((rf) => rf.role === "reference" || files[rf.role] == null) &&
+    !isImportingFile;
 
   return (
     <div className="flex flex-1 items-center justify-center p-10">
@@ -141,7 +147,7 @@ export function Dropzone() {
             data-testid="dropzone-title"
             className="text-primary mb-1.5 font-mono text-xl font-bold tracking-[0.5px]"
           >
-            *.lang
+            {selectedLoader.displayName}
           </EmptyTitle>
 
           <EmptyDescription
@@ -154,26 +160,20 @@ export function Dropzone() {
 
         <EmptyContent className="max-w-none gap-0">
           <div className="mb-4 grid w-full gap-3 sm:grid-cols-2">
-            <FileDropBox
-              testId="dropzone-original"
-              inputId="originalFileInput"
-              label={t("drop.originalLabel")}
-              hint={t("drop.originalHint")}
-              pickLabel={t("drop.pick")}
-              file={originalFile}
-              disabled={isImportingFile}
-              onFile={setOriginalFile}
-            />
-            <FileDropBox
-              testId="dropzone-translation"
-              inputId="translationFileInput"
-              label={t("drop.translationLabel")}
-              hint={originalFile ? t("drop.pick") : t("drop.translationRequiresOriginalHint")}
-              pickLabel={t("drop.pick")}
-              file={translationFile}
-              disabled={isImportingFile || !originalFile}
-              onFile={setTranslationFile}
-            />
+            {selectedLoader.requiredFiles.map((rf) => (
+              <FileDropBox
+                key={rf.role}
+                testId={`dropzone-${rf.role}`}
+                inputId={`${rf.role}FileInput`}
+                label={t(rf.labelKey)}
+                hint={t(`${rf.labelKey}Hint`)}
+                pickLabel={t("drop.pick")}
+                file={files[rf.role] ?? null}
+                disabled={isImportingFile}
+                accept={rf.accept}
+                onFile={(file) => setFiles((prev) => ({ ...prev, [rf.role]: file }))}
+              />
+            ))}
           </div>
 
           <div className="mb-[22px] flex flex-wrap items-center justify-center gap-2">
@@ -182,49 +182,30 @@ export function Dropzone() {
               id="btnOpenTranslation"
               disabled={!canOpen}
               onClick={() => {
-                if (originalFile && translationFile) {
-                  void openWorkspaceWithReference(translationFile, originalFile);
+                const picked: Record<string, File> = {};
+                for (const rf of selectedLoader.requiredFiles) {
+                  const file = files[rf.role];
+                  if (file) picked[rf.role] = file;
                 }
+                void openWorkspaceFiles(picked);
               }}
             >
               {t("drop.open")}
             </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              data-new-translation-button=""
-              title={t("btn.newTranslationTitle")}
-              disabled={!canCreateNew}
-              onClick={() => {
-                if (originalFile) void createFromReferenceFile(originalFile);
-              }}
-            >
-              {t("btn.newTranslation")}
-            </Button>
-          </div>
-
-          <div
-            className="text-foreground-faint flex flex-wrap justify-center gap-4 text-[11.5px]"
-            data-testid="dropzone-legend"
-          >
-            {LEGEND_ITEMS.map((item) => (
-              <span key={item.id} className="flex items-center gap-1.5">
-                <i
-                  className="inline-block size-[9px] shrink-0 rounded-sm"
-                  style={{ background: item.color }}
-                />
-                {"literal" in item ? (
-                  <span className="ltr-isolate">{item.literal}</span>
-                ) : item.html ? (
-                  <span
-                    className="ltr-isolate"
-                    dangerouslySetInnerHTML={{ __html: t(item.labelKey) }}
-                  />
-                ) : (
-                  <span className="ltr-isolate">{t(item.labelKey)}</span>
-                )}
-              </span>
-            ))}
+            {selectedLoader.createFromReference != null && (
+              <Button
+                type="button"
+                variant="ghost"
+                data-new-translation-button=""
+                title={t("btn.newTranslationTitle")}
+                disabled={!canCreateNew}
+                onClick={() => {
+                  if (files.reference) void createFromReferenceFile(files.reference);
+                }}
+              >
+                {t("btn.newTranslation")}
+              </Button>
+            )}
           </div>
         </EmptyContent>
       </Empty>

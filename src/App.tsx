@@ -15,6 +15,7 @@ import { TerminologyWorkspace } from "@/features/glossary/TerminologyWorkspace";
 import { I18nProvider, useI18n } from "@/features/i18n/I18nProvider";
 import { ReviewView } from "@/features/review/ReviewView";
 import { Dropzone } from "@/features/workspace/Dropzone";
+import { GameSelect } from "@/features/workspace/GameSelect";
 import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
 import { WorkspaceProvider, useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
@@ -88,7 +89,6 @@ function WorkspaceShell({
   }, [railOpen]);
 
   const reviewCount = workspace.entries.filter((entry) => entry.touched).length;
-  const showWorkspace = workspace.isOpen || workspace.view === "terminology";
 
   if (!workspace.ready) {
     return (
@@ -117,7 +117,13 @@ function WorkspaceShell({
       />
       <CompactBar />
 
-      {!showWorkspace ? (
+      {workspace.flowStage === "select-game" ? (
+        <main className="flex min-h-0 flex-1 flex-row">
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+            <GameSelect />
+          </section>
+        </main>
+      ) : workspace.flowStage === "dropzone" ? (
         <main className="flex min-h-0 flex-1 flex-row">
           <section className="flex min-h-0 min-w-0 flex-1 flex-col">
             <Dropzone />

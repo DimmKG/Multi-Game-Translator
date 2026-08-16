@@ -30,8 +30,6 @@
     "side.sections": "Bagian",
     "drop.text": "Seret file terjemahan Necesse ke sini atau pilih secara manual.<br>File diproses secara lokal di browser Anda — tidak ada yang diunggah ke mana pun.",
     "drop.pick": "Pilih file .lang",
-    "legend.var": "&lt;variabel&gt;",
-    "legend.fmt": "§format",
     "tab.editor": "Editor",
     "tab.review": "Tinjauan",
     "tab.diff": "Perbandingan",

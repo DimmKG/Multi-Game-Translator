@@ -149,7 +149,11 @@ const EntryCard = memo(function EntryCard({
   const { t } = useI18n();
   const workspace = useWorkspace();
   const status = entry.legacyStatus;
-  const placeholders = placeholderIssues(entry.source, entry.target);
+  const placeholders = placeholderIssues(
+    entry.source,
+    entry.target,
+    workspace.activeLoader.placeholders,
+  );
   const reference = referenceDisplayText(entry);
   const whitespace = scanWhitespace(entry.target, reference);
   const guidance = metadataGuidanceFor(entry);
@@ -305,7 +309,7 @@ const EntryCard = memo(function EntryCard({
               {t("terminology.filter")}
             </Button>
           )}
-          {entry.referenceText != null && (
+          {entry.referenceText != null && entry.supportsMarkedSame && (
             <Button
               type="button"
               variant="outline"

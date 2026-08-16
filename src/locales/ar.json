@@ -30,8 +30,6 @@
     "side.sections": "الأقسام",
     "drop.text": "أفلت ملف ترجمة Necesse هنا، أو اختره يدويًا.<br>يتم معالجة الملف محليًا في متصفحك.",
     "drop.pick": "اختر ملف .lang",
-    "legend.var": "&lt;متغير&gt;",
-    "legend.fmt": "§تنسيق",
     "tab.editor": "المحرر",
     "tab.review": "المراجعة",
     "tab.diff": "المقارنة",

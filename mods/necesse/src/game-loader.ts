@@ -13,8 +13,13 @@ import {
 } from "@mgt/sdk";
 import { MISSING_TRANSLATION_PREFIX, SAME_TRANSLATION_PREFIX, stripStatusPrefix } from "./markers";
 import { necessePlaceholderTokenizer } from "./placeholders";
-import { buildReferenceQueues, referenceIdentity } from "./reference";
-import { necesseStatusStrategy, type NecesseEntryExt } from "./status";
+import { buildReferenceQueues, necesseAttachReference, referenceIdentity } from "./reference";
+import {
+  necesseApplyEntryPatch,
+  necesseEntryUiHints,
+  necesseStatusStrategy,
+  type NecesseEntryExt,
+} from "./status";
 import { validateEnglishReferenceFile } from "./validate-reference";
 
 type NecesseFormatMeta = {
@@ -216,7 +221,9 @@ const requiredFiles: RequiredFile[] = [
     accept: [".lang"],
     validate(file) {
       const result = validateEnglishReferenceFile(file.name, file.text);
-      return result.ok ? { ok: true } : { ok: false, messageKey: result.messageKey };
+      return result.ok
+        ? { ok: true, displayName: result.filename }
+        : { ok: false, messageKey: result.messageKey };
     },
   },
   {
@@ -231,11 +238,15 @@ export const necesseGameLoader: GameLoader<IniFileLoaderRaw> = {
   id: "necesse",
   displayName: "Necesse",
   fileLoaderId: "ini",
+  fileExtension: ".lang",
   requiredFiles,
   detectGame,
   toDocument,
   fromDocument,
   createFromReference,
+  entryUiHints: necesseEntryUiHints,
+  applyEntryPatch: necesseApplyEntryPatch,
+  attachReference: necesseAttachReference,
   placeholders: necessePlaceholderTokenizer,
   statusStrategy: necesseStatusStrategy,
   locale: {},

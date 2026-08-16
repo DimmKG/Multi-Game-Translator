@@ -79,12 +79,3 @@ export function parseNecesseRawFile(text: string): NecesseRawFile {
 
   return { eol, items };
 }
-
-/** Strips download-duplication artifacts from a Necesse `.lang` filename without breaking locale codes like pt-BR. */
-export function cleanNecesseFilename(name: string): string {
-  let base = String(name || "").replace(/\.lang$/i, "");
-  base = base.replace(/\s*\(\d+\)\s*$/, "");
-  base = base.replace(/_\d+_?/g, "");
-  base = base.replace(/^_+|_+$/g, "");
-  return base ? `${base}.lang` : "translation.lang";
-}

@@ -27,6 +27,7 @@ function fakeGameLoader(id: string): GameLoader {
     id,
     displayName: id,
     fileLoaderId: "ini",
+    fileExtension: ".ini",
     requiredFiles: [],
     detectGame: () => 0,
     toDocument: () => {
@@ -35,6 +36,7 @@ function fakeGameLoader(id: string): GameLoader {
     fromDocument: () => {
       throw new Error("not implemented");
     },
+    applyEntryPatch: (entry, patch) => ({ ...entry, target: patch.target ?? entry.target }),
     placeholders: { tokenize: () => [] },
     statusStrategy: {
       fromNative: (entry) => entry.status,

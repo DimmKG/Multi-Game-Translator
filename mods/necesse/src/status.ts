@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import type { EntryStatus, StatusStrategy, TranslationEntry } from "@mgt/sdk";
+import type {
+  EntryPatch,
+  EntryStatus,
+  EntryUiHints,
+  StatusStrategy,
+  TranslationEntry,
+} from "@mgt/sdk";
 
 /**
  * Necesse-specific fields the generic ini File Loader/TranslationEntry model
@@ -72,3 +78,32 @@ export const necesseStatusStrategy: StatusStrategy = {
     return "none";
   },
 };
+
+export function necesseEntryUiHints(entry: TranslationEntry): EntryUiHints {
+  const ext = necesseEntryExt(entry);
+  return {
+    originalValue: ext.originalValue,
+    referenceText: ext.hasReference ? entry.source : undefined,
+    markedSame: ext.markedSame,
+    wasMissing: ext.wasMissing,
+  };
+}
+
+/** Moved verbatim from src/state/entries.ts's withUpdatedNecesseEntry. */
+export function necesseApplyEntryPatch(
+  entry: TranslationEntry,
+  patch: EntryPatch,
+): TranslationEntry {
+  const ext = necesseEntryExt(entry);
+  const nextExt: NecesseEntryExt = {
+    ...ext,
+    ...(patch.markedSame !== undefined ? { markedSame: patch.markedSame } : {}),
+  };
+  const draft = { ...entry, target: patch.target ?? entry.target, ext: nextExt };
+  const status = necesseStatusStrategy.fromNative(draft, {
+    markedSame: nextExt.markedSame,
+    wasMissing: nextExt.wasMissing,
+    hasReference: nextExt.hasReference,
+  });
+  return { ...draft, status };
+}

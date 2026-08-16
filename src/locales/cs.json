@@ -30,8 +30,6 @@
     "side.sections": "Sekce",
     "drop.text": "Přetáhněte sem soubor s překladem pro Necesse nebo jej vyberte ručně.<br>Soubor se zpracovává lokálně ve vašem prohlížeči — nikam se neodesílá.",
     "drop.pick": "Vybrat soubor .lang",
-    "legend.var": "&lt;proměnná&gt;",
-    "legend.fmt": "§formát",
     "tab.editor": "Editor",
     "tab.review": "Kontrola",
     "tab.diff": "Porovnání",

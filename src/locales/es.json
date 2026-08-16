@@ -30,8 +30,6 @@
     "side.sections": "Secciones",
     "drop.text": "Arrastra un archivo de traducción de Necesse aquí o elige uno manualmente.<br>El archivo se procesa localmente en tu navegador — no se sube a ningún sitio.",
     "drop.pick": "Elegir un archivo .lang",
-    "legend.var": "&lt;variable&gt;",
-    "legend.fmt": "§formato",
     "tab.editor": "Editor",
     "tab.review": "Revisar",
     "tab.diff": "Comparar",

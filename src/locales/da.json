@@ -30,8 +30,6 @@
     "side.sections": "Sektioner",
     "drop.text": "Slip en Necesse-oversættelsesfil her, eller vælg en manuelt.<br>Filen behandles lokalt i din browser — intet uploades nogen steder.",
     "drop.pick": "Vælg en .lang-fil",
-    "legend.var": "&lt;variabel&gt;",
-    "legend.fmt": "§format",
     "tab.editor": "Editor",
     "tab.review": "Gennemse",
     "tab.diff": "Sammenlign",

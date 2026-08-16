@@ -30,8 +30,6 @@
     "side.sections": "섹션",
     "drop.text": "Necesse 번역 파일을 여기에 끌어다 놓거나 직접 선택하세요.<br>파일은 브라우저 내에서 로컬로 처리됩니다.",
     "drop.pick": ".lang 파일 선택",
-    "legend.var": "&lt;변수&gt;",
-    "legend.fmt": "§서식",
     "tab.editor": "편집기",
     "tab.review": "검토",
     "tab.diff": "비교",

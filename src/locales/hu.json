@@ -30,8 +30,6 @@
     "side.sections": "Szekciók",
     "drop.text": "Húzzon ide egy Necesse fordítási fájlt, vagy válasszon egyet manuálisan.<br>A fájl feldolgozása helyileg történik a böngészőben — semmi nem kerül feltöltésre.",
     "drop.pick": ".lang fájl kiválasztása",
-    "legend.var": "&lt;változó&gt;",
-    "legend.fmt": "§formátum",
     "tab.editor": "Szerkesztő",
     "tab.review": "Áttekintés",
     "tab.diff": "Összehasonlítás",

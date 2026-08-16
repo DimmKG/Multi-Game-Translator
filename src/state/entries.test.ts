@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { iniFileLoader, type TranslationDocument } from "@mgt/sdk";
-import { necesseGameLoader } from "@mgt/mod-necesse";
+import { necesseGameLoader, necessePlaceholderTokenizer } from "@mgt/mod-necesse";
+import { genericIniGameLoader } from "@mgt/mod-generic-ini";
 import { describe, expect, it } from "vitest";
 
 import type { WorkspaceUiFlags } from "@/core/persistence/idb";
@@ -63,6 +64,7 @@ describe("buildWorkspaceEntries", () => {
     expect(hello.referenceText).toBe("Hello");
     expect(hello.touched).toBe(true);
     expect(hello.legacyStatus).toBe("done");
+    expect(hello.supportsMarkedSame).toBe(true);
 
     const bye = entries.find((e) => e.key === "bye")!;
     expect(bye.wasMissing).toBe(true);
@@ -188,36 +190,48 @@ describe("hasUsableReference", () => {
 
 describe("placeholderIssues", () => {
   it("flags a missing required token (var)", () => {
-    expect(placeholderIssues("Hello <name>", "Hallo")).toEqual({
+    expect(placeholderIssues("Hello <name>", "Hallo", necessePlaceholderTokenizer)).toEqual({
       missingRequired: ["<name>"],
       missingFormattingKinds: [],
     });
   });
 
   it("returns nothing when every required token is present", () => {
-    expect(placeholderIssues("Hello <name>", "Hallo <name>")).toEqual({
+    expect(placeholderIssues("Hello <name>", "Hallo <name>", necessePlaceholderTokenizer)).toEqual({
       missingRequired: [],
       missingFormattingKinds: [],
     });
   });
 
   it("is multiset-aware for required tokens: two occurrences need two matches", () => {
-    expect(placeholderIssues("<a> and <a>", "<a>").missingRequired).toEqual(["<a>"]);
-    expect(placeholderIssues("<a> and <a>", "<a> und <a>").missingRequired).toEqual([]);
+    expect(
+      placeholderIssues("<a> and <a>", "<a>", necessePlaceholderTokenizer).missingRequired,
+    ).toEqual(["<a>"]);
+    expect(
+      placeholderIssues("<a> and <a>", "<a> und <a>", necessePlaceholderTokenizer).missingRequired,
+    ).toEqual([]);
   });
 
   it("does not flag a formatting kind that is merely reordered or reduced in count", () => {
-    const issues = placeholderIssues("[item/ref=sword] and [item/ref=shield]", "[item/ref=shield]");
+    const issues = placeholderIssues(
+      "[item/ref=sword] and [item/ref=shield]",
+      "[item/ref=shield]",
+      necessePlaceholderTokenizer,
+    );
     expect(issues.missingFormattingKinds).toEqual([]);
   });
 
   it("flags a formatting kind only when it is entirely absent from target", () => {
-    const issues = placeholderIssues("Take the [item/ref=sword]", "Take it");
+    const issues = placeholderIssues(
+      "Take the [item/ref=sword]",
+      "Take it",
+      necessePlaceholderTokenizer,
+    );
     expect(issues.missingFormattingKinds).toEqual(["ref"]);
   });
 
   it("returns nothing when source has no protected tokens", () => {
-    expect(placeholderIssues("Hello", "Hallo")).toEqual({
+    expect(placeholderIssues("Hello", "Hallo", necessePlaceholderTokenizer)).toEqual({
       missingRequired: [],
       missingFormattingKinds: [],
     });
@@ -231,7 +245,7 @@ describe("row indexing", () => {
       "hello=<name> Hello\nbye=Bye\n",
     );
     const entries = buildWorkspaceEntries(document, new Map());
-    const index = buildWorkspaceRowIndex(entries, []);
+    const index = buildWorkspaceRowIndex(entries, necesseGameLoader, []);
 
     const hello = entries.find((e) => e.key === "hello")!;
     expect(index.get(hello.id)?.tokenIssue).toBe(true);
@@ -244,15 +258,64 @@ describe("row indexing", () => {
   it("reindexWorkspaceEntry updates only the targeted entry's row", () => {
     const document = buildDocument("MISSING_TRANSLATION:hello=Hallo\nbye=Tschuss\n");
     const entries = buildWorkspaceEntries(document, new Map());
-    const index = buildWorkspaceRowIndex(entries, []);
+    const index = buildWorkspaceRowIndex(entries, necesseGameLoader, []);
 
     const hello = entries.find((e) => e.key === "hello")!;
     const edited = { ...hello, target: "Hallo!", legacyStatus: "done" as const };
-    const updated = reindexWorkspaceEntry(index, edited, []);
+    const updated = reindexWorkspaceEntry(index, edited, necesseGameLoader, []);
 
     expect(updated.status).toBe("done");
     expect(index.get(hello.id)?.status).toBe("done");
     const bye = entries.find((e) => e.key === "bye")!;
     expect(index.get(bye.id)?.status).toBe("done");
+  });
+});
+
+describe("cross-loader genericity (M6) — a document from a loader with no ext at all must not crash", () => {
+  function buildGenericIniDocument(
+    translationText: string,
+    referenceText: string,
+  ): TranslationDocument {
+    const raw = iniFileLoader.parse({
+      files: [
+        { name: "t.ini", text: translationText },
+        { name: "en.ini", text: referenceText },
+      ],
+    });
+    return genericIniGameLoader.toDocument(
+      raw,
+      [{ role: "translation" }, { role: "reference" }],
+      "de",
+    );
+  }
+
+  it("buildWorkspaceEntries does not throw, and fills in loader-agnostic defaults", () => {
+    const document = buildGenericIniDocument("hello=Hallo\nbye=\n", "hello=Hello\nbye=Bye\n");
+    const entries = buildWorkspaceEntries(document, new Map());
+    expect(entries).toHaveLength(2);
+
+    const hello = entries.find((e) => e.key === "hello")!;
+    expect(hello.referenceText).toBe("Hello");
+    // No markedSame/wasMissing concept in this format — always the neutral default.
+    expect(hello.markedSame).toBe(false);
+    expect(hello.wasMissing).toBe(false);
+    expect(hello.supportsMarkedSame).toBe(false);
+
+    const bye = entries.find((e) => e.key === "bye")!;
+    expect(bye.legacyStatus).toBe("missing");
+  });
+
+  it("toggleEntryMarkedSame is a no-op — the format has no such concept, regardless of a matched reference", () => {
+    const document = buildGenericIniDocument("hello=Hallo\n", "hello=Hello\n");
+    const [entry] = buildWorkspaceEntries(document, new Map());
+    const next = toggleEntryMarkedSame(document, entry.id);
+    expect(next).toBe(document);
+  });
+
+  it("updateEntryTarget and exportedText round-trip through the generic-ini loader", () => {
+    const document = buildGenericIniDocument("hello=Hallo\n", "hello=Hello\n");
+    const [entry] = buildWorkspaceEntries(document, new Map());
+    const next = updateEntryTarget(document, entry.id, "Servus");
+    expect(exportedText(next)).toBe("hello=Servus\n");
   });
 });
