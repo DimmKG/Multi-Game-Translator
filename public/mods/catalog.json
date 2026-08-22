@@ -19,6 +19,15 @@
       "entry": "factorio/index.js",
       "sdkRange": "^0.0.1",
       "enabled": true
+    },
+    {
+      "id": "gettext",
+      "name": "gettext (.po)",
+      "icon": "",
+      "version": "0.0.1",
+      "entry": "gettext/index.js",
+      "sdkRange": "^0.0.1",
+      "enabled": true
     }
   ]
 }

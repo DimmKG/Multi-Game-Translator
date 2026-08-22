@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // Game-specific mods shipped as separate import()-ed bundles (public/mods/catalog.json).
 // General-purpose loaders (generic-ini) are statically bundled into the main app and
 // never appear here.
-const DYNAMIC_MODS = ["necesse", "factorio"];
+const DYNAMIC_MODS = ["necesse", "factorio", "gettext"];
 
 for (const id of DYNAMIC_MODS) {
   const fromFile = path.join(root, "mods", id, "dist-bundle", "index.js");
