@@ -10,7 +10,7 @@ import {
   ItemTitle,
 } from "@/components/ui/item";
 import { useI18n } from "@/features/i18n/I18nProvider";
-import { AVAILABLE_GAME_LOADERS } from "@/state/loaders";
+import { availableGameLoaders } from "@/state/loaders";
 import { useWorkspace } from "@/state/workspace-store";
 
 export function GameSelect() {
@@ -20,7 +20,7 @@ export function GameSelect() {
   return (
     <div className="flex flex-1 items-center justify-center p-10">
       <ItemGroup className="w-[min(560px,90%)]" data-testid="game-select">
-        {AVAILABLE_GAME_LOADERS.map((loader) => {
+        {availableGameLoaders().map((loader) => {
           // Default = a specific game (gamepad); GameLoader.icon === "generic"
           // opts a loader out (e.g. generic-ini isn't tied to any one game).
           const Icon = loader.icon === "generic" ? FileType2 : Gamepad2;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useEffect, useState } from "react";
 import { Tabs as TabsPrimitive } from "radix-ui";
+import { toast } from "sonner";
 
 import { AppHeader } from "@/components/layout/AppHeader";
 import { CompactBar } from "@/components/layout/CompactBar";
@@ -17,6 +18,7 @@ import { ReviewView } from "@/features/review/ReviewView";
 import { Dropzone } from "@/features/workspace/Dropzone";
 import { GameSelect } from "@/features/workspace/GameSelect";
 import { useKeyboardInset } from "@/hooks/use-keyboard-inset";
+import { getModLoadWarnings } from "@/state/mod-bootstrap-warnings";
 import { WorkspaceProvider, useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
 import { applyTheme, loadStoredMode, loadStoredTheme, type ThemeMode } from "@/themes/themes";
@@ -87,6 +89,21 @@ function WorkspaceShell({
       /* private mode, or storage full — the rail just forgets */
     }
   }, [railOpen]);
+
+  // Gated on workspace.ready: the not-ready branch below mounts its own
+  // separate <Toaster/>, which unmounts (taking any toast with it) the
+  // moment the ready branch's <Toaster/> takes over — firing before that
+  // switch loses the toast to the remount instead of showing it.
+  useEffect(() => {
+    if (!workspace.ready) return;
+    for (const warning of getModLoadWarnings()) {
+      toast.warning(
+        warning.scope === "catalog"
+          ? t("modLoad.catalogFailed")
+          : t("modLoad.modFailed", { id: warning.id ?? "?" }),
+      );
+    }
+  }, [t, workspace.ready]);
 
   const reviewCount = workspace.entries.filter((entry) => entry.touched).length;
 

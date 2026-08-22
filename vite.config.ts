@@ -53,9 +53,21 @@ export default defineConfig(({ mode }) => {
     base: "./",
     plugins: [react(), tailwindcss(), spdxBanner()],
     resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-      },
+      alias: [
+        // Checked before the generic "@" entry below (array aliases are matched
+        // in order) — standalone has no server to fetch a mod catalog from, so
+        // it gets a mod source backed by build-time-embedded/statically-imported
+        // mods instead of the web build's real fetch()/import(url). See
+        // src/state/mod-source.web.ts / mod-source.standalone.ts.
+        {
+          find: "@/state/mod-source",
+          replacement: path.resolve(
+            __dirname,
+            `./src/state/mod-source.${standalone ? "standalone" : "web"}.ts`,
+          ),
+        },
+        { find: "@", replacement: path.resolve(__dirname, "./src") },
+      ],
     },
     optimizeDeps: {
       // Generated standalone and legacy HTML files live inside the repository,
@@ -96,6 +108,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: "node",
       include: ["src/**/*.test.ts", "test/**/*.test.ts"],
+      setupFiles: ["./test/setup/register-mods.ts"],
     },
     server: {
       host: "127.0.0.1",

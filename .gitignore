@@ -1,7 +1,11 @@
 # Normal files
 node_modules/
 dist/
+dist-bundle/
 dist-standalone/
+
+# Generated per-mod browser bundles synced from mods/*/dist-bundle (scripts/sync-mod-assets.mjs)
+public/mods/*/
 .preview/
 .DS_Store
 Thumbs.db

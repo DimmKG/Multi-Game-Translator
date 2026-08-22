@@ -161,6 +161,8 @@
     "toast.progressSaved": "Progress saved · {size}",
     "toast.progressRestored": "Progress restored",
     "toast.diffLoaded": "Comparison file loaded",
+    "modLoad.catalogFailed": "Couldn't load the mod catalog — only built-in formats are available this session.",
+    "modLoad.modFailed": "Couldn't load the {id} mod — its formats won't be available this session.",
     "err.noGzip": "this browser cannot decompress gzip",
     "err.readFile": "Could not read the file: {msg}",
     "err.unknownFormat": "Unknown progress file format",

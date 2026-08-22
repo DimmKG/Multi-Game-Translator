@@ -9,9 +9,9 @@
     "mods/*"
   ],
   "scripts": {
-    "predev": "npm run build --workspaces --if-present",
+    "predev": "npm run build --workspaces --if-present && node scripts/sync-mod-assets.mjs",
     "dev": "vite --host 0.0.0.0",
-    "prebuild": "npm run build --workspaces --if-present",
+    "prebuild": "npm run build --workspaces --if-present && node scripts/sync-mod-assets.mjs",
     "build": "tsc -b && vite build",
     "prebuild:standalone": "npm run build --workspaces --if-present",
     "build:standalone": "tsc -b && vite build --mode standalone --outDir dist-standalone && node scripts/build-standalone.mjs",

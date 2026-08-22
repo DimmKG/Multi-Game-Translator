@@ -1,0 +1,15 @@
+{
+  "format": "mgt-mod-catalog",
+  "version": 1,
+  "mods": [
+    {
+      "id": "necesse",
+      "name": "Necesse",
+      "icon": "",
+      "version": "0.0.1",
+      "entry": "necesse/index.js",
+      "sdkRange": "^0.0.1",
+      "enabled": true
+    }
+  ]
+}

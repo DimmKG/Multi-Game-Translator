@@ -32,14 +32,19 @@ if (scriptMatches.length !== 1) {
   throw new Error(`Expected exactly one generated module script, found ${scriptMatches.length}.`);
 }
 
+// A function replacer avoids String.replace's special "$&"/"$'"/"$$"/"$1"
+// substitution parsing of the replacement string — real risk here, since the
+// injected CSS/JS is arbitrary bundled content that can contain those
+// sequences (e.g. minified code using "$" identifiers) and would otherwise
+// get silently corrupted.
 for (const match of stylesheetMatches) {
   const css = await readFile(localAssetPath(match[1]), "utf8");
-  html = html.replace(match[0], `<style>\n${css}\n</style>`);
+  html = html.replace(match[0], () => `<style>\n${css}\n</style>`);
 }
 
 for (const match of scriptMatches) {
   const javascript = await readFile(localAssetPath(match[1]), "utf8");
-  html = html.replace(match[0], `<script type="module">\n${javascript}\n</script>`);
+  html = html.replace(match[0], () => `<script type="module">\n${javascript}\n</script>`);
 }
 
 // Only inspect actual HTML tags for unresolved local references. Bundled JavaScript can

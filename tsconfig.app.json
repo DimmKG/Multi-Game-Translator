@@ -17,6 +17,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
+      "@/state/mod-source": ["./src/state/mod-source.web.ts"],
       "@/*": ["./src/*"]
     }
   },

@@ -103,9 +103,16 @@ const SETTINGS_STORAGE_KEY = "necesse-translator.settings.v1";
 const FONT_STORAGE_KEY = "necesse-translator.font-settings.v1";
 const PREFERRED_PROVIDER_KEY = "necesse-translator.preferred-mt-provider.v1";
 
-/** Placeholder before any workspace is open — never shown, gameLoaderId is arbitrary (any AVAILABLE_GAME_LOADERS id resolves fine, no entries to act on yet). */
+/**
+ * Placeholder before any workspace is open — never shown, no entries to act
+ * on yet. gameLoaderId must be a loader guaranteed to be registered
+ * regardless of mod-catalog outcomes — resolveGameLoader() runs
+ * synchronously on the very first render, before bootstrapMods()'s catalog
+ * fetch is known to have succeeded. generic-ini is always statically
+ * registered (see mod-bootstrap.ts);
+ */
 const EMPTY_DOCUMENT: TranslationDocument = {
-  gameLoaderId: "necesse",
+  gameLoaderId: "generic-ini",
   fileLoaderId: "ini",
   sourceLocale: "en",
   targetLocale: "",

@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && vite build --config vite.bundle.config.ts",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },
@@ -22,6 +22,7 @@
   },
   "devDependencies": {
     "typescript": "~5.8.3",
+    "vite": "^6.4.3",
     "vitest": "^3.2.4"
   }
 }
