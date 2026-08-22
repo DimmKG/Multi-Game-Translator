@@ -81,6 +81,9 @@ export const TEXTAREA_CLASS = cn(
   "text-sm leading-[1.55] break-words whitespace-pre-wrap [tab-size:4]",
 );
 
+/** Stacked group of per-plural-category label+textarea pairs, replacing the single flat textarea. */
+export const PLURAL_GROUP_CLASS = "flex flex-col gap-2";
+
 /** The review view packs three columns into a row, so its textareas run smaller. */
 export const REVIEW_TEXTAREA_CLASS = cn(
   "min-h-[38px] resize-y rounded-[7px] px-2.5 py-2",

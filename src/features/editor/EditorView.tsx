@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { CANONICAL_PLURAL_ORDER } from "@mgt/sdk";
 import { BarOptions } from "@/components/layout/BarOptions";
 import { Toolbar, ToolbarHint, ToolbarSearch } from "@/components/layout/Toolbar";
 import { LIST_CLASS, VirtualList, type VirtualListApi } from "@/components/layout/VirtualList";
@@ -43,6 +44,7 @@ import {
   KEY_CLASS,
   OLABEL_CLASS,
   ORIG_CLASS,
+  PLURAL_GROUP_CLASS,
   ROW1_CLASS,
   ROW3_CLASS,
   TEXTAREA_CLASS,
@@ -54,6 +56,7 @@ import {
   type CardMetrics,
 } from "@/features/editor/card-metrics";
 import { TerminologyRuleDialog } from "@/features/editor/TerminologyRuleDialog";
+import { pluralCategoryExamples } from "@/features/editor/plural-examples";
 
 import type { FilterMode } from "@/core/lang/markers";
 import { metadataGuidanceFor } from "@/core/metadata/guidance";
@@ -164,6 +167,12 @@ const EntryCard = memo(function EntryCard({
   );
   const [terminologyDialogOpen, setTerminologyDialogOpen] = useState(false);
   const badge = STATUS_BADGE[status];
+  const pluralCategories = entry.targetPlurals
+    ? CANONICAL_PLURAL_ORDER.filter((category) => category in entry.targetPlurals!)
+    : undefined;
+  const pluralExamples = pluralCategories
+    ? pluralCategoryExamples(workspace.targetLanguage)
+    : undefined;
 
   return (
     <div className={CARD_ROW_GAP_CLASS}>
@@ -206,21 +215,51 @@ const EntryCard = memo(function EntryCard({
           </div>
         )}
 
-        <Textarea
-          className={TEXTAREA_CLASS}
-          value={entry.target}
-          spellCheck={workspace.spellcheck}
-          onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
-          onKeyDown={(event) => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-              event.preventDefault();
-              const entries = workspace.filteredEntries;
-              const index = entries.findIndex((item) => item.id === entry.id);
-              const next = entries.slice(index + 1).find((item) => item.legacyStatus === "missing");
-              if (next) requestEditorScroll({ type: "key", key: next.key });
-            }
-          }}
-        />
+        {pluralCategories ? (
+          <div className={PLURAL_GROUP_CLASS}>
+            {pluralCategories.map((category) => (
+              <div key={category}>
+                <span className={OLABEL_CLASS}>
+                  {t("card.pluralCategory", {
+                    // CLDR category names ("one"/"few"/"many"/...) are a
+                    // standardized technical vocabulary translators learn as
+                    // such (same convention as Weblate/Crowdin) — left
+                    // untranslated; the example numbers are the part that's
+                    // actually locale-specific and explanatory.
+                    category,
+                    examples: (pluralExamples?.[category] ?? []).join(", "),
+                  })}
+                </span>
+                <Textarea
+                  className={TEXTAREA_CLASS}
+                  value={entry.targetPlurals?.[category] ?? ""}
+                  spellCheck={workspace.spellcheck}
+                  onChange={(event) =>
+                    workspace.updateEntryTargetPlural(entry.id, category, event.target.value)
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Textarea
+            className={TEXTAREA_CLASS}
+            value={entry.target}
+            spellCheck={workspace.spellcheck}
+            onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                event.preventDefault();
+                const entries = workspace.filteredEntries;
+                const index = entries.findIndex((item) => item.id === entry.id);
+                const next = entries
+                  .slice(index + 1)
+                  .find((item) => item.legacyStatus === "missing");
+                if (next) requestEditorScroll({ type: "key", key: next.key });
+              }
+            }}
+          />
+        )}
 
         <div className={ROW3_CLASS}>
           {placeholders.missingRequired.length > 0 && (

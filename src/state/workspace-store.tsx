@@ -16,6 +16,7 @@ import {
   REFERENCE_ROLE,
   TRANSLATION_ROLE,
   type GameLoader,
+  type PluralCategory,
   type TranslationDocument,
 } from "@mgt/sdk";
 import { auxRoleOf, resolveFileLoader, resolveGameLoader } from "@/state/loaders";
@@ -33,6 +34,7 @@ import {
   sameRowIndex,
   toggleEntryMarkedSame,
   updateEntryTarget,
+  updateEntryTargetPluralCategory,
   type RowIndex,
   type WorkspaceEntry,
   type WorkspaceLine,
@@ -231,6 +233,7 @@ interface WorkspaceContextValue extends WorkspaceState {
   setDiffMode: (mode: DiffMode) => void;
   loadDiffFile: (file: File) => Promise<void>;
   updateEntryValue: (entryId: string, value: string, options?: { mtDraft?: boolean }) => void;
+  updateEntryTargetPlural: (entryId: string, category: PluralCategory, value: string) => void;
   toggleMarkedSame: (entryId: string) => void;
   translateEntry: (entryId: string) => Promise<void>;
   progress: { done: number; total: number };
@@ -920,6 +923,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [scheduleSave],
   );
 
+  const updateEntryTargetPlural = useCallback(
+    (entryId: string, category: PluralCategory, value: string) => {
+      const current = stateRef.current;
+      const nextDocument = updateEntryTargetPluralCategory(
+        current.document,
+        entryId,
+        category,
+        value,
+      );
+      if (nextDocument === current.document) return;
+      entryUiFlagsRef.current.set(entryId, { touched: true, mtDraft: false });
+
+      const loader = resolveGameLoader(nextDocument.gameLoaderId);
+      const nextEntry = findWorkspaceEntry(nextDocument, entryId, entryUiFlagsRef.current);
+      const next = new Map(rowIndexesRef.current);
+      const nextIndex = nextEntry
+        ? reindexWorkspaceEntry(next, nextEntry, loader, current.glossaries)
+        : undefined;
+      const prevIndex = rowIndexesRef.current.get(entryId);
+      rowIndexesRef.current = next;
+      if (!sameRowIndex(prevIndex, nextIndex)) setRowIndexes(next);
+
+      setState((prev) => ({ ...prev, document: nextDocument }));
+      scheduleSave();
+    },
+    [scheduleSave],
+  );
+
   const toggleMarkedSame = useCallback(
     (entryId: string) => {
       const current = stateRef.current;
@@ -1277,6 +1308,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setDiffMode: (diffMode) => setState((current) => ({ ...current, diffMode })),
     loadDiffFile,
     updateEntryValue,
+    updateEntryTargetPlural,
     toggleMarkedSame,
     translateEntry,
     progress,

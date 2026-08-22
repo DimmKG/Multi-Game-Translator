@@ -52,15 +52,19 @@ export function normalizeProjectCode(value: string): string {
   return LEGACY_ALIASES.get(lower) || RECOGNIZED.get(lower) || "";
 }
 
+/**
+ * Extension-agnostic on purpose: every GameLoader's requiredFiles accept
+ * whatever fileExtension that loader declares (.lang, .ini, .cfg, .po, ...),
+ * so this strips whichever single extension is actually present rather than
+ * assuming Necesse's ".lang".
+ */
 export function codeFromFilename(filename: string): string {
   const name = String(filename || "")
     .trim()
     .replace(/^.*[\\/]/, "");
-  if (!/\.lang$/i.test(name)) return "";
-  const base = name
-    .replace(/\.lang$/i, "")
-    .replace(/\s*\(\d+\)\s*$/, "")
-    .replace(/_\d+_?/g, "");
+  const match = /^(.+)\.[^.]+$/.exec(name);
+  if (!match) return "";
+  const base = match[1].replace(/\s*\(\d+\)\s*$/, "").replace(/_\d+_?/g, "");
   return normalizeProjectCode(base);
 }
 

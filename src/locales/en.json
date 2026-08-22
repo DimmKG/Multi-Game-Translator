@@ -361,6 +361,7 @@
     "settings.referenceReminderHint": "Pulse the reference-file button after a translation file is opened until a compatible reference is loaded. For the current Google provider, use an English reference such as en.lang.",
     "settings.close": "Close",
     "card.referenceText": "Reference text",
+    "card.pluralCategory": "{category} (e.g. {examples})",
     "mt.needReference": "Load a reference file first (for example, en.lang). The current Google provider expects English source text.",
     "rflag.sameRef": "= reference",
     "review.referenceLabel": "reference",

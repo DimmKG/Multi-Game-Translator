@@ -361,6 +361,7 @@
     "settings.referenceReminderHint": "Кнопка справочного файла будет пульсировать после загрузки перевода, пока не будет добавлен совместимый источник. Для текущего поставщика Google используйте английский источник, например en.lang.",
     "settings.close": "Закрыть",
     "card.referenceText": "Текст источника",
+    "card.pluralCategory": "{category} (например: {examples})",
     "mt.needReference": "Сначала загрузите справочный файл (например, en.lang). Текущий поставщик Google ожидает исходный текст на английском языке.",
     "rflag.sameRef": "= источнику",
     "review.referenceLabel": "источник",

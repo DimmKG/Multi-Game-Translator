@@ -194,6 +194,31 @@ describe("gettextGameLoader.applyEntryPatch", () => {
     expect(patched.targetPlurals?.other).toBe("%d files (edited)");
     expect(patched.status).toBe("translated");
   });
+
+  it("patches one CLDR category individually via targetPluralCategory, leaving others untouched", () => {
+    const doc = toDoc(
+      [
+        RUSSIAN_HEADER,
+        'msgid "one file"',
+        'msgid_plural "%d files"',
+        'msgstr[0] "один файл"',
+        'msgstr[1] "%d файла"',
+        'msgstr[2] "%d файлов"',
+        "",
+      ].join("\n"),
+      "ru",
+    );
+    const [entry] = entries(doc);
+    const patched = gettextGameLoader.applyEntryPatch(entry, {
+      targetPluralCategory: { category: "few", value: "%d файла (edited)" },
+    });
+    expect(patched.targetPlurals).toEqual({
+      one: "один файл",
+      few: "%d файла (edited)",
+      many: "%d файлов",
+    });
+    expect(patched.status).toBe("translated");
+  });
 });
 
 describe("gettextGameLoader.createFromReference", () => {

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 import type { PluralCategory } from "../model/document";
+import { CANONICAL_PLURAL_ORDER } from "./plural";
 
 export interface PluralFormsSpec {
   nplurals: number;
@@ -325,8 +326,6 @@ export function parsePluralForms(headerValue: string | undefined): ParsePluralFo
 // gettext-index <-> CLDR-category bridging.
 // ---------------------------------------------------------------------------
 
-const CANONICAL_ORDER: PluralCategory[] = ["zero", "one", "two", "few", "many", "other"];
-
 export type GettextIndexToCldr = Record<number, PluralCategory>;
 
 /**
@@ -363,7 +362,7 @@ export function bridgeGettextToCldr(
     }
     let best: PluralCategory = "other";
     let bestCount = -1;
-    for (const category of CANONICAL_ORDER) {
+    for (const category of CANONICAL_PLURAL_ORDER) {
       const count = byCategory.get(category) ?? 0;
       if (count > bestCount) {
         best = category;

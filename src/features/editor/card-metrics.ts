@@ -179,13 +179,25 @@ export class CardHeightCache {
     const rule = metadataGuidanceFor(entry);
     // Card renders `ⓘ ${t(messageKey)}` — count the same string for wrap.
     const guidanceText = rule ? `ⓘ ${this.translate(rule.messageKey)}` : null;
-    const fingerprint = `${warningCount}\0${reference ?? ""}\0${guidanceText ?? ""}`;
+    const pluralCategoryCount = entry.targetPlurals ? Object.keys(entry.targetPlurals).length : 0;
+    const fingerprint = `${warningCount}\0${reference ?? ""}\0${guidanceText ?? ""}\0${pluralCategoryCount}`;
     const cached = this.cache.get(entry.id);
     if (cached && cached.fingerprint === fingerprint) return cached.height;
 
     const { chrome, origBase, origLine, guideBase, guideLine, warnLine, wrap, wrapGuide } =
       this.metrics;
     let height = chrome;
+    if (pluralCategoryCount > 1) {
+      // A plural card swaps the single flat textarea for N labeled
+      // per-category ones — chrome still bakes in one bare textarea's worth
+      // of height, so this is a deliberate overestimate (safer than under-)
+      // rather than precisely decomposing chrome. origBase/origLine (a
+      // label+text block of similar shape) stand in as a reasonable proxy
+      // instead of adding dedicated probes; VirtualList's measureElement
+      // corrects any drift once the real card mounts, so this only needs to
+      // be a decent initial guess, not exact.
+      height += pluralCategoryCount * (origBase + origLine);
+    }
     if (reference != null) height += origBase + wrap.lineCount(reference) * origLine;
     if (guidanceText != null) {
       height += guideBase + wrapGuide.lineCount(guidanceText) * guideLine;

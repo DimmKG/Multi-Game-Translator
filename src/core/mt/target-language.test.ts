@@ -24,6 +24,12 @@ describe("MT target language", () => {
     expect(codeFromFilename("pt_BR.lang")).toBe("pt-BR");
   });
 
+  it("recognizes non-.lang extensions too — extension-agnostic, not Necesse-only", () => {
+    expect(codeFromFilename("ru.po")).toBe("ru");
+    expect(codeFromFilename("fr.cfg")).toBe("fr");
+    expect(codeFromFilename("bg.ini")).toBe("bg");
+  });
+
   it("unknown filenames do not commit a guessed target", () => {
     expect(codeFromFilename("translation.lang")).toBe("");
     expect(codeFromFilename("my-mod-pack.lang")).toBe("");

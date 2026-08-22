@@ -68,6 +68,8 @@ export interface EntryUiHints {
 export interface EntryPatch {
   target?: string;
   markedSame?: boolean;
+  /** Patches ONE CLDR category of a plural entry's targetPlurals. Ignored by loaders with no plural concept (pluralSelector absent). */
+  targetPluralCategory?: { category: PluralCategory; value: string };
 }
 
 export interface LocaleMeta {

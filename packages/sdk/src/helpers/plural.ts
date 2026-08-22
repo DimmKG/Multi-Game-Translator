@@ -3,7 +3,14 @@ import type { PluralCategory } from "../model/document";
 import type { PluralSelector } from "../game-loader";
 
 /** Canonical CLDR ordering — Intl.PluralRules returns categories unordered. */
-const CANONICAL_ORDER: readonly PluralCategory[] = ["zero", "one", "two", "few", "many", "other"];
+export const CANONICAL_PLURAL_ORDER: readonly PluralCategory[] = [
+  "zero",
+  "one",
+  "two",
+  "few",
+  "many",
+  "other",
+];
 
 /**
  * Default PluralSelector for any format whose plurals are natively CLDR
@@ -25,7 +32,7 @@ export function createCldrPluralSelector(): PluralSelector {
       const categories = new Set(
         rulesFor(doc.targetLocale).resolvedOptions().pluralCategories as PluralCategory[],
       );
-      return CANONICAL_ORDER.filter((category) => categories.has(category));
+      return CANONICAL_PLURAL_ORDER.filter((category) => categories.has(category));
     },
     select(n, doc) {
       return rulesFor(doc.targetLocale).select(n) as PluralCategory;

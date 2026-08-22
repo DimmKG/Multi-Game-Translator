@@ -273,8 +273,27 @@ function detectGame(input: {
  * EntryPatch for the translator to use instead.
  */
 function applyEntryPatch(entry: TranslationEntry, patch: EntryPatch): TranslationEntry {
-  if (patch.target === undefined) return entry;
   const ext = entry.ext as GettextEntryExt;
+
+  if (patch.targetPluralCategory) {
+    const { category, value } = patch.targetPluralCategory;
+    const targetPlurals = { ...entry.targetPlurals, [category]: value };
+    const target =
+      targetPlurals.other ?? Object.values(targetPlurals).find((v) => v !== undefined) ?? "";
+    const status = computeStatus(
+      Object.values(targetPlurals).filter((v): v is string => v !== undefined),
+      false,
+    );
+    return {
+      ...entry,
+      target,
+      targetPlurals,
+      status,
+      ext: { ...ext, comments: setFuzzy(ext.comments, false) },
+    };
+  }
+
+  if (patch.target === undefined) return entry;
   const isPlural = entry.sourcePlurals !== undefined;
   const target = patch.target;
   const targetPlurals = isPlural ? { ...entry.targetPlurals, other: target } : entry.targetPlurals;

@@ -361,6 +361,7 @@
     "settings.referenceReminderHint": "Бутонът за референтен файл ще пулсира след зареждане на превод, докато не бъде добавена съвместима референция. За текущия доставчик Google използвайте английска референция като en.lang.",
     "settings.close": "Затваряне",
     "card.referenceText": "Референтен текст",
+    "card.pluralCategory": "{category} (напр. {examples})",
     "mt.needReference": "Първо заредете референтен файл (например en.lang). Текущият доставчик Google очаква изходен текст на английски.",
     "rflag.sameRef": "= референцията",
     "review.referenceLabel": "референция",

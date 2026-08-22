@@ -4,6 +4,7 @@ import {
   type EntryStatus as SdkEntryStatus,
   type GameLoader,
   type PlaceholderTokenizer,
+  type PluralCategory,
   type TranslationDocument,
   type TranslationEntry as SdkTranslationEntry,
 } from "@mgt/sdk";
@@ -31,6 +32,9 @@ export interface WorkspaceEntry {
   /** Matched reference, or the frozen original — always populated (== SDK entry.source). Feeds placeholder checks & MT. */
   source: string;
   target: string;
+  /** Present only for a plural entry — absence means this format/entry has no plural concept. */
+  sourcePlurals?: Partial<Record<PluralCategory, string>>;
+  targetPlurals?: Partial<Record<PluralCategory, string>>;
   /** RHS as originally parsed (frozen) — used to tell "still untouched" from "edited". */
   originalValue: string;
   /** Matched reference text, or null when no reference was matched for this entry. */
@@ -79,6 +83,8 @@ function toWorkspaceEntry(
     namespace: entry.namespace ?? "",
     source: entry.source,
     target: entry.target,
+    sourcePlurals: entry.sourcePlurals,
+    targetPlurals: entry.targetPlurals,
     originalValue: hints.originalValue ?? entry.target,
     referenceText: hints.referenceText ?? null,
     markedSame: hints.markedSame ?? false,
@@ -192,6 +198,26 @@ export function updateEntryTarget(
     if (node.type !== "entry" || node.entry.id !== entryId) return node;
     changed = true;
     return { ...node, entry: loader.applyEntryPatch(node.entry, { target }) };
+  });
+  return changed ? { ...document, nodes } : document;
+}
+
+/** Patches one CLDR category of a plural entry — a no-op (unchanged reference) for a loader/entry with no plural concept. */
+export function updateEntryTargetPluralCategory(
+  document: TranslationDocument,
+  entryId: string,
+  category: PluralCategory,
+  value: string,
+): TranslationDocument {
+  const loader = resolveGameLoader(document.gameLoaderId);
+  let changed = false;
+  const nodes = document.nodes.map((node) => {
+    if (node.type !== "entry" || node.entry.id !== entryId) return node;
+    changed = true;
+    return {
+      ...node,
+      entry: loader.applyEntryPatch(node.entry, { targetPluralCategory: { category, value } }),
+    };
   });
   return changed ? { ...document, nodes } : document;
 }
