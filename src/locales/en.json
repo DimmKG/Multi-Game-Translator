@@ -77,6 +77,8 @@
     "gettext.dropzone.translationHint": "Required — the .po file you're translating.",
     "gettext.dropzone.template": "Template",
     "gettext.dropzone.templateHint": "Optional — a .pot/.po template to start a new translation from.",
+    "gettext.config.contextAsKey": "Use msgctxt as the key",
+    "gettext.config.contextAsKeyHint": "Some .po files (Kodi/Weblate addon strings, for example) use msgctxt as a stable string ID and msgid as the actual English text — the reverse of plain gettext. Turn this on if entries show English text as their key instead of an ID like \"#30000\".",
     "gameSelect.factorio.description": "Factorio's .cfg locale format — positional and plural placeholders.",
     "gameSelect.gettext.description": "gettext .po files — plurals, comments, msgctxt.",
     "tab.editor": "Editor",

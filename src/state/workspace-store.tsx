@@ -16,6 +16,7 @@ import {
   REFERENCE_ROLE,
   TRANSLATION_ROLE,
   type GameLoader,
+  type LoaderConfigValues,
   type PluralCategory,
   type TranslationDocument,
 } from "@mgt/sdk";
@@ -210,8 +211,8 @@ interface WorkspaceContextValue extends WorkspaceState {
     },
   ) => void;
   openLangFile: (file: File) => Promise<void>;
-  openWorkspaceFiles: (files: Record<string, File>) => Promise<void>;
-  createFromReferenceFile: (file: File) => Promise<void>;
+  openWorkspaceFiles: (files: Record<string, File>, config?: LoaderConfigValues) => Promise<void>;
+  createFromReferenceFile: (file: File, config?: LoaderConfigValues) => Promise<void>;
   loadReferenceFile: (file: File) => Promise<void>;
   /** Drops the open document (and its persisted record) back to the game-selection screen. Does not save anything — callers must offer that first. */
   closeWorkspace: () => void;
@@ -656,7 +657,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const openWorkspaceFiles = useCallback(
-    async (files: Record<string, File>) => {
+    async (files: Record<string, File>, config?: LoaderConfigValues) => {
       await runWithImportSpinner(async () => {
         const loaderId = stateRef.current.selectedGameLoaderId;
         if (!loaderId) {
@@ -690,7 +691,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const translationEntry = present.find(({ rf }) => rf.role === TRANSLATION_ROLE);
         const referenceEntry = present.find(({ rf }) => rf.role === auxRole);
         const targetLanguage = codeFromFilename(translationFile.name);
-        const document = loader.toDocument(raw, roles, targetLanguage || "und");
+        const document = loader.toDocument(raw, roles, targetLanguage || "und", config);
         const translationDisplayName =
           (translationEntry?.validation?.ok && translationEntry.validation.displayName) ||
           cleanDownloadedFilename(translationFile.name, loader.fileExtension);
@@ -710,7 +711,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   );
 
   const createFromReferenceFile = useCallback(
-    async (file: File) => {
+    async (file: File, config?: LoaderConfigValues) => {
       await runWithImportSpinner(async () => {
         const loaderId = stateRef.current.selectedGameLoaderId;
         if (!loaderId) return;
@@ -732,7 +733,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         });
         let document: TranslationDocument;
         try {
-          document = loader.createFromReference(referenceRaw, "und");
+          document = loader.createFromReference(referenceRaw, "und", config);
         } catch {
           toast.error(t("err.newTranslationNoEntries"));
           return;

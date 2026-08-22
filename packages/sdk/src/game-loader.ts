@@ -72,6 +72,64 @@ export interface EntryPatch {
   targetPluralCategory?: { category: PluralCategory; value: string };
 }
 
+/**
+ * A loader's declarative, scalar parsing-time settings — e.g. gettext's
+ * "which field is the key" corner case (see gettextGameLoader.configSchema),
+ * or a future CSV File Loader's column/row delimiters. Fixed, closed set of
+ * value types (no free-form schema) so the host can render every field with
+ * one generic form component, the same way RequiredFile lets it render every
+ * loader's file-drop slots without knowing what any given game is.
+ */
+export type LoaderConfigFieldType = "boolean" | "string" | "number" | "enum";
+
+interface LoaderConfigFieldBase {
+  key: string;
+  labelKey: string;
+  hintKey?: string;
+}
+
+export type LoaderConfigField =
+  | (LoaderConfigFieldBase & { type: "boolean"; default: boolean })
+  | (LoaderConfigFieldBase & { type: "string"; default: string })
+  | (LoaderConfigFieldBase & { type: "number"; default: number })
+  | (LoaderConfigFieldBase & {
+      type: "enum";
+      default: string;
+      options: { value: string; labelKey: string }[];
+    });
+
+export type LoaderConfigValue = boolean | string | number;
+export type LoaderConfigValues = Record<string, LoaderConfigValue>;
+
+/**
+ * A static schema for a loader whose settings never depend on the file
+ * itself (gettext's contextAsKey). A function is for the opposite case — a
+ * future CSV File Loader's "which column is source/target" can only be
+ * offered once the file's actual header row is known, so its schema is
+ * derived from the dropped files themselves (same shape as `detectGame`),
+ * e.g. an "enum" field whose `options` are that file's real column names.
+ */
+export type LoaderConfigSchema =
+  LoaderConfigField[] | ((input: FileLoaderInput) => LoaderConfigField[]);
+
+/** Resolves a possibly file-dependent configSchema against the currently dropped files. */
+export function resolveLoaderConfigSchema(
+  schema: LoaderConfigSchema | undefined,
+  input: FileLoaderInput,
+): LoaderConfigField[] {
+  if (!schema) return [];
+  return typeof schema === "function" ? schema(input) : schema;
+}
+
+/** Every field's `default`, keyed by field — the form's initial state, and what an absent/never-configured loader gets. */
+export function defaultLoaderConfig(
+  schema: readonly LoaderConfigField[] | undefined,
+): LoaderConfigValues {
+  const values: LoaderConfigValues = {};
+  for (const field of schema ?? []) values[field.key] = field.default;
+  return values;
+}
+
 export interface LocaleMeta {
   /** As today's codeFromFilename. */
   defaultTargetLocaleHint?: string;
@@ -98,6 +156,22 @@ export interface GameLoader<TRaw = unknown> {
   requiredFiles: RequiredFile[];
   /** For the placeholder-legend UI. */
   legend?: { kind: string; color: string; labelKey: string }[];
+  /**
+   * Declarative parsing-time settings the host asks the translator to
+   * confirm before opening — a corner case, not a default (Necesse/generic-ini/
+   * Factorio all leave this absent). Rendered as a generic form (Dropzone,
+   * next to the file-drop slots) from this schema alone, same principle as
+   * requiredFiles. Absent/empty = nothing to configure. May depend on the
+   * dropped files themselves (see LoaderConfigSchema) — resolve with
+   * resolveLoaderConfigSchema, never read as a plain array. The chosen
+   * values are passed into toDocument/createFromReference below; a loader
+   * that uses them is expected to stash the resolved values into the
+   * returned document's gameMeta so fromDocument (config-less — it only
+   * receives the document) can stay consistent, and so the choice survives
+   * a save/reload for free — the document IS the progress file, no separate
+   * settings store needed.
+   */
+  configSchema?: LoaderConfigSchema;
 
   /** Auto-detect score (0..1) from the given file set. */
   detectGame(input: FileLoaderInput): number;
@@ -106,9 +180,16 @@ export interface GameLoader<TRaw = unknown> {
    * is unreliable (nothing stops a translator naming their file whatever they
    * like), so the host must ask the translator and pass the confirmed value
    * in. `locale.defaultTargetLocaleHint` exists purely to pre-fill that
-   * prompt, not to feed this call.
+   * prompt, not to feed this call. `config` is this loader's configSchema
+   * values (defaultLoaderConfig()'s defaults, or absent for a loader with no
+   * configSchema) — ignored by every loader that declares no configSchema.
    */
-  toDocument(raw: TRaw, roles: { role: string }[], targetLocale: string): TranslationDocument;
+  toDocument(
+    raw: TRaw,
+    roles: { role: string }[],
+    targetLocale: string,
+    config?: LoaderConfigValues,
+  ): TranslationDocument;
   fromDocument(doc: TranslationDocument): TRaw;
   /**
    * Optional: build a blank TranslationDocument from just a reference file (no
@@ -119,8 +200,13 @@ export interface GameLoader<TRaw = unknown> {
    * fileLoaderId produced for the reference file alone (same shape as toDocument's
    * `raw`, just parsed from a single file). `targetLocale` is the translator's
    * confirmed choice, same as for toDocument — never guessed here either.
+   * `config` mirrors toDocument's.
    */
-  createFromReference?(referenceRaw: TRaw, targetLocale: string): TranslationDocument;
+  createFromReference?(
+    referenceRaw: TRaw,
+    targetLocale: string,
+    config?: LoaderConfigValues,
+  ): TranslationDocument;
 
   /**
    * Absent = this loader exposes none of the optional per-entry UI hints

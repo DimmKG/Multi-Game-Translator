@@ -2,6 +2,7 @@
 import {
   poFileLoader,
   type DocumentNode,
+  type LoaderConfigValues,
   type TranslationDocument,
   type TranslationEntry,
 } from "@mgt/sdk";
@@ -12,9 +13,10 @@ function toDoc(
   text: string,
   targetLocale: string,
   roles = [{ role: "translation" }],
+  config?: LoaderConfigValues,
 ): TranslationDocument {
   const raw = poFileLoader.parse({ files: [{ name: "t.po", text }] });
-  return gettextGameLoader.toDocument(raw, roles, targetLocale);
+  return gettextGameLoader.toDocument(raw, roles, targetLocale, config);
 }
 
 function entries(doc: TranslationDocument): TranslationEntry[] {
@@ -124,6 +126,60 @@ describe("gettextGameLoader.toDocument", () => {
     const commentNode = doc.nodes.find((node) => node.type === "comment");
     expect(commentNode).toBeDefined();
     expect((commentNode as { raw: string }).raw).toContain("#~");
+  });
+});
+
+describe("gettextGameLoader configSchema — contextAsKey", () => {
+  const kodiText = [
+    'msgctxt "#30000"',
+    'msgid "Most Popular"',
+    'msgstr "Самое популярное"',
+    "",
+  ].join("\n");
+
+  it("defaults to msgid-as-key, matching plain gettext", () => {
+    const [entry] = entries(toDoc(kodiText, "ru"));
+    expect(entry.key).toBe("Most Popular");
+    expect(entry.namespace).toBe("#30000");
+    expect(entry.source).toBe("Most Popular");
+  });
+
+  it("swaps to msgctxt-as-key when the entry has a msgctxt to swap in", () => {
+    const [entry] = entries(toDoc(kodiText, "ru", undefined, { contextAsKey: true }));
+    expect(entry.key).toBe("#30000");
+    expect(entry.namespace).toBe("Most Popular");
+    // source stays the real English text regardless — placeholder/whitespace/
+    // terminology checks must keep comparing against it, not the ID.
+    expect(entry.source).toBe("Most Popular");
+  });
+
+  it("leaves a msgctxt-less entry alone even with contextAsKey on — nothing to swap in", () => {
+    const text = ['msgid "Open"', 'msgstr "Ouvrir"', ""].join("\n");
+    const [entry] = entries(toDoc(text, "fr", undefined, { contextAsKey: true }));
+    expect(entry.key).toBe("Open");
+    expect(entry.namespace).toBeUndefined();
+  });
+
+  it("round-trips correctly per-entry in a mixed file (some msgctxt, some not)", () => {
+    const text = [
+      'msgctxt "#30000"',
+      'msgid "Most Popular"',
+      'msgstr "Самое популярное"',
+      "",
+      'msgid "Open"',
+      'msgstr "Открыть"',
+      "",
+    ].join("\n");
+    const doc = toDoc(text, "ru", undefined, { contextAsKey: true });
+    const raw = gettextGameLoader.fromDocument(doc);
+    expect(raw[0].po.messages).toEqual([
+      expect.objectContaining({
+        msgctxt: "#30000",
+        msgid: "Most Popular",
+        msgstr: ["Самое популярное"],
+      }),
+      expect.objectContaining({ msgctxt: undefined, msgid: "Open", msgstr: ["Открыть"] }),
+    ]);
   });
 });
 

@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { FileType2, Loader2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
+import {
+  defaultLoaderConfig,
+  resolveLoaderConfigSchema,
+  type LoaderConfigField,
+  type LoaderConfigValues,
+} from "@mgt/sdk";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
   EmptyContent,
@@ -11,10 +18,89 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useI18n } from "@/features/i18n/I18nProvider";
 import { auxRoleOf, resolveGameLoader } from "@/state/loaders";
 import { useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
+
+/**
+ * One field from a loader's configSchema, rendered generically — the host
+ * never knows what any given field means, only its fixed type (see
+ * LoaderConfigField in the SDK). Resolved against `{ files: [] }`: every
+ * loader today either has no configSchema or a static one; a future
+ * file-dependent schema (e.g. a CSV loader offering its own column names)
+ * needs Dropzone to eagerly read dropped files' text first — not done here,
+ * deliberately, since nothing needs it yet.
+ */
+function LoaderConfigFormField({
+  field,
+  value,
+  onChange,
+}: {
+  field: LoaderConfigField;
+  value: LoaderConfigValues[string];
+  onChange: (value: LoaderConfigValues[string]) => void;
+}) {
+  const { t } = useI18n();
+  if (field.type === "boolean") {
+    return (
+      <label className="flex items-start gap-2.5">
+        <Checkbox
+          checked={value === true}
+          onCheckedChange={(checked) => onChange(checked === true)}
+        />
+        <span className="grid gap-0.5">
+          <span className="text-sm">{t(field.labelKey)}</span>
+          {field.hintKey && (
+            <span className="text-muted-foreground text-xs">{t(field.hintKey)}</span>
+          )}
+        </span>
+      </label>
+    );
+  }
+  if (field.type === "enum") {
+    return (
+      <div className="grid gap-1">
+        <Label>{t(field.labelKey)}</Label>
+        <Select value={String(value)} onValueChange={(next) => onChange(next)}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {field.options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {t(option.labelKey)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {field.hintKey && <p className="text-muted-foreground text-xs">{t(field.hintKey)}</p>}
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-1">
+      <Label>{t(field.labelKey)}</Label>
+      <Input
+        type={field.type === "number" ? "number" : "text"}
+        value={String(value)}
+        onChange={(event) =>
+          onChange(field.type === "number" ? Number(event.target.value) : event.target.value)
+        }
+      />
+      {field.hintKey && <p className="text-muted-foreground text-xs">{t(field.hintKey)}</p>}
+    </div>
+  );
+}
 
 function FileDropBox({
   testId,
@@ -116,6 +202,11 @@ export function Dropzone() {
   const selectedLoader = resolveGameLoader(selectedGameLoaderId!);
   const auxRole = auxRoleOf(selectedLoader);
   const [files, setFiles] = useState<Record<string, File | null>>({});
+  const configSchema = useMemo(
+    () => resolveLoaderConfigSchema(selectedLoader.configSchema, { files: [] }),
+    [selectedLoader],
+  );
+  const [config, setConfig] = useState<LoaderConfigValues>(() => defaultLoaderConfig(configSchema));
 
   const canOpen =
     selectedLoader.requiredFiles.every((rf) => !rf.required || files[rf.role] != null) &&
@@ -177,6 +268,19 @@ export function Dropzone() {
             ))}
           </div>
 
+          {configSchema.length > 0 && (
+            <div className="mb-4 grid w-full gap-3 text-start">
+              {configSchema.map((field) => (
+                <LoaderConfigFormField
+                  key={field.key}
+                  field={field}
+                  value={config[field.key]}
+                  onChange={(value) => setConfig((prev) => ({ ...prev, [field.key]: value }))}
+                />
+              ))}
+            </div>
+          )}
+
           <div className="mb-[22px] flex flex-wrap items-center justify-center gap-2">
             <Button
               type="button"
@@ -188,7 +292,7 @@ export function Dropzone() {
                   const file = files[rf.role];
                   if (file) picked[rf.role] = file;
                 }
-                void openWorkspaceFiles(picked);
+                void openWorkspaceFiles(picked, config);
               }}
             >
               {t("drop.open")}
@@ -202,7 +306,7 @@ export function Dropzone() {
                 disabled={!canCreateNew}
                 onClick={() => {
                   const referenceFile = auxRole ? files[auxRole] : undefined;
-                  if (referenceFile) void createFromReferenceFile(referenceFile);
+                  if (referenceFile) void createFromReferenceFile(referenceFile, config);
                 }}
               >
                 {t("btn.newTranslation")}

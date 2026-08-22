@@ -77,6 +77,8 @@
     "gettext.dropzone.translationHint": "Обязательно — файл .po, который вы переводите.",
     "gettext.dropzone.template": "Шаблон",
     "gettext.dropzone.templateHint": "Необязательно — шаблон .pot/.po для начала нового перевода.",
+    "gettext.config.contextAsKey": "Использовать msgctxt как ключ",
+    "gettext.config.contextAsKeyHint": "В некоторых .po-файлах (например, строки аддонов Kodi/Weblate) msgctxt — это стабильный ID строки, а msgid — сам английский текст, наоборот, чем в обычном gettext. Включите, если ключом записи показывается английский текст вместо ID вроде «#30000».",
     "gameSelect.factorio.description": "Формат локализации .cfg игры Factorio — позиционные и множественные плейсхолдеры.",
     "gameSelect.gettext.description": "Файлы gettext .po — множественное число, комментарии, msgctxt.",
     "tab.editor": "Редактор",

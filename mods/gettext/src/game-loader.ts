@@ -4,6 +4,7 @@ import {
   buildPoText,
   createCldrPluralSelector,
   defaultIdentityStrategy,
+  defaultLoaderConfig,
   parsePluralForms,
   parsePoText,
   poFileLoader,
@@ -13,6 +14,8 @@ import {
   type EntryPatch,
   type EntryStatus,
   type GameLoader,
+  type LoaderConfigField,
+  type LoaderConfigValues,
   type PluralCategory,
   type PoCommentLine,
   type PoFileLoaderRaw,
@@ -24,8 +27,25 @@ import {
 } from "@mgt/sdk";
 import { gettextPlaceholderTokenizer } from "./placeholders";
 
-/** Original comments a message carried, preserved for round-trip and for toggling the "fuzzy" flag. */
-type GettextEntryExt = { comments: PoCommentLine[] };
+/**
+ * Original comments a message carried, preserved for round-trip and for
+ * toggling the "fuzzy" flag. `contextSwapped` records, per entry, whether
+ * `configSchema`'s "contextAsKey" was actually applied to *this* message
+ * (only true when it had a msgctxt to swap in) — fromDocument un-swaps by
+ * this flag rather than re-deriving it from doc-level config, since a mixed
+ * file can have some messages with msgctxt and others without.
+ */
+type GettextEntryExt = { comments: PoCommentLine[]; contextSwapped: boolean };
+
+const CONFIG_SCHEMA: LoaderConfigField[] = [
+  {
+    key: "contextAsKey",
+    type: "boolean",
+    labelKey: "gettext.config.contextAsKey",
+    hintKey: "gettext.config.contextAsKeyHint",
+    default: false,
+  },
+];
 
 /** Occurrence-counting key separator — never collides with a real msgctxt/msgid. */
 const IDENTITY_SEPARATOR = String.fromCharCode(0);
@@ -94,6 +114,7 @@ function toDocument(
   raw: PoFileLoaderRaw,
   roles: { role: string }[],
   targetLocale: string,
+  config?: LoaderConfigValues,
 ): TranslationDocument {
   const translationIndex = findRoleIndex(roles, TRANSLATION_ROLE);
   const translation = translationIndex >= 0 ? raw[translationIndex] : undefined;
@@ -103,6 +124,8 @@ function toDocument(
   const po = translation.po;
   const { spec } = parsePluralForms(po.header.fields["Plural-Forms"]);
   const gettextToCldr = bridgeGettextToCldr(spec, targetLocale);
+  const resolvedConfig = { ...defaultLoaderConfig(CONFIG_SCHEMA), ...config };
+  const contextAsKey = resolvedConfig.contextAsKey === true;
 
   const identityStrategy = defaultIdentityStrategy();
   const occurrenceCounts = new Map<string, number>();
@@ -124,7 +147,13 @@ function toDocument(
     const isPlural = message.msgidPlural !== undefined;
     const fuzzy = poMessageFlags(message).includes("fuzzy");
     const status = computeStatus(message.msgstr, fuzzy);
-    const ext: GettextEntryExt = { comments: message.comments };
+    // Weblate/Kodi-style .po: msgctxt is a stable string ID ("#30000"), msgid
+    // is the actual English text — the reverse of plain gettext, where msgid
+    // alone is both key and source. Only swap when there's a msgctxt to swap
+    // in; entry.source stays msgid always, since that's the real text every
+    // placeholder/whitespace/terminology check needs to compare against.
+    const contextSwapped = contextAsKey && Boolean(message.msgctxt);
+    const ext: GettextEntryExt = { comments: message.comments, contextSwapped };
 
     let sourcePlurals: Partial<Record<PluralCategory, string>> | undefined;
     let targetPlurals: Partial<Record<PluralCategory, string>> | undefined;
@@ -146,8 +175,8 @@ function toDocument(
 
     const entry: TranslationEntry = {
       id: identityStrategy.makeEntryId(message.msgctxt, message.msgid, occurrence),
-      namespace: message.msgctxt,
-      key: message.msgid,
+      namespace: contextSwapped ? message.msgid : message.msgctxt,
+      key: contextSwapped ? message.msgctxt! : message.msgid,
       source: message.msgid,
       target,
       status,
@@ -165,7 +194,7 @@ function toDocument(
     targetLocale,
     nodes,
     formatMeta: { eol: po.eol, trailingNewline: po.trailingNewline },
-    gameMeta: { translationFileName: translation.name },
+    gameMeta: { translationFileName: translation.name, loaderConfig: resolvedConfig },
   };
 }
 
@@ -210,8 +239,11 @@ function fromDocument(doc: TranslationDocument): PoFileLoaderRaw {
     messages.push({
       comments: ext.comments,
       obsolete: false,
-      msgctxt: entry.namespace,
-      msgid: entry.key,
+      // entry.source is always the real msgid regardless of contextSwapped
+      // (toDocument never swaps it); only msgctxt's home (key vs namespace)
+      // depends on whether *this* entry had it swapped in.
+      msgctxt: ext.contextSwapped ? entry.key : entry.namespace,
+      msgid: entry.source,
       msgidPlural,
       msgstr,
     });
@@ -242,6 +274,7 @@ function fromDocument(doc: TranslationDocument): PoFileLoaderRaw {
 function createFromReference(
   referenceRaw: PoFileLoaderRaw,
   targetLocale: string,
+  config?: LoaderConfigValues,
 ): TranslationDocument {
   const referenceEntry = referenceRaw[0];
   if (!referenceEntry) {
@@ -257,6 +290,7 @@ function createFromReference(
     [{ name: referenceEntry.name, po: draftPo }],
     [{ role: TRANSLATION_ROLE }],
     targetLocale,
+    config,
   );
 }
 
@@ -332,6 +366,7 @@ export const gettextGameLoader: GameLoader<PoFileLoaderRaw> = {
   fileLoaderId: "po",
   fileExtension: ".po",
   requiredFiles,
+  configSchema: CONFIG_SCHEMA,
   detectGame,
   toDocument,
   fromDocument,
