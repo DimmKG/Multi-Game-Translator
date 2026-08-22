@@ -13,6 +13,7 @@ import {
   type DocumentNode,
   type EntryPatch,
   type EntryStatus,
+  type EntryUiHints,
   type GameLoader,
   type LoaderConfigField,
   type LoaderConfigValues,
@@ -301,6 +302,16 @@ function detectGame(input: {
 }
 
 /**
+ * PO is single-file — msgid already IS the source, unlike Necesse/generic-ini
+ * where source only exists once a separate reference file is matched. Every
+ * entry has one, unconditionally, so the editor can show the English text
+ * it's translating from instead of leaving that block hidden.
+ */
+function entryUiHints(entry: TranslationEntry): EntryUiHints {
+  return { referenceText: entry.source };
+}
+
+/**
  * A target edit also clears "fuzzy": real gettext tooling (Poedit, Lokalize,
  * msgmerge-adjacent workflows) treats a translator actually touching the
  * text as confirming it, and there's no separate "toggle fuzzy" action in
@@ -372,6 +383,7 @@ export const gettextGameLoader: GameLoader<PoFileLoaderRaw> = {
   fromDocument,
   createFromReference,
   applyEntryPatch,
+  entryUiHints,
   placeholders: gettextPlaceholderTokenizer,
   pluralSelector: createCldrPluralSelector(),
   statusStrategy: {

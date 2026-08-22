@@ -269,15 +269,20 @@ export function Dropzone() {
           </div>
 
           {configSchema.length > 0 && (
-            <div className="mb-4 grid w-full gap-3 text-start">
-              {configSchema.map((field) => (
-                <LoaderConfigFormField
-                  key={field.key}
-                  field={field}
-                  value={config[field.key]}
-                  onChange={(value) => setConfig((prev) => ({ ...prev, [field.key]: value }))}
-                />
-              ))}
+            <div className="border-border-soft bg-secondary/40 mb-4 w-full rounded-lg border p-3 text-start">
+              <p className="text-foreground-faint mb-2.5 text-[11px] tracking-[0.1em] uppercase">
+                {t("drop.settingsTitle")}
+              </p>
+              <div className="grid gap-3">
+                {configSchema.map((field) => (
+                  <LoaderConfigFormField
+                    key={field.key}
+                    field={field}
+                    value={config[field.key]}
+                    onChange={(value) => setConfig((prev) => ({ ...prev, [field.key]: value }))}
+                  />
+                ))}
+              </div>
             </div>
           )}
 

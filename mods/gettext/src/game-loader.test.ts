@@ -183,6 +183,22 @@ describe("gettextGameLoader configSchema — contextAsKey", () => {
   });
 });
 
+describe("gettextGameLoader.entryUiHints", () => {
+  it("exposes msgid as referenceText — PO is single-file, so every entry has one", () => {
+    const doc = toDoc(['msgid "Open"', 'msgstr "Ouvrir"', ""].join("\n"), "fr");
+    const [entry] = entries(doc);
+    expect(gettextGameLoader.entryUiHints?.(entry)).toEqual({ referenceText: "Open" });
+  });
+
+  it("still returns the real English text (not the ID) when contextAsKey swapped it into namespace", () => {
+    const text = ['msgctxt "#30000"', 'msgid "Most Popular"', 'msgstr "Самое популярное"', ""].join(
+      "\n",
+    );
+    const [entry] = entries(toDoc(text, "ru", undefined, { contextAsKey: true }));
+    expect(gettextGameLoader.entryUiHints?.(entry)).toEqual({ referenceText: "Most Popular" });
+  });
+});
+
 describe("gettextGameLoader.fromDocument", () => {
   it("round-trips a non-plural entry semantically", () => {
     const text = ['msgid "Open"', 'msgstr "Ouvrir"', ""].join("\n");

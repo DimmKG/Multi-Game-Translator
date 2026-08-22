@@ -59,6 +59,7 @@
     "drop.loading": "Четене и обработка на файла…",
     "drop.pick": "Изберете файл",
     "drop.open": "Отвори",
+    "drop.settingsTitle": "Настройки",
     "necesse.dropzone.reference": "Оригинал (английски)",
     "necesse.dropzone.referenceHint": "Задължително — трябва да съдържа engname=English.",
     "necesse.dropzone.translation": "Превод",
