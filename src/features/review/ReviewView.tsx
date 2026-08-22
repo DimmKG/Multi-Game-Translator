@@ -9,8 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Empty, EmptyDescription, EmptyHeader } from "@/components/ui/empty";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { REVIEW_TEXTAREA_CLASS } from "@/features/editor/card-classes";
+import { PLURAL_GROUP_CLASS, REVIEW_TEXTAREA_CLASS } from "@/features/editor/card-classes";
+import { pluralCategoryExamples } from "@/features/editor/plural-examples";
 
+import { CANONICAL_PLURAL_ORDER } from "@mgt/sdk";
 import type { ReviewFilter } from "@/core/lang/markers";
 import { fixWhitespace, scanWhitespace } from "@/core/model/whitespace";
 import { placeholderIssues, referenceDisplayText, type WorkspaceEntry } from "@/state/entries";
@@ -34,14 +36,21 @@ const COLUMN_LABEL_CLASS =
 const REVIEW_ROW_CHROME = 92;
 const REVIEW_CHARS_PER_LINE = 46; // each of the two text columns is roughly a third of the row
 
+function reviewTargets(entry: WorkspaceEntry): string[] {
+  return entry.targetPlurals ? Object.values(entry.targetPlurals) : [entry.target];
+}
+
+/** Union across every CLDR category — a plural entry has no single "the" target to scan. */
 function whitespaceLabels(entry: WorkspaceEntry, t: (key: string) => string) {
-  const flags = scanWhitespace(entry.target, referenceDisplayText(entry));
+  const reference = referenceDisplayText(entry);
+  const flagSets = reviewTargets(entry).map((target) => scanWhitespace(target, reference));
+  const any = (pick: (flags: (typeof flagSets)[number]) => boolean) => flagSets.some(pick);
   const labels: string[] = [];
-  if (flags.lead) labels.push(t("ws.lead"));
-  if (flags.trail) labels.push(t("ws.trail"));
-  if (flags.dbl) labels.push(t("ws.dbl"));
-  if (flags.tab) labels.push(t("ws.tab"));
-  if (flags.nbsp) labels.push(t("ws.nbsp"));
+  if (any((f) => f.lead)) labels.push(t("ws.lead"));
+  if (any((f) => f.trail)) labels.push(t("ws.trail"));
+  if (any((f) => f.dbl)) labels.push(t("ws.dbl"));
+  if (any((f) => f.tab)) labels.push(t("ws.tab"));
+  if (any((f) => f.nbsp)) labels.push(t("ws.nbsp"));
   return labels;
 }
 
@@ -92,7 +101,8 @@ export function ReviewView() {
       if (workspace.reviewFilter === "issues" && !hasIssues) return false;
       if (workspace.reviewFilter === "same" && indexed?.status !== "same") return false;
       if (query) {
-        const haystack = `${entry.key}\n${entry.target}`.toLowerCase();
+        const pluralText = entry.targetPlurals ? Object.values(entry.targetPlurals).join("\n") : "";
+        const haystack = `${entry.key}\n${entry.target}\n${pluralText}`.toLowerCase();
         if (!haystack.includes(query)) return false;
       }
       return true;
@@ -111,9 +121,18 @@ export function ReviewView() {
     const entry = rowsRef.current[index];
     if (!entry) return REVIEW_ROW_CHROME;
     const reference = referenceDisplayText(entry);
+    // A plural entry stacks one labeled textarea per CLDR category instead of
+    // one flat textarea — a deliberate overestimate (label + textarea per
+    // category), corrected post-mount by VirtualList's measureElement.
+    const targetLines = entry.targetPlurals
+      ? Object.values(entry.targetPlurals).reduce(
+          (total, value) => total + 1 + Math.ceil((value.length || 1) / REVIEW_CHARS_PER_LINE),
+          0,
+        )
+      : Math.ceil((entry.target.length || 1) / REVIEW_CHARS_PER_LINE);
     const lines = Math.max(
       reference ? Math.ceil(reference.length / REVIEW_CHARS_PER_LINE) : 1,
-      Math.ceil((entry.target.length || 1) / REVIEW_CHARS_PER_LINE),
+      targetLines,
     );
     return REVIEW_ROW_CHROME + lines * 20;
   }, []);
@@ -178,12 +197,29 @@ export function ReviewView() {
         }
         renderItem={(entry) => {
           const reference = referenceDisplayText(entry);
-          const placeholders = placeholderIssues(
-            entry.source,
-            entry.target,
-            workspace.activeLoader.placeholders,
+          const pluralCategories = entry.targetPlurals
+            ? CANONICAL_PLURAL_ORDER.filter((category) => category in entry.targetPlurals!)
+            : undefined;
+          const pluralExamples = pluralCategories
+            ? pluralCategoryExamples(workspace.targetLanguage)
+            : undefined;
+          // Union across every CLDR category — a bad token or stray space
+          // hiding in `few`/`many` must still trip the flag, not just `other`.
+          const targets = reviewTargets(entry);
+          const placeholderResults = targets.map((target) =>
+            placeholderIssues(entry.source, target, workspace.activeLoader.placeholders),
           );
-          const whitespace = scanWhitespace(entry.target, reference);
+          const placeholders = {
+            missingRequired: Array.from(
+              new Set(placeholderResults.flatMap((p) => p.missingRequired)),
+            ),
+            missingFormattingKinds: Array.from(
+              new Set(placeholderResults.flatMap((p) => p.missingFormattingKinds)),
+            ),
+          };
+          const whitespace = {
+            any: targets.some((target) => scanWhitespace(target, reference).any),
+          };
           const terminology = workspace.terminologyIssuesFor(entry);
           const status = entry.legacyStatus;
           const flagged =
@@ -269,13 +305,43 @@ export function ReviewView() {
 
               <div className="min-w-0">
                 <span className={COLUMN_LABEL_CLASS}>{t("review.trLabel")}</span>
-                <Textarea
-                  className={REVIEW_TEXTAREA_CLASS}
-                  value={entry.target}
-                  spellCheck={workspace.spellcheck}
-                  onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
-                />
-                {placeholders.missingRequired.length > 0 && (
+                {pluralCategories ? (
+                  <div className={PLURAL_GROUP_CLASS}>
+                    {pluralCategories.map((category) => (
+                      <div key={category}>
+                        <span className={COLUMN_LABEL_CLASS}>
+                          {t("card.pluralCategory", {
+                            category,
+                            examples: (pluralExamples?.[category] ?? []).join(", "),
+                          })}
+                        </span>
+                        <Textarea
+                          className={REVIEW_TEXTAREA_CLASS}
+                          value={entry.targetPlurals?.[category] ?? ""}
+                          spellCheck={workspace.spellcheck}
+                          onChange={(event) =>
+                            workspace.updateEntryTargetPlural(
+                              entry.id,
+                              category,
+                              event.target.value,
+                            )
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Textarea
+                    className={REVIEW_TEXTAREA_CLASS}
+                    value={entry.target}
+                    spellCheck={workspace.spellcheck}
+                    onChange={(event) => workspace.updateEntryValue(entry.id, event.target.value)}
+                  />
+                )}
+                {/* Inserts into the flat fallback value, so only offered when
+                    that's the field actually shown above — a plural entry
+                    edits per-category instead, right there in its own box. */}
+                {!pluralCategories && placeholders.missingRequired.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
                     {placeholders.missingRequired.map((token) => (
                       <Button
@@ -324,7 +390,9 @@ export function ReviewView() {
                     {t("review.checked")}
                   </Button>
                 )}
-                {whitespace.any && (
+                {/* Fixes the flat fallback value, so only offered when that's
+                    the field shown above — see the insert-token button. */}
+                {!pluralCategories && whitespace.any && (
                   <Button
                     type="button"
                     variant="outline"

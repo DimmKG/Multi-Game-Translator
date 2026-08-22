@@ -258,13 +258,27 @@ function indexWorkspaceEntry(
   loader: GameLoader,
   enabled: GlossaryLike[],
 ): RowIndex {
-  const placeholders = placeholderIssues(entry.source, entry.target, loader.placeholders);
+  // A plural entry has no single "the" target — check every CLDR category so
+  // an issue hiding in `few`/`many` isn't masked by a clean `other`.
+  const reference = referenceDisplayText(entry);
+  const targets = entry.targetPlurals ? Object.values(entry.targetPlurals) : [entry.target];
+  let tokenIssue = false;
+  let wsIssue = false;
+  let glossaryIssue = false;
+  for (const target of targets) {
+    const placeholders = placeholderIssues(entry.source, target, loader.placeholders);
+    if (placeholders.missingRequired.length > 0 || placeholders.missingFormattingKinds.length > 0) {
+      tokenIssue = true;
+    }
+    if (scanWhitespace(target, reference).any) wsIssue = true;
+    if (inspectTerminology(entry.source, target, enabled, entry.key).length > 0)
+      glossaryIssue = true;
+  }
   return {
     status: entry.legacyStatus,
-    tokenIssue:
-      placeholders.missingRequired.length > 0 || placeholders.missingFormattingKinds.length > 0,
-    wsIssue: scanWhitespace(entry.target, referenceDisplayText(entry)).any,
-    glossaryIssue: inspectTerminology(entry.source, entry.target, enabled, entry.key).length > 0,
+    tokenIssue,
+    wsIssue,
+    glossaryIssue,
     hasRef: entry.referenceText != null,
   };
 }

@@ -255,6 +255,23 @@ describe("row indexing", () => {
     expect(index.get(bye.id)?.wsIssue).toBe(true);
   });
 
+  it("buildWorkspaceRowIndex checks every plural category, not just the flat fallback", () => {
+    const document = buildDocument("hello=<name> Hallo\n", "hello=<name> Hello\n");
+    const entries = buildWorkspaceEntries(document, new Map());
+    const hello = entries.find((e) => e.key === "hello")!;
+
+    const clean = { ...hello, targetPlurals: { one: "<name> Hallo", other: "<name> Hallo" } };
+    expect(buildWorkspaceRowIndex([clean], necesseGameLoader, []).get(clean.id)?.tokenIssue).toBe(
+      false,
+    );
+
+    // "other" (== the flat fallback) still has the token — only "one" lost it.
+    const brokenOne = { ...hello, targetPlurals: { one: "Hallo", other: "<name> Hallo" } };
+    expect(
+      buildWorkspaceRowIndex([brokenOne], necesseGameLoader, []).get(brokenOne.id)?.tokenIssue,
+    ).toBe(true);
+  });
+
   it("reindexWorkspaceEntry updates only the targeted entry's row", () => {
     const document = buildDocument("MISSING_TRANSLATION:hello=Hallo\nbye=Tschuss\n");
     const entries = buildWorkspaceEntries(document, new Map());
