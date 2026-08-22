@@ -17,7 +17,7 @@
     "build:standalone": "tsc -b && vite build --mode standalone --outDir dist-standalone && node scripts/build-standalone.mjs",
     "preview": "npm run build && vite preview --host 0.0.0.0 --port 4173",
     "preview:built": "vite preview --host 0.0.0.0 --port 4173",
-    "pretest": "npm run test --workspaces --if-present",
+    "pretest": "npm run build --workspaces --if-present && npm run test --workspaces --if-present",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

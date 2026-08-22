@@ -56,3 +56,11 @@ export function getFileLoaders(): readonly FileLoader[] {
 export function getGameLoaders(): readonly GameLoader[] {
   return [...gameLoaders.values()];
 }
+
+/** Keep in sync with package.json's "version" field. */
+export const SDK_VERSION = "0.0.1";
+
+/** Single source of truth for constructing the object every mod's register(sdk) receives. */
+export function createModSdk(): ModSdk {
+  return { registerFileLoader, registerGameLoader, version: SDK_VERSION };
+}

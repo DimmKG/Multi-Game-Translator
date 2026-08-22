@@ -5,6 +5,7 @@ export * from "./tokenizer";
 export * from "./game-loader";
 export * from "./registry";
 export * from "./catalog";
+export * from "./catalog-loader";
 export * from "./helpers/tokenizer";
 export * from "./helpers/identity";
 export * from "./helpers/plural";
