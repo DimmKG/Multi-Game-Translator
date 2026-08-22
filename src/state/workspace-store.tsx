@@ -13,11 +13,12 @@ import { toast } from "sonner";
 
 import {
   cleanDownloadedFilename,
-  iniFileLoader,
+  REFERENCE_ROLE,
+  TRANSLATION_ROLE,
   type GameLoader,
   type TranslationDocument,
 } from "@mgt/sdk";
-import { resolveGameLoader } from "@/state/loaders";
+import { auxRoleOf, resolveFileLoader, resolveGameLoader } from "@/state/loaders";
 import type { DiffMode, FilterMode, ReviewFilter, WorkspaceView } from "@/core/lang/markers";
 import { normalizeSearchQuery } from "@/core/lang/search-query";
 import {
@@ -617,15 +618,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const files: { name: string; text: string }[] = [
         { name: filename || "translation.lang", text },
       ];
-      const roles: { role: string }[] = [{ role: "translation" }];
+      const roles: { role: string }[] = [{ role: TRANSLATION_ROLE }];
       if (options.referenceSourceText) {
         files.push({
           name: options.referenceFilename || "en.lang",
           text: options.referenceSourceText,
         });
-        roles.push({ role: "reference" });
+        // Fixed to "reference": this legacy-import option is only ever
+        // exercised by Necesse today (referenceSourceText isn't called with
+        // any value from src/ or tests), so there's no live caller needing
+        // the generalized aux-role name.
+        roles.push({ role: REFERENCE_ROLE });
       }
-      const raw = iniFileLoader.parse({ files });
+      const raw = resolveFileLoader(loader.fileLoaderId).parse({ files });
       const document = loader.toDocument(raw, roles, targetLanguage || "und");
       applyOpenedDocument(document, {
         filename,
@@ -673,15 +678,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         const present = picked.filter(
           (entry): entry is NonNullable<typeof entry> => entry !== null,
         );
-        const raw = iniFileLoader.parse({
+        const raw = resolveFileLoader(loader.fileLoaderId).parse({
           files: present.map(({ file, text }) => ({ name: file.name, text })),
         });
         const roles = present.map(({ rf }) => ({ role: rf.role }));
-        // "translation"/"reference" — the shared role-name convention both
-        // current loaders use, not a loader-identity hardcode.
-        const translationFile = files.translation;
-        const translationEntry = present.find(({ rf }) => rf.role === "translation");
-        const referenceEntry = present.find(({ rf }) => rf.role === "reference");
+        const auxRole = auxRoleOf(loader);
+        const translationFile = files[TRANSLATION_ROLE];
+        const translationEntry = present.find(({ rf }) => rf.role === TRANSLATION_ROLE);
+        const referenceEntry = present.find(({ rf }) => rf.role === auxRole);
         const targetLanguage = codeFromFilename(translationFile.name);
         const document = loader.toDocument(raw, roles, targetLanguage || "und");
         const translationDisplayName =
@@ -713,14 +717,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           return;
         }
         const text = await readFileAsText(file);
-        const referenceRf = loader.requiredFiles.find((rf) => rf.role === "reference");
+        const referenceRf = loader.requiredFiles.find((rf) => rf.role === auxRoleOf(loader));
         const validation = referenceRf?.validate?.({ name: file.name, text });
         if (validation && !validation.ok) {
           toast.error(t(validation.messageKey));
           return;
         }
         const displayName = (validation?.ok && validation.displayName) || file.name;
-        const referenceRaw = iniFileLoader.parse({ files: [{ name: displayName, text }] });
+        const referenceRaw = resolveFileLoader(loader.fileLoaderId).parse({
+          files: [{ name: displayName, text }],
+        });
         let document: TranslationDocument;
         try {
           document = loader.createFromReference(referenceRaw, "und");
@@ -763,14 +769,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           return;
         }
         const text = await readFileAsText(file);
-        const referenceRf = loader.requiredFiles.find((rf) => rf.role === "reference");
+        const referenceRf = loader.requiredFiles.find((rf) => rf.role === auxRoleOf(loader));
         const validation = referenceRf?.validate?.({ name: file.name, text });
         if (validation && !validation.ok) {
           toast.error(t(validation.messageKey));
           return;
         }
         const displayName = (validation?.ok && validation.displayName) || file.name;
-        const referenceRaw = iniFileLoader.parse({ files: [{ name: displayName, text }] });
+        const referenceRaw = resolveFileLoader(loader.fileLoaderId).parse({
+          files: [{ name: displayName, text }],
+        });
 
         const nextDocument = loader.attachReference(current.document, referenceRaw);
         const nextEntries = buildWorkspaceEntries(nextDocument, entryUiFlagsRef.current);

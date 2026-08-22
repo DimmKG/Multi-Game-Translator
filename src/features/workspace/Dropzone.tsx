@@ -12,7 +12,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { useI18n } from "@/features/i18n/I18nProvider";
-import { resolveGameLoader } from "@/state/loaders";
+import { auxRoleOf, resolveGameLoader } from "@/state/loaders";
 import { useWorkspace } from "@/state/workspace-store";
 import { cn } from "@/lib/utils";
 
@@ -114,6 +114,7 @@ export function Dropzone() {
   // selected — NOT `activeLoader` here, that reflects the currently *open document's*
   // loader (stays a meaningless placeholder until a document actually exists).
   const selectedLoader = resolveGameLoader(selectedGameLoaderId!);
+  const auxRole = auxRoleOf(selectedLoader);
   const [files, setFiles] = useState<Record<string, File | null>>({});
 
   const canOpen =
@@ -121,8 +122,8 @@ export function Dropzone() {
     !isImportingFile;
   const canCreateNew =
     selectedLoader.createFromReference != null &&
-    files.reference != null &&
-    selectedLoader.requiredFiles.every((rf) => rf.role === "reference" || files[rf.role] == null) &&
+    (auxRole ? files[auxRole] != null : false) &&
+    selectedLoader.requiredFiles.every((rf) => rf.role === auxRole || files[rf.role] == null) &&
     !isImportingFile;
 
   return (
@@ -200,7 +201,8 @@ export function Dropzone() {
                 title={t("btn.newTranslationTitle")}
                 disabled={!canCreateNew}
                 onClick={() => {
-                  if (files.reference) void createFromReferenceFile(files.reference);
+                  const referenceFile = auxRole ? files[auxRole] : undefined;
+                  if (referenceFile) void createFromReferenceFile(referenceFile);
                 }}
               >
                 {t("btn.newTranslation")}

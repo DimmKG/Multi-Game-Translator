@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { createModSdk, loadModCatalog } from "@mgt/sdk";
+import { createModSdk, iniFileLoader, loadModCatalog, poFileLoader } from "@mgt/sdk";
 import registerGenericIni from "@mgt/mod-generic-ini";
 import { modSource } from "@/state/mod-source";
 import type { ModLoadWarning } from "@/state/mod-bootstrap-warnings";
@@ -9,14 +9,17 @@ export interface ModBootstrapResult {
 }
 
 /**
- * Registers every available game loader. generic-ini is always static (no
- * network, per Fork B — a general-purpose loader must work fully offline).
- * Necesse (and any future game-specific mod) goes through loadModCatalog(),
- * fed by whichever mod-source the current build resolves to — see
- * vite.config.ts's mode-conditional "@/state/mod-source" alias.
+ * Registers every available game/file loader. File Loaders and generic-ini
+ * are always static (no network, per Fork B — general-purpose infrastructure
+ * must work fully offline). Game-specific mods (Necesse and friends) go
+ * through loadModCatalog(), fed by whichever mod-source the current build
+ * resolves to — see vite.config.ts's mode-conditional "@/state/mod-source"
+ * alias.
  */
 export async function bootstrapMods(): Promise<ModBootstrapResult> {
   const sdk = createModSdk();
+  sdk.registerFileLoader(iniFileLoader);
+  sdk.registerFileLoader(poFileLoader);
   registerGenericIni(sdk);
 
   const outcome = await loadModCatalog({ ...modSource, sdk });

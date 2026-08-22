@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   checkPlaceholders,
-  iniFileLoader,
   type EntryStatus as SdkEntryStatus,
   type GameLoader,
-  type IniFileLoaderRaw,
   type PlaceholderTokenizer,
   type TranslationDocument,
   type TranslationEntry as SdkTranslationEntry,
 } from "@mgt/sdk";
-import { resolveGameLoader } from "@/state/loaders";
+import { resolveFileLoader, resolveGameLoader } from "@/state/loaders";
 import { scanWhitespace } from "@/core/model/whitespace";
 import type { EntryStatus as LegacyStatus } from "@/core/lang/markers";
 import type { WorkspaceUiFlags } from "@/core/persistence/idb";
@@ -221,11 +219,8 @@ export function toggleEntryMarkedSame(
 /** Serializes a document back to its native text, mirroring exportLang's pipeline. */
 export function exportedText(document: TranslationDocument): string {
   const loader = resolveGameLoader(document.gameLoaderId);
-  // Both loaders today use fileLoaderId "ini" — a real multi-File-Loader host
-  // would resolve this generically too, but that's out of scope here (see
-  // GameLoader.fileLoaderId's doc comment).
-  const raw = loader.fromDocument(document) as IniFileLoaderRaw;
-  return iniFileLoader.serialize(raw).files[0]?.text ?? "";
+  const raw = loader.fromDocument(document);
+  return resolveFileLoader(loader.fileLoaderId).serialize(raw).files[0]?.text ?? "";
 }
 
 function enabledOnly(glossaries: readonly GlossaryLike[]): GlossaryLike[] {

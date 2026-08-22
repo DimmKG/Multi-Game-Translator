@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import {
   defaultIdentityStrategy,
+  REFERENCE_ROLE,
+  TRANSLATION_ROLE,
   type DocumentNode,
   type FileLoaderInput,
   type GameLoader,
@@ -55,12 +57,12 @@ function toDocument(
   roles: { role: string }[],
   targetLocale: string,
 ): TranslationDocument {
-  const translationIndex = findRoleIndex(roles, "translation");
+  const translationIndex = findRoleIndex(roles, TRANSLATION_ROLE);
   const translation = translationIndex >= 0 ? raw[translationIndex] : undefined;
   if (!translation) {
     throw new Error("Necesse Game Loader requires a translation file.");
   }
-  const referenceIndex = findRoleIndex(roles, "reference");
+  const referenceIndex = findRoleIndex(roles, REFERENCE_ROLE);
   const referenceFile = referenceIndex >= 0 ? raw[referenceIndex] : undefined;
   const referenceQueues = referenceFile
     ? buildReferenceQueues(referenceFile.ini)
@@ -193,7 +195,7 @@ function createFromReference(
 
   return toDocument(
     [referenceEntry, draftEntry],
-    [{ role: "reference" }, { role: "translation" }],
+    [{ role: REFERENCE_ROLE }, { role: TRANSLATION_ROLE }],
     targetLocale,
   );
 }
@@ -215,7 +217,7 @@ function detectGame(input: FileLoaderInput): number {
 
 const requiredFiles: RequiredFile[] = [
   {
-    role: "reference",
+    role: REFERENCE_ROLE,
     labelKey: "necesse.dropzone.reference",
     required: true,
     accept: [".lang"],
@@ -227,7 +229,7 @@ const requiredFiles: RequiredFile[] = [
     },
   },
   {
-    role: "translation",
+    role: TRANSLATION_ROLE,
     labelKey: "necesse.dropzone.translation",
     required: true,
     accept: [".lang"],

@@ -2,6 +2,8 @@
 import {
   defaultIdentityStrategy,
   iniFileLoader,
+  REFERENCE_ROLE,
+  TRANSLATION_ROLE,
   type DocumentNode,
   type EntryPatch,
   type EntryUiHints,
@@ -81,12 +83,12 @@ function toDocument(
   roles: { role: string }[],
   targetLocale: string,
 ): TranslationDocument {
-  const translationIndex = findRoleIndex(roles, "translation");
+  const translationIndex = findRoleIndex(roles, TRANSLATION_ROLE);
   const translation = translationIndex >= 0 ? raw[translationIndex] : undefined;
   if (!translation) {
     throw new Error("Generic ini Game Loader requires a translation file.");
   }
-  const referenceIndex = findRoleIndex(roles, "reference");
+  const referenceIndex = findRoleIndex(roles, REFERENCE_ROLE);
   const referenceMap = buildReferenceMap(referenceIndex >= 0 ? raw[referenceIndex] : undefined);
 
   const identityStrategy = defaultIdentityStrategy();
@@ -202,13 +204,13 @@ function applyEntryPatch(entry: TranslationEntry, patch: EntryPatch): Translatio
 
 const requiredFiles: RequiredFile[] = [
   {
-    role: "translation",
+    role: TRANSLATION_ROLE,
     labelKey: "genericIni.dropzone.translation",
     required: true,
     accept: iniFileLoader.extensions,
   },
   {
-    role: "reference",
+    role: REFERENCE_ROLE,
     labelKey: "genericIni.dropzone.reference",
     required: true,
     accept: iniFileLoader.extensions,
