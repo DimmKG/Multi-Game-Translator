@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 import type { FileLoader, FileLoaderInput } from "../file-loader";
-import type { GameLoader } from "../game-loader";
+import { REFERENCE_ROLE, TRANSLATION_ROLE, type GameLoader } from "../game-loader";
 import type { TranslationDocument } from "../model/document";
 
 /**
@@ -32,7 +32,7 @@ export function createDraftFromReference<TRaw>(
   gameLoader: GameLoader<TRaw>,
   referenceRaw: TRaw,
   targetLocale: string,
-  roles: { role: string }[] = [{ role: "reference" }, { role: "translation" }],
+  roles: { role: string }[] = [{ role: REFERENCE_ROLE }, { role: TRANSLATION_ROLE }],
 ): TranslationDocument {
   const referenceInput = fileLoader.serialize(referenceRaw);
   const referenceFile = referenceInput.files[0];

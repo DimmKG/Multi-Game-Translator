@@ -4,6 +4,8 @@ import type { PlaceholderSeverity, PlaceholderToken, PlaceholderTokenizer } from
 export interface PlaceholderClassification {
   kind: string;
   severity: PlaceholderSeverity;
+  /** Hint for a specialized editor widget, e.g. Factorio's value-level plural sub-grammar. */
+  subgrammar?: string;
 }
 
 /** Build a PlaceholderTokenizer from a regex; almost every simple loader needs no more than this. */

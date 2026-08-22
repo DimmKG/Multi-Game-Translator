@@ -3,8 +3,17 @@ import type { FileLoaderInput } from "./file-loader";
 import type { PluralCategory, TranslationDocument, TranslationEntry } from "./model/document";
 import type { PlaceholderTokenizer } from "./tokenizer";
 
+/**
+ * The two RequiredFile roles the SDK itself fixes as a shared vocabulary:
+ * the file being translated, and its source-language original. Any role
+ * beyond these two (e.g. gettext's "template") is entirely up to the
+ * individual mod — the SDK neither defines nor constrains it.
+ */
+export const TRANSLATION_ROLE = "translation";
+export const REFERENCE_ROLE = "reference";
+
 export interface RequiredFile {
-  /** Dropzone slot id, e.g. "translation" | "reference" | "template". */
+  /** Dropzone slot id — TRANSLATION_ROLE/REFERENCE_ROLE for the two SDK-fixed roles, or any mod-specific string. */
   role: string;
   labelKey: string;
   required: boolean;

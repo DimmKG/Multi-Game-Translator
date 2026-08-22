@@ -13,4 +13,7 @@ export * from "./helpers/ini";
 export * from "./helpers/locale";
 export * from "./helpers/create-from-reference";
 export * from "./helpers/filename";
+export * from "./helpers/po";
+export * from "./helpers/gettext-plural";
 export * from "./loaders/ini-file-loader";
+export * from "./loaders/po-file-loader";
