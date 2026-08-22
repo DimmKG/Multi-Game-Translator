@@ -18,6 +18,7 @@ import type { ImportedMod } from "@mgt/sdk";
  */
 const STANDALONE_MODS: Record<string, () => Promise<ImportedMod>> = {
   necesse: () => import("@mgt/mod-necesse"),
+  factorio: () => import("@mgt/mod-factorio"),
 };
 
 const STANDALONE_CATALOG = {

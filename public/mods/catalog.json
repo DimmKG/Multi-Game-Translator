@@ -10,6 +10,15 @@
       "entry": "necesse/index.js",
       "sdkRange": "^0.0.1",
       "enabled": true
+    },
+    {
+      "id": "factorio",
+      "name": "Factorio",
+      "icon": "",
+      "version": "0.0.1",
+      "entry": "factorio/index.js",
+      "sdkRange": "^0.0.1",
+      "enabled": true
     }
   ]
 }
